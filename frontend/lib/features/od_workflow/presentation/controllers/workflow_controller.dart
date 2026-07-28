@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/providers/dio_provider.dart';
+import '../../../authentication/presentation/controllers/auth_controller.dart';
 import '../../data/repositories/api_workflow_repository.dart';
 import '../../data/repositories/mock_workflow_repository.dart';
 import '../../domain/entities/attachment_item.dart';
@@ -47,8 +48,9 @@ class WorkflowState {
 
 class WorkflowController extends StateNotifier<WorkflowState> {
   final WorkflowRepository _repository;
+  final String _currentUserId;
 
-  WorkflowController(this._repository) : super(const WorkflowState()) {
+  WorkflowController(this._repository, this._currentUserId) : super(const WorkflowState()) {
     loadAllData();
   }
 
@@ -56,7 +58,7 @@ class WorkflowController extends StateNotifier<WorkflowState> {
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
       final requests = await _repository.getAllRequests();
-      final notifications = await _repository.getNotifications('RA2510026020400');
+      final notifications = await _repository.getNotifications(_currentUserId);
       state = state.copyWith(
         requests: requests,
         notifications: notifications,
@@ -152,5 +154,7 @@ class WorkflowController extends StateNotifier<WorkflowState> {
 
 final workflowControllerProvider = StateNotifierProvider<WorkflowController, WorkflowState>((ref) {
   final repo = ref.watch(workflowRepositoryProvider);
-  return WorkflowController(repo);
+  final session = ref.watch(authControllerProvider).session;
+  final userId = session?.userId ?? '';
+  return WorkflowController(repo, userId);
 });
