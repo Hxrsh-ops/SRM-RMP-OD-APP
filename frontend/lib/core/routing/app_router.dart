@@ -14,31 +14,25 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     redirect: (BuildContext context, GoRouterState state) {
       final authState = ref.read(authControllerProvider);
       final isAuth = authState.status == AuthStatus.authenticated;
-      final isAuthenticating = authState.status == AuthStatus.authenticating;
 
       final isSplashLocation = state.matchedLocation == AppConstants.splashRoute;
       final isLoginLocation = state.matchedLocation == AppConstants.loginRoute;
 
-      // Allow splash to perform startup session restoration
-      if (isSplashLocation && isAuthenticating) {
+      // Allow splash to perform startup session restoration without interference
+      if (isSplashLocation) {
         return null;
       }
 
-      // If authenticated, redirect away from public login/splash to protected dashboard
+      // If authenticated, redirect away from public login to protected dashboard
       if (isAuth) {
-        if (isLoginLocation || isSplashLocation) {
+        if (isLoginLocation) {
           return '/dashboard';
         }
         return null;
       }
 
       // If unauthenticated and trying to access protected routes, redirect to login
-      if (!isAuth && !isLoginLocation && !isSplashLocation) {
-        return AppConstants.loginRoute;
-      }
-
-      // Default redirect from splash to login if session check finishes unauthenticated
-      if (isSplashLocation && !isAuthenticating && !isAuth) {
+      if (!isAuth && !isLoginLocation) {
         return AppConstants.loginRoute;
       }
 

@@ -56,6 +56,7 @@ class _MainShellDashboardScreenState extends ConsumerState<MainShellDashboardScr
             AppDesktopSidebar(
               selectedIndex: _currentIndex,
               onDestinationSelected: (index) => setState(() => _currentIndex = index),
+              role: role,
             ),
             Expanded(
               child: SafeArea(
@@ -75,8 +76,9 @@ class _MainShellDashboardScreenState extends ConsumerState<MainShellDashboardScr
         ),
       ),
       bottomNavigationBar: AppBottomNavBar(
-        currentIndex: _currentIndex < 5 ? _currentIndex : 0,
+        currentIndex: _currentIndex < pages.length ? _currentIndex : 0,
         onTap: (index) => setState(() => _currentIndex = index),
+        role: role,
       ),
     );
   }

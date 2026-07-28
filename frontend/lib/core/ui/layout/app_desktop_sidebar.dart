@@ -6,15 +6,20 @@ import 'app_brand_logo.dart';
 class AppDesktopSidebar extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onDestinationSelected;
+  final String role;
 
   const AppDesktopSidebar({
     super.key,
     required this.selectedIndex,
     required this.onDestinationSelected,
+    this.role = 'STUDENT',
   });
 
   @override
   Widget build(BuildContext context) {
+    final isStudent = role == 'STUDENT';
+    final isFaculty = role == 'FACULTY_ADVISOR';
+
     return Container(
       width: 260,
       color: AppColors.primaryBlue,
@@ -40,37 +45,31 @@ class AppDesktopSidebar extends StatelessWidget {
                 _SidebarItem(
                   icon: Icons.assignment_outlined,
                   activeIcon: Icons.assignment_rounded,
-                  label: 'My OD Requests',
+                  label: isStudent ? 'My OD Requests' : (isFaculty ? 'Pending Requests' : 'Approval Queue'),
                   isSelected: selectedIndex == 1,
                   onTap: () => onDestinationSelected(1),
                 ),
-                _SidebarItem(
-                  icon: Icons.add_circle_outline_rounded,
-                  activeIcon: Icons.add_circle_rounded,
-                  label: 'Create OD Request',
-                  isSelected: selectedIndex == 2,
-                  onTap: () => onDestinationSelected(2),
-                ),
+                if (isStudent)
+                  _SidebarItem(
+                    icon: Icons.add_circle_outline_rounded,
+                    activeIcon: Icons.add_circle_rounded,
+                    label: 'Create OD Request',
+                    isSelected: selectedIndex == 2,
+                    onTap: () => onDestinationSelected(2),
+                  ),
                 _SidebarItem(
                   icon: Icons.notifications_none_rounded,
                   activeIcon: Icons.notifications_rounded,
                   label: 'Notifications',
-                  isSelected: selectedIndex == 3,
-                  onTap: () => onDestinationSelected(3),
+                  isSelected: selectedIndex == (isStudent ? 3 : 2),
+                  onTap: () => onDestinationSelected(isStudent ? 3 : 2),
                 ),
                 _SidebarItem(
                   icon: Icons.person_outline_rounded,
                   activeIcon: Icons.person_rounded,
                   label: 'Profile',
-                  isSelected: selectedIndex == 4,
-                  onTap: () => onDestinationSelected(4),
-                ),
-                _SidebarItem(
-                  icon: Icons.settings_outlined,
-                  activeIcon: Icons.settings_rounded,
-                  label: 'Settings',
-                  isSelected: selectedIndex == 5,
-                  onTap: () => onDestinationSelected(5),
+                  isSelected: selectedIndex == (isStudent ? 4 : 3),
+                  onTap: () => onDestinationSelected(isStudent ? 4 : 3),
                 ),
               ],
             ),
