@@ -1,0 +1,9 @@
+*.db
+*.sqlite3
+__pycache__/
+*.pyc
+.pytest_cache/
+uploads/*
+!uploads/.gitkeep
+venv/
+.env

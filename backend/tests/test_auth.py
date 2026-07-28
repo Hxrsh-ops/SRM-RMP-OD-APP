@@ -1,0 +1,41 @@
+def test_login_student_success(client):
+    response = client.post(
+        "/api/v1/auth/login",
+        data={"username": "RA2510026020400", "password": "student123"}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "access_token" in data
+    assert data["token_type"] == "bearer"
+
+def test_login_faculty_success(client):
+    response = client.post(
+        "/api/v1/auth/login",
+        data={"username": "FA1001", "password": "faculty123"}
+    )
+    assert response.status_code == 200
+    assert "access_token" in response.json()
+
+def test_login_invalid_password(client):
+    response = client.post(
+        "/api/v1/auth/login",
+        data={"username": "RA2510026020400", "password": "wrongpassword"}
+    )
+    assert response.status_code == 401
+
+def test_get_me_profile(client):
+    login_res = client.post(
+        "/api/v1/auth/login",
+        data={"username": "RA2510026020400", "password": "student123"}
+    )
+    token = login_res.json()["access_token"]
+
+    response = client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["username"] == "RA2510026020400"
+    assert data["full_name"] == "K.M. Harshanth"
+    assert data["role"] == "STUDENT"
