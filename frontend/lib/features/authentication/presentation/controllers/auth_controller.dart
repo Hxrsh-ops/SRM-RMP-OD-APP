@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/security/memory_secure_storage.dart';
-import '../../../../core/security/secure_storage_service.dart';
+import '../../../../core/network/providers/dio_provider.dart';
 import '../../data/datasources/auth_local_datasource.dart';
+import '../../data/repositories/api_authentication_repository.dart';
 import '../../data/repositories/mock_authentication_repository.dart';
 import '../../domain/entities/auth_status.dart';
 import '../../domain/repositories/authentication_repository.dart';
@@ -10,17 +10,21 @@ import '../../domain/usecases/logout_usecase.dart';
 import '../../domain/usecases/restore_session_usecase.dart';
 import 'auth_state.dart';
 
-// Providers setup
-final secureStorageProvider = Provider<SecureStorageService>((ref) => MemorySecureStorage());
-
 final authLocalDataSourceProvider = Provider<AuthLocalDataSource>((ref) {
   final storage = ref.watch(secureStorageProvider);
   return AuthLocalDataSource(storage);
 });
 
 final authenticationRepositoryProvider = Provider<AuthenticationRepository>((ref) {
-  final localDataSource = ref.watch(authLocalDataSourceProvider);
-  return MockAuthenticationRepository(localDataSource: localDataSource);
+  final useApi = ref.watch(useApiRepositoryProvider);
+  if (useApi) {
+    final apiClient = ref.watch(apiClientProvider);
+    final storage = ref.watch(secureStorageProvider);
+    return ApiAuthenticationRepository(apiClient: apiClient, storageService: storage);
+  } else {
+    final localDataSource = ref.watch(authLocalDataSourceProvider);
+    return MockAuthenticationRepository(localDataSource: localDataSource);
+  }
 });
 
 final loginUseCaseProvider = Provider<LoginUseCase>((ref) {
