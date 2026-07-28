@@ -1,6 +1,5 @@
 import os
 from typing import List
-from pydantic import AnyHttpUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
@@ -13,10 +12,10 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 # 1 day for demo ease
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
-    # PostgreSQL / SQLite Database URL
+    # Single Source of Truth for Database Configuration (PostgreSQL)
     DATABASE_URL: str = os.getenv(
         "DATABASE_URL", 
-        "sqlite:///./srm_rmp_od.db"
+        "postgresql://postgres:postgres@localhost:5432/srm_od"
     )
 
     # Local Storage Directory
