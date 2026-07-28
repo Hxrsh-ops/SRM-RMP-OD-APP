@@ -1,3 +1,4 @@
+import '../../domain/entities/auth_token.dart';
 import '../../domain/entities/user_session.dart';
 import '../../domain/repositories/authentication_repository.dart';
 import '../datasources/auth_local_datasource.dart';
@@ -5,52 +6,75 @@ import '../models/auth_token_model.dart';
 import '../models/user_session_model.dart';
 
 class MockAuthenticationRepository implements AuthenticationRepository {
-  final AuthLocalDataSource _localDataSource;
+  final AuthLocalDataSource localDataSource;
 
-  MockAuthenticationRepository(this._localDataSource);
+  MockAuthenticationRepository({required this.localDataSource});
 
   @override
   Future<UserSession> login({
     required String username,
     required String password,
+    bool rememberMe = true,
   }) async {
-    // Simulate network latency
-    await Future.delayed(const Duration(milliseconds: 800));
+    await Future.delayed(const Duration(milliseconds: 300));
 
-    final token = AuthTokenModel(
-      accessToken: 'mock_jwt_access_token_${DateTime.now().millisecondsSinceEpoch}',
-      refreshToken: 'mock_jwt_refresh_token',
+    final trimmedUsername = username.trim();
+    final trimmedPassword = password.trim();
+
+    String role = 'STUDENT';
+    String name = 'Alex Vance';
+
+    if (trimmedUsername == 'RA2311003001' && trimmedPassword == 'student123') {
+      role = 'STUDENT';
+      name = 'Alex Vance (Student)';
+    } else if (trimmedUsername == 'FA1001' && trimmedPassword == 'faculty123') {
+      role = 'FACULTY_ADVISOR';
+      name = 'Dr. Karthik B (Faculty Advisor)';
+    } else if (trimmedUsername == 'CO1001' && trimmedPassword == 'coord123') {
+      role = 'COORDINATOR';
+      name = 'Prof. Ramesh Kumar (Coordinator)';
+    } else if (trimmedPassword.length < 6) {
+      throw Exception('Invalid password. Minimum 6 characters required.');
+    } else {
+      name = 'User $trimmedUsername';
+    }
+
+    final tokenModel = AuthTokenModel(
+      accessToken: 'mock_access_token_${DateTime.now().millisecondsSinceEpoch}',
+      refreshToken: 'mock_refresh_token_${DateTime.now().millisecondsSinceEpoch}',
       expiresAt: DateTime.now().add(const Duration(hours: 24)),
     );
 
-    final session = UserSessionModel(
-      userId: 'usr_mock_1001',
-      username: username,
-      name: 'SRM Student User',
-      email: '$username@srmist.edu.in',
-      role: 'STUDENT',
-      token: token,
+    final sessionModel = UserSessionModel(
+      userId: 'usr_$trimmedUsername',
+      username: trimmedUsername,
+      email: '$trimmedUsername@srmist.edu.in',
+      name: name,
+      role: role,
+      token: tokenModel,
     );
 
-    await _localDataSource.saveSession(session);
-    return session;
+    if (rememberMe) {
+      await localDataSource.saveSession(sessionModel);
+    }
+
+    return sessionModel;
   }
 
   @override
   Future<void> logout() async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    await _localDataSource.clearSession();
+    await localDataSource.clearSession();
   }
 
   @override
   Future<UserSession?> restoreSession() async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    return await _localDataSource.getSession();
+    final sessionModel = await localDataSource.getSession();
+    return sessionModel;
   }
 
   @override
   Future<bool> isAuthenticated() async {
-    final session = await _localDataSource.getSession();
-    return session != null;
+    final session = await restoreSession();
+    return session != null && !session.token.isExpired;
   }
 }

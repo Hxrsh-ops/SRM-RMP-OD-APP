@@ -15,8 +15,26 @@ class LoginForm extends ConsumerStatefulWidget {
 
 class _LoginFormState extends ConsumerState<LoginForm> {
   final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController();
-  final _passwordController = TextEditingController();
+  final _usernameController = TextEditingController(text: 'RA2311003001');
+  final _passwordController = TextEditingController(text: 'student123');
+
+  int _selectedRoleIndex = 0; // 0: Student, 1: Faculty Advisor, 2: Coordinator
+
+  void _onRoleChanged(int index) {
+    setState(() {
+      _selectedRoleIndex = index;
+      if (index == 0) {
+        _usernameController.text = 'RA2311003001';
+        _passwordController.text = 'student123';
+      } else if (index == 1) {
+        _usernameController.text = 'FA1001';
+        _passwordController.text = 'faculty123';
+      } else {
+        _usernameController.text = 'CO1001';
+        _passwordController.text = 'coord123';
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -40,11 +58,49 @@ class _LoginFormState extends ConsumerState<LoginForm> {
     final authState = ref.watch(authControllerProvider);
     final isAuthenticating = authState.status == AuthStatus.authenticating;
 
+    final String labelText = _selectedRoleIndex == 0 ? 'Register Number' : 'Employee ID';
+    final String hintText = _selectedRoleIndex == 0 ? 'RA2311003001' : (_selectedRoleIndex == 1 ? 'FA1001' : 'CO1001');
+
     return Form(
       key: _formKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Segmented Role Selector
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceVariant,
+              borderRadius: AppRadius.borderMd,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _RoleSegmentButton(
+                    label: 'Student',
+                    isSelected: _selectedRoleIndex == 0,
+                    onTap: () => _onRoleChanged(0),
+                  ),
+                ),
+                Expanded(
+                  child: _RoleSegmentButton(
+                    label: 'Faculty',
+                    isSelected: _selectedRoleIndex == 1,
+                    onTap: () => _onRoleChanged(1),
+                  ),
+                ),
+                Expanded(
+                  child: _RoleSegmentButton(
+                    label: 'Coordinator',
+                    isSelected: _selectedRoleIndex == 2,
+                    onTap: () => _onRoleChanged(2),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+
           if (authState.status == AuthStatus.failure && authState.errorMessage != null) ...[
             AppStatusChip(
               label: authState.errorMessage!,
@@ -53,17 +109,17 @@ class _LoginFormState extends ConsumerState<LoginForm> {
             const SizedBox(height: AppSpacing.lg),
           ],
 
-          // Register Number / Username Input Field
+          // Username / Register Number / Employee ID Field
           AppTextField(
             controller: _usernameController,
-            labelText: 'Register Number',
-            hintText: 'RA2111003010001',
+            labelText: labelText,
+            hintText: hintText,
             prefixIcon: const Icon(Icons.badge_outlined, size: 20),
             enabled: !isAuthenticating,
             textInputAction: TextInputAction.next,
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
-                return 'Please enter your Register Number';
+                return 'Please enter your $labelText';
               }
               return null;
             },
@@ -144,33 +200,43 @@ class _LoginFormState extends ConsumerState<LoginForm> {
             size: AppButtonSize.large,
             onPressed: isAuthenticating ? null : _onLoginPressed,
           ),
-          const SizedBox(height: AppSpacing.lg),
-
-          // Don't have an account? Register Footer
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                "Don't have an account? ",
-                style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
-              ),
-              GestureDetector(
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Registration is managed by SRM IT Cell.')),
-                  );
-                },
-                child: Text(
-                  'Register',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: AppColors.primaryLight,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
         ],
+      ),
+    );
+  }
+}
+
+class _RoleSegmentButton extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _RoleSegmentButton({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primaryBlue : Colors.transparent,
+          borderRadius: AppRadius.borderMd,
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : AppColors.textSecondary,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            fontSize: 12,
+          ),
+        ),
       ),
     );
   }

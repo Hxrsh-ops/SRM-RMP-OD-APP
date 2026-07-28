@@ -20,7 +20,7 @@ final authLocalDataSourceProvider = Provider<AuthLocalDataSource>((ref) {
 
 final authenticationRepositoryProvider = Provider<AuthenticationRepository>((ref) {
   final localDataSource = ref.watch(authLocalDataSourceProvider);
-  return MockAuthenticationRepository(localDataSource);
+  return MockAuthenticationRepository(localDataSource: localDataSource);
 });
 
 final loginUseCaseProvider = Provider<LoginUseCase>((ref) {

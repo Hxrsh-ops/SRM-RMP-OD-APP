@@ -21,7 +21,7 @@ void main() {
     setUp(() {
       storage = MemorySecureStorage();
       localDataSource = AuthLocalDataSource(storage);
-      repository = MockAuthenticationRepository(localDataSource);
+      repository = MockAuthenticationRepository(localDataSource: localDataSource);
       loginUseCase = LoginUseCase(repository);
       logoutUseCase = LogoutUseCase(repository);
       restoreSessionUseCase = RestoreSessionUseCase(repository);
@@ -44,20 +44,20 @@ void main() {
     });
 
     test('Login fails for short password (< 6 chars)', () async {
-      await controller.login(username: 'RA2111003010001', password: '123');
+      await controller.login(username: 'RA2311003001', password: '123');
       expect(controller.state.status, AuthStatus.failure);
       expect(controller.state.errorMessage, contains('at least 6 characters'));
     });
 
     test('Login succeeds for valid non-empty fields and password >= 6 chars', () async {
-      await controller.login(username: 'RA2111003010001', password: 'password123');
+      await controller.login(username: 'RA2311003001', password: 'student123');
       expect(controller.state.status, AuthStatus.authenticated);
       expect(controller.state.session, isNotNull);
-      expect(controller.state.session?.username, 'RA2111003010001');
+      expect(controller.state.session?.username, 'RA2311003001');
     });
 
     test('Logout clears session and updates state to unauthenticated', () async {
-      await controller.login(username: 'RA2111003010001', password: 'password123');
+      await controller.login(username: 'RA2311003001', password: 'student123');
       expect(controller.state.status, AuthStatus.authenticated);
 
       await controller.logout();

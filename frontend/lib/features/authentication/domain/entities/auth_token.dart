@@ -1,16 +1,13 @@
-import 'package:equatable/equatable.dart';
-
-class AuthToken extends Equatable {
+class AuthToken {
   final String accessToken;
-  final String? refreshToken;
-  final DateTime? expiresAt;
+  final String refreshToken;
+  final DateTime expiresAt;
 
   const AuthToken({
     required this.accessToken,
-    this.refreshToken,
-    this.expiresAt,
+    required this.refreshToken,
+    required this.expiresAt,
   });
 
-  @override
-  List<Object?> get props => [accessToken, refreshToken, expiresAt];
+  bool get isExpired => DateTime.now().isAfter(expiresAt);
 }
