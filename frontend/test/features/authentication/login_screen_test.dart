@@ -18,7 +18,7 @@ void main() {
       expect(find.text('Register Number / Username'), findsOneWidget);
       expect(find.text('Password'), findsOneWidget);
       expect(find.text('Remember Me'), findsOneWidget);
-      expect(find.text('Sign In'), findsOneWidget);
+      expect(find.text('Sign In to Portal'), findsOneWidget);
     });
   });
 }
