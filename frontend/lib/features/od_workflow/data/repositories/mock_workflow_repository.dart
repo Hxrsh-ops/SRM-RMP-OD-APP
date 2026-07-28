@@ -27,9 +27,9 @@ class MockWorkflowRepository implements WorkflowRepository {
 
     final req1 = OdRequest(
       id: 'OD-2026-001',
-      studentId: 'RA2311003001',
-      studentName: 'Alex Vance',
-      registerNumber: 'RA2311003001',
+      studentId: 'RA2510026020400',
+      studentName: 'K.M. Harshanth',
+      registerNumber: 'RA2510026020400',
       reason: 'Hackathon / Competition',
       startDate: now.subtract(const Duration(days: 2)),
       endDate: now.add(const Duration(days: 1)),
@@ -39,7 +39,7 @@ class MockWorkflowRepository implements WorkflowRepository {
       organizer: 'Department of CSE & AI Club',
       additionalNotes: 'Team Leader for Antigravity Hackers',
       facultyAdvisorId: 'FA1001',
-      facultyAdvisorName: 'Dr. Karthik B (Faculty Advisor)',
+      facultyAdvisorName: 'Dr. Karthik B (Mock)',
       status: OdStatus.pendingFaculty,
       attachments: [
         AttachmentItem(
@@ -48,7 +48,7 @@ class MockWorkflowRepository implements WorkflowRepository {
           fileType: 'pdf',
           sizeBytes: 1024 * 450,
           fileUrl: 'https://example.com/att1.pdf',
-          uploadedBy: 'Alex Vance',
+          uploadedBy: 'K.M. Harshanth',
           uploadedAt: now.subtract(const Duration(days: 2)),
         ),
       ],
@@ -56,7 +56,7 @@ class MockWorkflowRepository implements WorkflowRepository {
         TimelineStep(
           id: 'TS-1',
           title: 'Request Submitted',
-          actorName: 'Alex Vance',
+          actorName: 'K.M. Harshanth',
           actorRole: 'Student',
           status: OdStatus.submitted,
           timestamp: now.subtract(const Duration(days: 2)),
@@ -65,7 +65,7 @@ class MockWorkflowRepository implements WorkflowRepository {
         TimelineStep(
           id: 'TS-2',
           title: 'Assigned to Faculty Advisor',
-          actorName: 'Dr. Karthik B',
+          actorName: 'Dr. Karthik B (Mock)',
           actorRole: 'Faculty Advisor',
           status: OdStatus.pendingFaculty,
           timestamp: now.subtract(const Duration(days: 2)),
@@ -78,9 +78,9 @@ class MockWorkflowRepository implements WorkflowRepository {
 
     final req2 = OdRequest(
       id: 'OD-2026-002',
-      studentId: 'RA2311003001',
-      studentName: 'Alex Vance',
-      registerNumber: 'RA2311003001',
+      studentId: 'RA2510026020400',
+      studentName: 'K.M. Harshanth',
+      registerNumber: 'RA2510026020400',
       reason: 'Sports Event',
       startDate: now.add(const Duration(days: 5)),
       endDate: now.add(const Duration(days: 6)),
@@ -90,14 +90,14 @@ class MockWorkflowRepository implements WorkflowRepository {
       organizer: 'SRM Sports Council',
       additionalNotes: 'Selected for University Varsity Team',
       facultyAdvisorId: 'FA1001',
-      facultyAdvisorName: 'Dr. Karthik B (Faculty Advisor)',
+      facultyAdvisorName: 'Dr. Karthik B (Mock)',
       status: OdStatus.pendingCoordinator,
       attachments: [],
       timeline: [
         TimelineStep(
           id: 'TS-3',
           title: 'Request Submitted',
-          actorName: 'Alex Vance',
+          actorName: 'K.M. Harshanth',
           actorRole: 'Student',
           status: OdStatus.submitted,
           timestamp: now.subtract(const Duration(days: 4)),
@@ -105,7 +105,7 @@ class MockWorkflowRepository implements WorkflowRepository {
         TimelineStep(
           id: 'TS-4',
           title: 'Faculty Approved',
-          actorName: 'Dr. Karthik B',
+          actorName: 'Dr. Karthik B (Mock)',
           actorRole: 'Faculty Advisor',
           status: OdStatus.facultyApproved,
           timestamp: now.subtract(const Duration(days: 1)),
@@ -123,7 +123,7 @@ class MockWorkflowRepository implements WorkflowRepository {
       comments: [
         CommentItem(
           id: 'C-1',
-          authorName: 'Dr. Karthik B',
+          authorName: 'Dr. Karthik B (Mock)',
           authorRole: 'Faculty Advisor',
           text: 'Approved. Attendance requirements verified.',
           timestamp: now.subtract(const Duration(days: 1)),
@@ -137,7 +137,7 @@ class MockWorkflowRepository implements WorkflowRepository {
     _notifications.addAll([
       NotificationItem(
         id: 'N-1',
-        recipientId: 'RA2311003001',
+        recipientId: 'RA2510026020400',
         title: 'OD Request Created',
         message: 'Your OD request for National AI Hackathon 2026 has been submitted.',
         timestamp: now.subtract(const Duration(days: 2)),
@@ -147,7 +147,7 @@ class MockWorkflowRepository implements WorkflowRepository {
         id: 'N-2',
         recipientId: 'FA1001',
         title: 'New OD Request Assigned',
-        message: 'Student Alex Vance submitted OD request OD-2026-001 for your approval.',
+        message: 'Student K.M. Harshanth submitted OD request OD-2026-001 for your approval.',
         timestamp: now.subtract(const Duration(days: 2)),
         requestId: 'OD-2026-001',
       ),
@@ -155,7 +155,7 @@ class MockWorkflowRepository implements WorkflowRepository {
         id: 'N-3',
         recipientId: 'CO1001',
         title: 'Faculty Approved OD Request',
-        message: 'Dr. Karthik B approved OD-2026-002. Awaiting final coordinator sign-off.',
+        message: 'Dr. Karthik B (Mock) approved OD-2026-002. Awaiting final coordinator sign-off.',
         timestamp: now.subtract(const Duration(days: 1)),
         requestId: 'OD-2026-002',
       ),
@@ -219,7 +219,7 @@ class MockWorkflowRepository implements WorkflowRepository {
       organizer: organizer,
       additionalNotes: additionalNotes,
       facultyAdvisorId: 'FA1001',
-      facultyAdvisorName: 'Dr. Karthik B (Faculty Advisor)',
+      facultyAdvisorName: 'Dr. Karthik B (Mock)',
       status: OdStatus.pendingFaculty,
       attachments: attachments ?? [],
       timeline: [
@@ -235,7 +235,7 @@ class MockWorkflowRepository implements WorkflowRepository {
         TimelineStep(
           id: 'TS-${now.millisecondsSinceEpoch}-2',
           title: 'Assigned to Faculty Advisor',
-          actorName: 'Dr. Karthik B',
+          actorName: 'Dr. Karthik B (Mock)',
           actorRole: 'Faculty Advisor',
           status: OdStatus.pendingFaculty,
           timestamp: now,
@@ -433,7 +433,7 @@ class MockWorkflowRepository implements WorkflowRepository {
   @override
   Future<List<NotificationItem>> getNotifications(String recipientId) async {
     await Future.delayed(const Duration(milliseconds: 100));
-    return _notifications.where((n) => n.recipientId == recipientId || n.recipientId == 'RA2311003001').toList();
+    return _notifications.where((n) => n.recipientId == recipientId || n.recipientId == 'RA2510026020400').toList();
   }
 
   @override

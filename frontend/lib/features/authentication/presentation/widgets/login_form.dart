@@ -15,7 +15,7 @@ class LoginForm extends ConsumerStatefulWidget {
 
 class _LoginFormState extends ConsumerState<LoginForm> {
   final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController(text: 'RA2311003001');
+  final _usernameController = TextEditingController(text: 'RA2510026020400');
   final _passwordController = TextEditingController(text: 'student123');
 
   int _selectedRoleIndex = 0; // 0: Student, 1: Faculty Advisor, 2: Coordinator
@@ -24,7 +24,7 @@ class _LoginFormState extends ConsumerState<LoginForm> {
     setState(() {
       _selectedRoleIndex = index;
       if (index == 0) {
-        _usernameController.text = 'RA2311003001';
+        _usernameController.text = 'RA2510026020400';
         _passwordController.text = 'student123';
       } else if (index == 1) {
         _usernameController.text = 'FA1001';
@@ -59,7 +59,7 @@ class _LoginFormState extends ConsumerState<LoginForm> {
     final isAuthenticating = authState.status == AuthStatus.authenticating;
 
     final String labelText = _selectedRoleIndex == 0 ? 'Register Number' : 'Employee ID';
-    final String hintText = _selectedRoleIndex == 0 ? 'RA2311003001' : (_selectedRoleIndex == 1 ? 'FA1001' : 'CO1001');
+    final String hintText = _selectedRoleIndex == 0 ? 'RA2510026020400' : (_selectedRoleIndex == 1 ? 'FA1001' : 'CO1001');
 
     return Form(
       key: _formKey,

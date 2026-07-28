@@ -1,4 +1,3 @@
-import '../../domain/entities/auth_token.dart';
 import '../../domain/entities/user_session.dart';
 import '../../domain/repositories/authentication_repository.dart';
 import '../datasources/auth_local_datasource.dart';
@@ -22,21 +21,26 @@ class MockAuthenticationRepository implements AuthenticationRepository {
     final trimmedPassword = password.trim();
 
     String role = 'STUDENT';
-    String name = 'Alex Vance';
+    String name = 'K.M. Harshanth';
+    String email = 'hk7793@srmist.edu.in';
 
-    if (trimmedUsername == 'RA2311003001' && trimmedPassword == 'student123') {
+    if (trimmedUsername == 'RA2510026020400' && trimmedPassword == 'student123') {
       role = 'STUDENT';
-      name = 'Alex Vance (Student)';
+      name = 'K.M. Harshanth';
+      email = 'hk7793@srmist.edu.in';
     } else if (trimmedUsername == 'FA1001' && trimmedPassword == 'faculty123') {
       role = 'FACULTY_ADVISOR';
       name = 'Dr. Karthik B (Faculty Advisor)';
+      email = 'karthikb@srmist.edu.in';
     } else if (trimmedUsername == 'CO1001' && trimmedPassword == 'coord123') {
       role = 'COORDINATOR';
       name = 'Prof. Ramesh Kumar (Coordinator)';
+      email = 'rameshk@srmist.edu.in';
     } else if (trimmedPassword.length < 6) {
       throw Exception('Invalid password. Minimum 6 characters required.');
     } else {
       name = 'User $trimmedUsername';
+      email = '$trimmedUsername@srmist.edu.in';
     }
 
     final tokenModel = AuthTokenModel(
@@ -48,7 +52,7 @@ class MockAuthenticationRepository implements AuthenticationRepository {
     final sessionModel = UserSessionModel(
       userId: 'usr_$trimmedUsername',
       username: trimmedUsername,
-      email: '$trimmedUsername@srmist.edu.in',
+      email: email,
       name: name,
       role: role,
       token: tokenModel,

@@ -121,7 +121,7 @@ class _HomeDashboardView extends ConsumerWidget {
                 Row(
                   children: [
                     AppAvatarPlaceholder(
-                      name: session?.name ?? 'Alex Vance',
+                      name: session?.name ?? 'K.M. Harshanth',
                       size: 44,
                     ),
                     const SizedBox(width: AppSpacing.md),
@@ -130,7 +130,7 @@ class _HomeDashboardView extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            session?.name ?? 'Alex Vance',
+                            session?.name ?? 'K.M. Harshanth',
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 18,
@@ -141,7 +141,7 @@ class _HomeDashboardView extends ConsumerWidget {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            '${session?.role ?? 'STUDENT'} • ${session?.username ?? 'RA2311003001'}',
+                            '${session?.role ?? 'STUDENT'} • ${session?.username ?? 'RA2510026020400'}',
                             style: const TextStyle(
                               color: AppColors.accentYellow,
                               fontSize: 12,
@@ -315,14 +315,14 @@ class _FacultyDashboardView extends ConsumerWidget {
         children: [
           Row(
             children: [
-              AppAvatarPlaceholder(name: session?.name ?? 'Dr. Karthik B', size: 48),
+              AppAvatarPlaceholder(name: session?.name ?? 'Dr. Karthik B (Mock)', size: 48),
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      session?.name ?? 'Dr. Karthik B',
+                      session?.name ?? 'Dr. Karthik B (Mock)',
                       style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -531,7 +531,7 @@ class _CreateOdRequestFlowViewState extends ConsumerState<_CreateOdRequestFlowVi
           fileType: 'pdf',
           sizeBytes: 1024 * 380,
           fileUrl: 'https://example.com/doc.pdf',
-          uploadedBy: 'Alex Vance',
+          uploadedBy: 'K.M. Harshanth',
           uploadedAt: now,
         ),
       );
@@ -609,7 +609,6 @@ class _CreateOdRequestFlowViewState extends ConsumerState<_CreateOdRequestFlowVi
                 child: RadioListTile<String>(
                   title: Text(reason, style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.w500)),
                   value: reason,
-                  // Ignore deprecated warning explicitly as per standard
                   // ignore: deprecated_member_use
                   groupValue: _selectedReason,
                   activeColor: AppColors.primaryBlue,
@@ -645,7 +644,7 @@ class _CreateOdRequestFlowViewState extends ConsumerState<_CreateOdRequestFlowVi
               ],
             ),
           ]
-          // STEP 3: DETAILS (FIXED OVERFLOW BY 26 PIXELS)
+          // STEP 3: DETAILS
           else if (_currentStep == 3) ...[
             const AppSectionHeader(
               title: 'Step 3: Event Details',
@@ -772,7 +771,7 @@ class _CreateOdRequestFlowViewState extends ConsumerState<_CreateOdRequestFlowVi
             // Automatic Faculty Advisor Assignment Box
             const AppInfoCard(
               title: 'Assigned Faculty Advisor (Automatic)',
-              description: 'Dr. Karthik B (FA1001) - Class Counselor',
+              description: 'Dr. Karthik B (Mock) - Class Counselor',
               icon: Icons.assignment_ind_outlined,
             ),
 
@@ -786,9 +785,9 @@ class _CreateOdRequestFlowViewState extends ConsumerState<_CreateOdRequestFlowVi
                     label: 'Submit Request',
                     onPressed: () {
                       ref.read(workflowControllerProvider.notifier).submitRequest(
-                            studentId: session?.username ?? 'RA2311003001',
-                            studentName: session?.name ?? 'Alex Vance',
-                            registerNumber: session?.username ?? 'RA2311003001',
+                            studentId: session?.username ?? 'RA2510026020400',
+                            studentName: session?.name ?? 'K.M. Harshanth',
+                            registerNumber: session?.username ?? 'RA2510026020400',
                             reason: _selectedReason,
                             startDate: DateTime.now(),
                             endDate: DateTime.now().add(const Duration(days: 2)),
@@ -800,7 +799,7 @@ class _CreateOdRequestFlowViewState extends ConsumerState<_CreateOdRequestFlowVi
                             attachments: _attachments,
                           );
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('OD Request submitted successfully! Assigned to Dr. Karthik B.')),
+                        const SnackBar(content: Text('OD Request submitted successfully! Assigned to Dr. Karthik B (Mock).')),
                       );
                       setState(() {
                         _currentStep = 1;
@@ -1008,6 +1007,7 @@ class _ProfileView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final session = ref.watch(authControllerProvider).session;
+    final isStudent = (session?.role ?? 'STUDENT') == 'STUDENT';
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -1026,11 +1026,16 @@ class _ProfileView extends ConsumerWidget {
           AppCard(
             child: Column(
               children: [
-                AppAvatarPlaceholder(name: session?.name ?? 'User Account', size: 72),
+                AppAvatarPlaceholder(name: session?.name ?? 'K.M. Harshanth', size: 72),
                 const SizedBox(height: AppSpacing.md),
-                Text(session?.name ?? 'User Account', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
                 Text(
-                  'Role: ${session?.role ?? 'STUDENT'} • ID: ${session?.username ?? 'RA2311003001'}',
+                  session?.name ?? 'K.M. Harshanth',
+                  style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  'Role: ${session?.role ?? 'STUDENT'} • ID: ${session?.username ?? 'RA2510026020400'}',
                   style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -1038,9 +1043,18 @@ class _ProfileView extends ConsumerWidget {
                 const SizedBox(height: AppSpacing.lg),
                 const Divider(),
                 const SizedBox(height: AppSpacing.md),
-                const _ProfileDetailRow(label: 'Campus', value: 'SRM Ramapuram Campus'),
-                const _ProfileDetailRow(label: 'Institution', value: 'SRM Institute of Science & Tech'),
-                _ProfileDetailRow(label: 'Role Privilege', value: session?.role ?? 'STUDENT'),
+                if (isStudent) ...[
+                  const _ProfileDetailRow(label: 'Program', value: 'B.Tech CSE (AI & ML)'),
+                  const _ProfileDetailRow(label: 'Year & Section', value: '2nd Year - Sec G'),
+                  _ProfileDetailRow(label: 'Student Email', value: session?.email ?? 'hk7793@srmist.edu.in'),
+                  const _ProfileDetailRow(label: 'Faculty Advisor', value: 'Dr. Karthik B (Mock)'),
+                  const _ProfileDetailRow(label: 'Campus', value: 'SRM Ramapuram Campus'),
+                  const _ProfileDetailRow(label: 'Institution', value: 'SRM Institute of Science & Tech'),
+                ] else ...[
+                  const _ProfileDetailRow(label: 'Campus', value: 'SRM Ramapuram Campus'),
+                  const _ProfileDetailRow(label: 'Institution', value: 'SRM Institute of Science & Tech'),
+                  _ProfileDetailRow(label: 'Role Privilege', value: session?.role ?? 'STUDENT'),
+                ],
               ],
             ),
           ),
