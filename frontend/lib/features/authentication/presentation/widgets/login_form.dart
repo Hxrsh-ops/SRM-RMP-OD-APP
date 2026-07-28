@@ -148,46 +148,55 @@ class _LoginFormState extends ConsumerState<LoginForm> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: Checkbox(
-                      value: authState.rememberMe,
-                      activeColor: AppColors.primaryBlue,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(4),
+              Flexible(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: Checkbox(
+                        value: authState.rememberMe,
+                        activeColor: AppColors.primaryBlue,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        onChanged: isAuthenticating
+                            ? null
+                            : (val) => ref
+                                .read(authControllerProvider.notifier)
+                                .toggleRememberMe(val ?? false),
                       ),
-                      onChanged: isAuthenticating
-                          ? null
-                          : (val) => ref
-                              .read(authControllerProvider.notifier)
-                              .toggleRememberMe(val ?? false),
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  Text(
-                    'Remember me',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-              AppTextButton(
-                label: 'Forgot Password?',
-                size: AppButtonSize.small,
-                onPressed: isAuthenticating
-                    ? null
-                    : () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Password reset placeholder. Contact HOD/Admin.'),
+                    const SizedBox(width: AppSpacing.xs),
+                    Flexible(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'Remember me',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: AppColors.textSecondary,
                           ),
-                        );
-                      },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Flexible(
+                child: AppTextButton(
+                  label: 'Forgot Password?',
+                  size: AppButtonSize.small,
+                  onPressed: isAuthenticating
+                      ? null
+                      : () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Password reset placeholder. Contact HOD/Admin.'),
+                            ),
+                          );
+                        },
+                ),
               ),
             ],
           ),
@@ -223,18 +232,22 @@ class _RoleSegmentButton extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm, horizontal: AppSpacing.xs),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.primaryBlue : Colors.transparent,
           borderRadius: AppRadius.borderMd,
         ),
         alignment: Alignment.center,
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? Colors.white : AppColors.textSecondary,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-            fontSize: 12,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            label,
+            maxLines: 1,
+            style: TextStyle(
+              color: isSelected ? Colors.white : AppColors.textSecondary,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+              fontSize: 12,
+            ),
           ),
         ),
       ),

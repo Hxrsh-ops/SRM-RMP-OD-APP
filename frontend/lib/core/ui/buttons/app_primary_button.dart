@@ -115,12 +115,18 @@ class _AppPrimaryButtonState extends State<AppPrimaryButton> {
                   Icon(widget.prefixIcon, size: _iconSize, color: foregroundColor),
                   const SizedBox(width: AppSpacing.sm),
                 ],
-                Text(
-                  widget.label,
-                  style: TextStyle(
-                    fontSize: _fontSize,
-                    fontWeight: FontWeight.w600,
-                    color: foregroundColor,
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      widget.label,
+                      maxLines: 1,
+                      style: TextStyle(
+                        fontSize: _fontSize,
+                        fontWeight: FontWeight.w600,
+                        color: foregroundColor,
+                      ),
+                    ),
                   ),
                 ),
                 if (!widget.isLoading && widget.suffixIcon != null) ...[

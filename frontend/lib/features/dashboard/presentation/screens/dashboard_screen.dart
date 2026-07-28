@@ -98,7 +98,6 @@ class _HomeDashboardView extends ConsumerWidget {
     final requests = workflowState.requests;
 
     final pendingCount = requests.where((r) => r.status == OdStatus.pendingFaculty || r.status == OdStatus.pendingCoordinator).length;
-    final approvedCount = requests.where((r) => r.status == OdStatus.completed).length;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.only(bottom: AppSpacing.xxl),
@@ -137,6 +136,8 @@ class _HomeDashboardView extends ConsumerWidget {
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 2),
                           Text(
@@ -146,6 +147,8 @@ class _HomeDashboardView extends ConsumerWidget {
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
@@ -226,25 +229,33 @@ class _HomeDashboardView extends ConsumerWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _QuickActionButton(
-                      icon: Icons.add_circle_outline_rounded,
-                      label: 'Create OD',
-                      onTap: () => onNavigate(2),
+                    Expanded(
+                      child: _QuickActionButton(
+                        icon: Icons.add_circle_outline_rounded,
+                        label: 'Create OD',
+                        onTap: () => onNavigate(2),
+                      ),
                     ),
-                    _QuickActionButton(
-                      icon: Icons.assignment_outlined,
-                      label: 'My ODs',
-                      onTap: () => onNavigate(1),
+                    Expanded(
+                      child: _QuickActionButton(
+                        icon: Icons.assignment_outlined,
+                        label: 'My ODs',
+                        onTap: () => onNavigate(1),
+                      ),
                     ),
-                    _QuickActionButton(
-                      icon: Icons.history_rounded,
-                      label: 'Timeline',
-                      onTap: () => onNavigate(1),
+                    Expanded(
+                      child: _QuickActionButton(
+                        icon: Icons.history_rounded,
+                        label: 'Timeline',
+                        onTap: () => onNavigate(1),
+                      ),
                     ),
-                    _QuickActionButton(
-                      icon: Icons.notifications_active_outlined,
-                      label: 'Alerts',
-                      onTap: () => onNavigate(3),
+                    Expanded(
+                      child: _QuickActionButton(
+                        icon: Icons.notifications_active_outlined,
+                        label: 'Alerts',
+                        onTap: () => onNavigate(3),
+                      ),
                     ),
                   ],
                 ),
@@ -310,8 +321,18 @@ class _FacultyDashboardView extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(session?.name ?? 'Dr. Karthik B', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-                    const Text('Faculty Advisor • Computer Science', style: TextStyle(color: AppColors.primaryLight, fontSize: 12, fontWeight: FontWeight.bold)),
+                    Text(
+                      session?.name ?? 'Dr. Karthik B',
+                      style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const Text(
+                      'Faculty Advisor • Computer Science',
+                      style: TextStyle(color: AppColors.primaryLight, fontSize: 12, fontWeight: FontWeight.bold),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ],
                 ),
               ),
@@ -400,8 +421,18 @@ class _CoordinatorDashboardView extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(session?.name ?? 'Prof. Ramesh Kumar', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-                    const Text('OD Workflow Coordinator • SRM Ramapuram', style: TextStyle(color: AppColors.primaryLight, fontSize: 12, fontWeight: FontWeight.bold)),
+                    Text(
+                      session?.name ?? 'Prof. Ramesh Kumar',
+                      style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const Text(
+                      'OD Workflow Coordinator • SRM Ramapuram',
+                      style: TextStyle(color: AppColors.primaryLight, fontSize: 12, fontWeight: FontWeight.bold),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ],
                 ),
               ),
@@ -568,12 +599,23 @@ class _CreateOdRequestFlowViewState extends ConsumerState<_CreateOdRequestFlowVi
               'Competition',
               'Others',
             ].map((reason) {
-              return RadioListTile<String>(
-                title: Text(reason, style: const TextStyle(fontWeight: FontWeight.w500)),
-                value: reason,
-                groupValue: _selectedReason,
-                activeColor: AppColors.primaryBlue,
-                onChanged: (val) => setState(() => _selectedReason = val!),
+              final isSelected = _selectedReason == reason;
+              return Container(
+                margin: const EdgeInsets.only(bottom: AppSpacing.xs),
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.primaryContainer.withValues(alpha: 0.3) : Colors.transparent,
+                  borderRadius: AppRadius.borderMd,
+                ),
+                child: RadioListTile<String>(
+                  title: Text(reason, style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.w500)),
+                  value: reason,
+                  // Ignore deprecated warning explicitly as per standard
+                  // ignore: deprecated_member_use
+                  groupValue: _selectedReason,
+                  activeColor: AppColors.primaryBlue,
+                  // ignore: deprecated_member_use
+                  onChanged: (val) => setState(() => _selectedReason = val!),
+                ),
               );
             }),
             const SizedBox(height: AppSpacing.xxl),
@@ -598,12 +640,12 @@ class _CreateOdRequestFlowViewState extends ConsumerState<_CreateOdRequestFlowVi
             Row(
               children: [
                 Expanded(child: AppOutlineButton(label: 'Back', onPressed: () => setState(() => _currentStep = 1))),
-                const SizedBox(width: AppSpacing.md),
+                const SizedBox(width: AppSpacing.sm),
                 Expanded(child: AppPrimaryButton(label: 'Continue to Details', onPressed: () => setState(() => _currentStep = 3))),
               ],
             ),
           ]
-          // STEP 3: DETAILS
+          // STEP 3: DETAILS (FIXED OVERFLOW BY 26 PIXELS)
           else if (_currentStep == 3) ...[
             const AppSectionHeader(
               title: 'Step 3: Event Details',
@@ -621,7 +663,7 @@ class _CreateOdRequestFlowViewState extends ConsumerState<_CreateOdRequestFlowVi
             Row(
               children: [
                 Expanded(child: AppOutlineButton(label: 'Back', onPressed: () => setState(() => _currentStep = 2))),
-                const SizedBox(width: AppSpacing.md),
+                const SizedBox(width: AppSpacing.sm),
                 Expanded(child: AppPrimaryButton(label: 'Continue to Attachments', onPressed: () => setState(() => _currentStep = 4))),
               ],
             ),
@@ -671,8 +713,8 @@ class _CreateOdRequestFlowViewState extends ConsumerState<_CreateOdRequestFlowVi
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(att.fileName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                              Text('Uploaded by ${att.uploadedBy} • ${att.sizeFormatted}', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                              Text(att.fileName, style: const TextStyle(fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
+                              Text('Uploaded by ${att.uploadedBy} • ${att.sizeFormatted}', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary), maxLines: 1, overflow: TextOverflow.ellipsis),
                             ],
                           ),
                         ),
@@ -695,12 +737,12 @@ class _CreateOdRequestFlowViewState extends ConsumerState<_CreateOdRequestFlowVi
             Row(
               children: [
                 Expanded(child: AppOutlineButton(label: 'Back', onPressed: () => setState(() => _currentStep = 3))),
-                const SizedBox(width: AppSpacing.md),
+                const SizedBox(width: AppSpacing.sm),
                 Expanded(child: AppPrimaryButton(label: 'Continue to Review', onPressed: () => setState(() => _currentStep = 5))),
               ],
             ),
           ]
-          // STEP 5: REVIEW & SUBMIT (WITH AUTOMATIC FACULTY ADVISOR ASSIGNMENT)
+          // STEP 5: REVIEW & SUBMIT
           else ...[
             const AppSectionHeader(
               title: 'Step 5: Review & Submit',
@@ -715,7 +757,7 @@ class _CreateOdRequestFlowViewState extends ConsumerState<_CreateOdRequestFlowVi
                   Text(_selectedReason, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                   const AppDivider(),
                   const Text('Event Details', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-                  Text('${_purposeController.text} • ${_venueController.text}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  Text('${_purposeController.text} • ${_venueController.text}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14), maxLines: 2, overflow: TextOverflow.ellipsis),
                   const AppDivider(),
                   const Text('Attachments', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
                   Text(
@@ -738,7 +780,7 @@ class _CreateOdRequestFlowViewState extends ConsumerState<_CreateOdRequestFlowVi
             Row(
               children: [
                 Expanded(child: AppOutlineButton(label: 'Back', onPressed: () => setState(() => _currentStep = 4))),
-                const SizedBox(width: AppSpacing.md),
+                const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: AppPrimaryButton(
                     label: 'Submit Request',
@@ -938,9 +980,9 @@ class _NotificationsView extends ConsumerWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(n.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                              Text(n.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
                               const SizedBox(height: 2),
-                              Text(n.message, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                              Text(n.message, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary), maxLines: 2, overflow: TextOverflow.ellipsis),
                             ],
                           ),
                         ),
@@ -986,10 +1028,12 @@ class _ProfileView extends ConsumerWidget {
               children: [
                 AppAvatarPlaceholder(name: session?.name ?? 'User Account', size: 72),
                 const SizedBox(height: AppSpacing.md),
-                Text(session?.name ?? 'User Account', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                Text(session?.name ?? 'User Account', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
                 Text(
                   'Role: ${session?.role ?? 'STUDENT'} • ID: ${session?.username ?? 'RA2311003001'}',
                   style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 const Divider(),
@@ -1013,15 +1057,6 @@ class _ProfileView extends ConsumerWidget {
   }
 }
 
-class _SettingsView extends StatelessWidget {
-  const _SettingsView();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: Text('Settings Placeholder')));
-  }
-}
-
 // -----------------------------------------------------------------------------
 // HELPER TILES
 // -----------------------------------------------------------------------------
@@ -1042,15 +1077,18 @@ class _OdRequestTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(request.reason, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                Text(request.reason, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 2),
                 Text(
                   '${request.studentName} • ${request.durationDays} Days (${request.startDate.toString().split(' ')[0]})',
                   style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
+          const SizedBox(width: AppSpacing.xs),
           AppStatusChip(label: request.status.displayName, statusType: request.status.statusType),
         ],
       ),
@@ -1074,17 +1112,17 @@ class _ScheduleCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(subject, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+          Text(subject, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary), maxLines: 1, overflow: TextOverflow.ellipsis),
           const SizedBox(height: 4),
           Row(
             children: [
               const Icon(Icons.access_time_rounded, size: 12, color: AppColors.primaryLight),
               const SizedBox(width: 4),
-              Text(time, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+              Expanded(child: Text(time, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary), maxLines: 1, overflow: TextOverflow.ellipsis)),
             ],
           ),
           const SizedBox(height: 2),
-          Text(venue, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+          Text(venue, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary), maxLines: 1, overflow: TextOverflow.ellipsis),
         ],
       ),
     );
@@ -1105,10 +1143,13 @@ class _SummaryStatCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          Text(title, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary), maxLines: 1, overflow: TextOverflow.ellipsis),
           const SizedBox(height: 4),
-          Text(value, style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: accentColor)),
-          Text(subtext, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(value, style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: accentColor)),
+          ),
+          Text(subtext, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary), maxLines: 1, overflow: TextOverflow.ellipsis),
         ],
       ),
     );
@@ -1135,7 +1176,10 @@ class _QuickActionButton extends StatelessWidget {
             child: Icon(icon, color: AppColors.primaryBlue, size: 22),
           ),
           const SizedBox(height: 6),
-          Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500), maxLines: 1),
+          ),
         ],
       ),
     );
@@ -1155,8 +1199,8 @@ class _ProfileDetailRow extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+          Expanded(child: Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis)),
+          Expanded(child: Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), textAlign: TextAlign.right, maxLines: 1, overflow: TextOverflow.ellipsis)),
         ],
       ),
     );

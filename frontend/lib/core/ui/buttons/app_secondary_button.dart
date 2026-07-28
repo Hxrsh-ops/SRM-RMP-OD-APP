@@ -58,7 +58,12 @@ class AppSecondaryButton extends StatelessWidget {
                     Icon(prefixIcon, size: size.iconSize),
                     const SizedBox(width: AppSpacing.xs),
                   ],
-                  Text(label),
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(label, maxLines: 1),
+                    ),
+                  ),
                   if (suffixIcon != null) ...[
                     const SizedBox(width: AppSpacing.xs),
                     Icon(suffixIcon, size: size.iconSize),
