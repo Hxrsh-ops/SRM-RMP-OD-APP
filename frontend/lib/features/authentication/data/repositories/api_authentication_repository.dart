@@ -35,20 +35,21 @@ class ApiAuthenticationRepository implements AuthenticationRepository {
     await storageService.write(key: ApiConstants.tokenKey, value: accessToken);
     await storageService.write(key: ApiConstants.refreshTokenKey, value: refreshToken);
 
-    final session = UserSession(
+    return UserSession(
       userId: userData['id'].toString(),
       username: userData['username'].toString(),
       name: userData['full_name'].toString(),
       email: userData['email'].toString(),
       role: userData['role'].toString(),
+      program: userData['program']?.toString() ?? 'B.Tech CSE (AI & ML)',
+      yearSection: userData['year_section']?.toString() ?? '2nd Year - Sec G',
+      assignedFacultyName: 'Dr. Karthik B (Mock)',
       token: AuthToken(
         accessToken: accessToken,
         refreshToken: refreshToken,
         expiresAt: DateTime.now().add(const Duration(hours: 24)),
       ),
     );
-
-    return session;
   }
 
   @override
@@ -67,6 +68,9 @@ class ApiAuthenticationRepository implements AuthenticationRepository {
         name: userData['full_name'].toString(),
         email: userData['email'].toString(),
         role: userData['role'].toString(),
+        program: userData['program']?.toString() ?? 'B.Tech CSE (AI & ML)',
+        yearSection: userData['year_section']?.toString() ?? '2nd Year - Sec G',
+        assignedFacultyName: 'Dr. Karthik B (Mock)',
         token: AuthToken(
           accessToken: token,
           refreshToken: refreshToken,

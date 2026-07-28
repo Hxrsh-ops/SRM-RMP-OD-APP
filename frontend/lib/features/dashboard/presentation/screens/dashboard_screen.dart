@@ -1009,63 +1009,70 @@ class _ProfileView extends ConsumerWidget {
     final session = ref.watch(authControllerProvider).session;
     final isStudent = (session?.role ?? 'STUDENT') == 'STUDENT';
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'User Profile',
-            style: theme.textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: AppColors.primaryBlue,
+    return RefreshIndicator(
+      onRefresh: () async {
+        await ref.read(authControllerProvider.notifier).restoreSession();
+      },
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'User Profile',
+              style: theme.textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppColors.primaryBlue,
+              ),
             ),
-          ),
-          const SizedBox(height: AppSpacing.xl),
+            const SizedBox(height: AppSpacing.xl),
 
-          AppCard(
-            child: Column(
-              children: [
-                AppAvatarPlaceholder(name: session?.name ?? 'K.M. Harshanth', size: 72),
-                const SizedBox(height: AppSpacing.md),
-                Text(
-                  session?.name ?? 'K.M. Harshanth',
-                  style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  'Role: ${session?.role ?? 'STUDENT'} • ID: ${session?.username ?? 'RA2510026020400'}',
-                  style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                const Divider(),
-                const SizedBox(height: AppSpacing.md),
-                if (isStudent) ...[
-                  const _ProfileDetailRow(label: 'Program', value: 'B.Tech CSE (AI & ML)'),
-                  const _ProfileDetailRow(label: 'Year & Section', value: '2nd Year - Sec G'),
-                  _ProfileDetailRow(label: 'Student Email', value: session?.email ?? 'hk7793@srmist.edu.in'),
-                  const _ProfileDetailRow(label: 'Faculty Advisor', value: 'Dr. Karthik B (Mock)'),
-                  const _ProfileDetailRow(label: 'Campus', value: 'SRM Ramapuram Campus'),
-                  const _ProfileDetailRow(label: 'Institution', value: 'SRM Institute of Science & Tech'),
-                ] else ...[
-                  const _ProfileDetailRow(label: 'Campus', value: 'SRM Ramapuram Campus'),
-                  const _ProfileDetailRow(label: 'Institution', value: 'SRM Institute of Science & Tech'),
-                  _ProfileDetailRow(label: 'Role Privilege', value: session?.role ?? 'STUDENT'),
+            AppCard(
+              child: Column(
+                children: [
+                  AppAvatarPlaceholder(name: session?.name ?? 'K.M. Harshanth', size: 72),
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    session?.name ?? 'K.M. Harshanth',
+                    style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    'Role: ${session?.role ?? 'STUDENT'} • ID: ${session?.username ?? 'RA2510026020400'}',
+                    style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  const Divider(),
+                  const SizedBox(height: AppSpacing.md),
+                  if (isStudent) ...[
+                    _ProfileDetailRow(label: 'Program', value: session?.program ?? 'B.Tech CSE (AI & ML)'),
+                    _ProfileDetailRow(label: 'Year & Section', value: session?.yearSection ?? '2nd Year - Sec G'),
+                    _ProfileDetailRow(label: 'Student Email', value: session?.email ?? 'hk7793@srmist.edu.in'),
+                    _ProfileDetailRow(label: 'Faculty Advisor', value: session?.assignedFacultyName ?? 'Dr. Karthik B (Mock)'),
+                    const _ProfileDetailRow(label: 'Campus', value: 'SRM Ramapuram Campus'),
+                    const _ProfileDetailRow(label: 'Institution', value: 'SRM Institute of Science & Tech'),
+                  ] else ...[
+                    _ProfileDetailRow(label: 'Email', value: session?.email ?? 'karthikb@srmist.edu.in'),
+                    const _ProfileDetailRow(label: 'Campus', value: 'SRM Ramapuram Campus'),
+                    const _ProfileDetailRow(label: 'Institution', value: 'SRM Institute of Science & Tech'),
+                    _ProfileDetailRow(label: 'Role Privilege', value: session?.role ?? 'STUDENT'),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
 
-          const SizedBox(height: AppSpacing.xxl),
+            const SizedBox(height: AppSpacing.xxl),
 
-          AppDestructiveButton(
-            label: 'Sign Out of Account',
-            onPressed: () => ref.read(authControllerProvider.notifier).logout(),
-          ),
-        ],
+            AppDestructiveButton(
+              label: 'Sign Out of Account',
+              onPressed: () => ref.read(authControllerProvider.notifier).logout(),
+            ),
+          ],
+        ),
       ),
     );
   }
