@@ -5,7 +5,7 @@ import 'package:srm_rmp_od_frontend/features/authentication/presentation/screens
 
 void main() {
   group('LoginScreen Widget Tests', () {
-    testWidgets('Renders LoginScreen branding and form fields correctly', (WidgetTester tester) async {
+    testWidgets('Renders the UI Kit login screen and form fields', (WidgetTester tester) async {
       await tester.pumpWidget(
         const ProviderScope(
           child: MaterialApp(
@@ -14,11 +14,11 @@ void main() {
         ),
       );
 
-      expect(find.text('SRM RMP OD'), findsOneWidget);
-      expect(find.text('Register Number / Username'), findsOneWidget);
+      expect(find.text('Welcome Back'), findsOneWidget);
+      expect(find.text('Register Number'), findsOneWidget);
       expect(find.text('Password'), findsOneWidget);
-      expect(find.text('Remember Me'), findsOneWidget);
-      expect(find.text('Sign In to Portal'), findsOneWidget);
+      expect(find.text('Remember me'), findsOneWidget);
+      expect(find.text('Sign In'), findsOneWidget);
     });
   });
 }
