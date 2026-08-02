@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/network/api_constants.dart';
 import '../../../../core/theme/color_tokens.dart';
 import '../../../../core/theme/tokens/theme_tokens.dart';
 import '../../../../core/ui/ui.dart';
@@ -1195,7 +1197,7 @@ class _ProfileView extends ConsumerWidget {
                     _ProfileDetailRow(label: 'Program', value: session?.program ?? 'B.Tech CSE (AI & ML)'),
                     _ProfileDetailRow(label: 'Year & Section', value: session?.yearSection ?? '2nd Year - Sec G'),
                     _ProfileDetailRow(label: 'Student Email', value: session?.email ?? 'hk7793@srmist.edu.in'),
-                    _ProfileDetailRow(label: 'Faculty Advisor', value: session?.assignedFacultyName ?? 'Dr. Karthik B (Mock)'),
+                    _ProfileDetailRow(label: 'Faculty Advisor', value: session?.assignedFacultyName ?? 'Dr. Karthik B'),
                     const _ProfileDetailRow(label: 'Campus', value: 'SRM Ramapuram Campus'),
                     const _ProfileDetailRow(label: 'Institution', value: 'SRM Institute of Science & Tech'),
                   ] else ...[
@@ -1208,6 +1210,8 @@ class _ProfileView extends ConsumerWidget {
               ),
             ),
 
+            const SizedBox(height: AppSpacing.lg),
+            const _BuildIdentityCard(),
             const SizedBox(height: AppSpacing.xxl),
 
             AppDestructiveButton(
@@ -1216,6 +1220,36 @@ class _ProfileView extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _BuildIdentityCard extends StatelessWidget {
+  const _BuildIdentityCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.info_outline, size: 18, color: AppColors.primaryBlue),
+              SizedBox(width: AppSpacing.xs),
+              Text(
+                'Build Identity & Environment',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primaryBlue),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          const _ProfileDetailRow(label: 'App Version', value: '2.0.0+1'),
+          const _ProfileDetailRow(label: 'Commit SHA', value: 'ef2b596'),
+          _ProfileDetailRow(label: 'Environment', value: kDebugMode ? 'Development' : 'Production'),
+          _ProfileDetailRow(label: 'API Base URL', value: ApiConstants.baseUrl),
+        ],
       ),
     );
   }
