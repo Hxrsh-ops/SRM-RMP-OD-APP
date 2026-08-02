@@ -1,5 +1,6 @@
 from uuid import UUID
 from datetime import datetime
+from typing import Optional
 from pydantic import BaseModel, ConfigDict
 
 class AttachmentBase(BaseModel):
@@ -9,6 +10,7 @@ class AttachmentBase(BaseModel):
     file_url: str
     uploaded_by: str
     uploaded_at: datetime
+    document_category: Optional[str] = "supporting_document"
 
 class AttachmentCreate(AttachmentBase):
     pass

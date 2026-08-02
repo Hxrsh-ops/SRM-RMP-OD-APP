@@ -1,7 +1,7 @@
 def test_login_student_success(client):
     response = client.post(
         "/api/v1/auth/login",
-        data={"username": "RA2510026020400", "password": "student123"}
+        data={"username": "RA2511026020400", "password": "student123"}
     )
     assert response.status_code == 200
     data = response.json()
@@ -19,14 +19,14 @@ def test_login_faculty_success(client):
 def test_login_invalid_password(client):
     response = client.post(
         "/api/v1/auth/login",
-        data={"username": "RA2510026020400", "password": "wrongpassword"}
+        data={"username": "RA2511026020400", "password": "wrongpassword"}
     )
     assert response.status_code == 401
 
 def test_get_me_profile(client):
     login_res = client.post(
         "/api/v1/auth/login",
-        data={"username": "RA2510026020400", "password": "student123"}
+        data={"username": "RA2511026020400", "password": "student123"}
     )
     token = login_res.json()["access_token"]
 
@@ -36,6 +36,23 @@ def test_get_me_profile(client):
     )
     assert response.status_code == 200
     data = response.json()
-    assert data["username"] == "RA2510026020400"
+    assert data["username"] == "RA2511026020400"
     assert data["full_name"] == "K.M. Harshanth"
     assert data["role"] == "STUDENT"
+    assert data["assigned_faculty_name"] == "Dr. Karthik B"
+
+def test_refresh_token(client):
+    login_res = client.post(
+        "/api/v1/auth/login/json",
+        json={"username": "RA2511026020400", "password": "student123"}
+    )
+    refresh_token = login_res.json()["refresh_token"]
+
+    refresh_res = client.post(
+        "/api/v1/auth/refresh",
+        json={"refresh_token": refresh_token}
+    )
+    assert refresh_res.status_code == 200
+    data = refresh_res.json()
+    assert "access_token" in data
+    assert "refresh_token" in data

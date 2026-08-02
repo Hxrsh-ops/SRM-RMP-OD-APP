@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime, timezone
 from typing import List, Optional
 from uuid import UUID
@@ -28,15 +29,23 @@ class WorkflowService:
         if not student:
             raise NotFoundException("Student record not found")
 
+        # Validate Hosteller Parent Consent requirement
+        if req_in.residence_type == "Hosteller":
+            has_parent_consent = bool(req_in.parent_consent_url) or any(
+                att.document_category == "parent_consent" or "consent" in att.file_name.lower() or "parent" in att.file_name.lower()
+                for att in (req_in.attachments or [])
+            )
+            if not has_parent_consent:
+                raise BadRequestException("Hosteller students MUST provide a valid parent consent document.")
+
         # Determine Faculty Advisor
         faculty_id = student.assigned_faculty_id
         if not faculty_id:
             faculty = self.user_repo.get_by_username("FA1001")
             faculty_id = faculty.id if faculty else student_id
 
-        all_requests = self.od_repo.list_all()
-        request_number = len(all_requests) + 1
-        new_id = f"OD-2026-{request_number:03d}"
+        # Collision-safe ID generation
+        new_id = f"OD-2026-{uuid.uuid4().hex[:6].upper()}"
 
         now = datetime.now(timezone.utc)
         od = OdRequest(
@@ -68,6 +77,7 @@ class WorkflowService:
                         file_type=att_in.file_type,
                         size_bytes=att_in.size_bytes,
                         file_url=att_in.file_url,
+                        document_category=att_in.document_category or "supporting_document",
                         uploaded_by=student.full_name,
                         uploaded_at=now
                     )
@@ -85,7 +95,7 @@ class WorkflowService:
             )
         )
         faculty_user = self.user_repo.get_by_id(faculty_id)
-        faculty_name = faculty_user.full_name if faculty_user else "Dr. Karthik B (Mock)"
+        faculty_name = faculty_user.full_name if faculty_user else "Dr. Karthik B"
         od.timeline.append(
             TimelineEvent(
                 title="Assigned to Faculty Advisor",
@@ -126,6 +136,14 @@ class WorkflowService:
         if not req:
             raise NotFoundException("OD Request not found")
 
+        # Object-level authorization check
+        if req.faculty_id != faculty_user_id:
+            raise PermissionDeniedException("You are not the assigned Faculty Advisor for this request.")
+
+        # State transition validation
+        if req.status not in (OdStatus.PENDING_FACULTY, OdStatus.SUBMITTED):
+            raise BadRequestException(f"Cannot perform faculty action on request in status {req.status.value}")
+
         faculty_user = self.user_repo.get_by_id(faculty_user_id)
         faculty_name = faculty_user.full_name if faculty_user else "Faculty Advisor"
 
@@ -134,6 +152,8 @@ class WorkflowService:
 
         req.status = new_status
         req.updated_at = now
+        if action.approve:
+            req.faculty_approval_time = now
 
         req.timeline.append(
             TimelineEvent(
@@ -189,6 +209,13 @@ class WorkflowService:
             raise NotFoundException("OD Request not found")
 
         coordinator_user = self.user_repo.get_by_id(coordinator_user_id)
+        if not coordinator_user or coordinator_user.role not in (UserRole.COORDINATOR, UserRole.MASTER_ADMIN, UserRole.HOD, UserRole.DEAN):
+            raise PermissionDeniedException("Only Coordinators can perform this action.")
+
+        # State transition validation
+        if req.status != OdStatus.PENDING_COORDINATOR:
+            raise BadRequestException(f"Cannot perform coordinator action on request in status {req.status.value}")
+
         coordinator_name = coordinator_user.full_name if coordinator_user else "Coordinator"
 
         now = datetime.now(timezone.utc)

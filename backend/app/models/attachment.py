@@ -16,6 +16,7 @@ class Attachment(Base, AuditMixin, SoftDeleteMixin):
     file_type = Column(String(50), nullable=False)
     size_bytes = Column(Integer, nullable=False)
     file_url = Column(String(500), nullable=False)
+    document_category = Column(String(50), nullable=True, default="supporting_document")
     
     uploaded_by = Column(String(100), nullable=False)
     uploaded_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)

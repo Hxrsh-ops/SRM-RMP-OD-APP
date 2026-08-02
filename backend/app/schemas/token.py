@@ -10,3 +10,6 @@ class TokenPayload(BaseModel):
     sub: Optional[str] = None
     role: Optional[str] = None
     type: Optional[str] = None
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str

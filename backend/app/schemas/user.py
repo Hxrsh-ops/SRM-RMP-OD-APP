@@ -18,6 +18,8 @@ class UserCreate(UserBase):
 class UserResponse(UserBase):
     id: UUID
     is_active: bool
+    assigned_faculty_id: Optional[UUID] = None
+    assigned_faculty_name: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 

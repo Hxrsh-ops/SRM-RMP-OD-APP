@@ -39,7 +39,7 @@ def setup_db():
         faculty = User(
             username="FA1001",
             email="faculty@srmist.edu.in",
-            full_name="Dr. Karthik B (Mock)",
+            full_name="Dr. Karthik B",
             hashed_password=get_password_hash("faculty123"),
             role=UserRole.FACULTY_ADVISOR,
             department_id=dept.id,
@@ -54,7 +54,7 @@ def setup_db():
         coord = User(
             username="CO1001",
             email="coord@srmist.edu.in",
-            full_name="Prof. Ramesh Kumar (Coordinator)",
+            full_name="Prof. Ramesh Kumar",
             hashed_password=get_password_hash("coord123"),
             role=UserRole.COORDINATOR,
             department_id=dept.id,
@@ -63,10 +63,10 @@ def setup_db():
         db.commit()
 
     # Seed Student
-    student = db.query(User).filter(User.username == "RA2510026020400").first()
+    student = db.query(User).filter(User.username == "RA2511026020400").first()
     if not student:
         student = User(
-            username="RA2510026020400",
+            username="RA2511026020400",
             email="hk7793@srmist.edu.in",
             full_name="K.M. Harshanth",
             hashed_password=get_password_hash("student123"),

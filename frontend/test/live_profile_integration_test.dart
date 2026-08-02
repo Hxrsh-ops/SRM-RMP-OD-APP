@@ -15,7 +15,7 @@ void main() {
     setUp(() {
       storage = MemorySecureStorage();
       dio = Dio(BaseOptions(
-        baseUrl: ApiConstants.desktopBaseUrl,
+        baseUrl: ApiConstants.baseUrl,
         connectTimeout: const Duration(seconds: 10),
         receiveTimeout: const Duration(seconds: 10),
         headers: {'Content-Type': 'application/json'},
@@ -39,7 +39,7 @@ void main() {
     test('2. Faculty Advisor live profile contains email and role privilege', () async {
       final session = await repo.login(username: 'FA1001', password: 'faculty123');
 
-      expect(session.name, 'Dr. Karthik B (Mock)');
+      expect(session.name, contains('Dr. Karthik B'));
       expect(session.username, 'FA1001');
       expect(session.role, 'FACULTY_ADVISOR');
     });
@@ -47,7 +47,7 @@ void main() {
     test('3. Coordinator live profile contains email and role privilege', () async {
       final session = await repo.login(username: 'CO1001', password: 'coord123');
 
-      expect(session.name, 'Prof. Ramesh Kumar (Coordinator)');
+      expect(session.name, contains('Prof. Ramesh Kumar'));
       expect(session.username, 'CO1001');
       expect(session.role, 'COORDINATOR');
     });

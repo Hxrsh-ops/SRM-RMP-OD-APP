@@ -2,20 +2,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/providers/dio_provider.dart';
 import '../../../authentication/presentation/controllers/auth_controller.dart';
 import '../../data/repositories/api_workflow_repository.dart';
-import '../../data/repositories/mock_workflow_repository.dart';
 import '../../domain/entities/attachment_item.dart';
 import '../../domain/entities/notification_item.dart';
 import '../../domain/entities/od_request.dart';
 import '../../domain/repositories/workflow_repository.dart';
 
 final workflowRepositoryProvider = Provider<WorkflowRepository>((ref) {
-  final useApi = ref.watch(useApiRepositoryProvider);
-  if (useApi) {
-    final apiClient = ref.watch(apiClientProvider);
-    return ApiWorkflowRepository(apiClient: apiClient);
-  } else {
-    return MockWorkflowRepository();
-  }
+  final apiClient = ref.watch(apiClientProvider);
+  return ApiWorkflowRepository(apiClient: apiClient);
 });
 
 class WorkflowState {

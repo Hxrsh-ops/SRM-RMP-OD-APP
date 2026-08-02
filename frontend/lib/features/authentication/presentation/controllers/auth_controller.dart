@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/providers/dio_provider.dart';
 import '../../data/datasources/auth_local_datasource.dart';
 import '../../data/repositories/api_authentication_repository.dart';
-import '../../data/repositories/mock_authentication_repository.dart';
 import '../../domain/entities/auth_status.dart';
 import '../../domain/repositories/authentication_repository.dart';
 import '../../domain/usecases/login_usecase.dart';
@@ -16,15 +15,9 @@ final authLocalDataSourceProvider = Provider<AuthLocalDataSource>((ref) {
 });
 
 final authenticationRepositoryProvider = Provider<AuthenticationRepository>((ref) {
-  final useApi = ref.watch(useApiRepositoryProvider);
-  if (useApi) {
-    final apiClient = ref.watch(apiClientProvider);
-    final storage = ref.watch(secureStorageProvider);
-    return ApiAuthenticationRepository(apiClient: apiClient, storageService: storage);
-  } else {
-    final localDataSource = ref.watch(authLocalDataSourceProvider);
-    return MockAuthenticationRepository(localDataSource: localDataSource);
-  }
+  final apiClient = ref.watch(apiClientProvider);
+  final storage = ref.watch(secureStorageProvider);
+  return ApiAuthenticationRepository(apiClient: apiClient, storageService: storage);
 });
 
 final loginUseCaseProvider = Provider<LoginUseCase>((ref) {

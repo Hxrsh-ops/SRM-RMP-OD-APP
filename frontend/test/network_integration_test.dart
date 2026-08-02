@@ -15,7 +15,7 @@ void main() {
     setUp(() {
       storage = MemorySecureStorage();
       dio = Dio(BaseOptions(
-        baseUrl: ApiConstants.desktopBaseUrl,
+        baseUrl: ApiConstants.baseUrl,
         connectTimeout: const Duration(seconds: 10),
         receiveTimeout: const Duration(seconds: 10),
         headers: {'Content-Type': 'application/json'},

@@ -13,18 +13,16 @@ final secureStorageProvider = Provider<SecureStorageService>((ref) {
   return FlutterSecureStorageService();
 });
 
-final useApiRepositoryProvider = StateProvider<bool>((ref) => true);
-
 final dioProvider = Provider<Dio>((ref) {
   final storage = ref.watch(secureStorageProvider);
+  final baseUrl = ApiConstants.baseUrl;
 
-  // Auto detect desktop vs mobile base URL
-  final String base = kIsWeb || defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.macOS || defaultTargetPlatform == TargetPlatform.linux
-      ? ApiConstants.desktopBaseUrl
-      : ApiConstants.baseUrl;
+  if (kDebugMode) {
+    debugPrint('[SRM RMP OD Network Initialization] Resolved API Base URL: $baseUrl');
+  }
 
   final options = BaseOptions(
-    baseUrl: base,
+    baseUrl: baseUrl,
     connectTimeout: ApiConstants.connectTimeout,
     receiveTimeout: ApiConstants.receiveTimeout,
     headers: {
@@ -36,7 +34,7 @@ final dioProvider = Provider<Dio>((ref) {
   final dio = Dio(options);
 
   dio.interceptors.addAll([
-    AuthInterceptor(storage),
+    AuthInterceptor(storage, dio),
     LoggingInterceptor(),
     ErrorInterceptor(),
   ]);

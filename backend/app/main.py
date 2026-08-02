@@ -16,11 +16,11 @@ from .models.enums import UserRole
 # Initialize Logging
 setup_logging()
 
-# Create tables
-Base.metadata.create_all(bind=engine)
-
 def seed_demo_users():
-    """Automatically seed default demo accounts on backend startup."""
+    """Seed default development accounts if environment is development."""
+    if settings.ENVIRONMENT.lower() not in ("development", "dev"):
+        return
+
     db: Session = SessionLocal()
     try:
         # Seed Department
@@ -37,7 +37,7 @@ def seed_demo_users():
             faculty = User(
                 username="FA1001",
                 email="karthikb@srmist.edu.in",
-                full_name="Dr. Karthik B (Mock)",
+                full_name="Dr. Karthik B",
                 hashed_password=get_password_hash("faculty123"),
                 role=UserRole.FACULTY_ADVISOR,
                 department_id=dept.id,
@@ -45,6 +45,9 @@ def seed_demo_users():
             db.add(faculty)
             db.commit()
             db.refresh(faculty)
+        elif "Mock" in faculty.full_name:
+            faculty.full_name = "Dr. Karthik B"
+            db.commit()
 
         # Coordinator (Prof. Ramesh Kumar)
         coord = db.query(User).filter(User.username == "CO1001").first()
@@ -52,12 +55,15 @@ def seed_demo_users():
             coord = User(
                 username="CO1001",
                 email="rameshk@srmist.edu.in",
-                full_name="Prof. Ramesh Kumar (Coordinator)",
+                full_name="Prof. Ramesh Kumar",
                 hashed_password=get_password_hash("coord123"),
                 role=UserRole.COORDINATOR,
                 department_id=dept.id,
             )
             db.add(coord)
+            db.commit()
+        elif "Coordinator" in coord.full_name:
+            coord.full_name = "Prof. Ramesh Kumar"
             db.commit()
 
         # Student (K.M. Harshanth) - RA2511026020400
@@ -82,7 +88,7 @@ def seed_demo_users():
                 db.add(student)
                 db.commit()
 
-        logger.info("Demo users and seed data successfully initialized.")
+        logger.info("Development seed data successfully initialized.")
     except Exception as e:
         logger.error(f"Error seeding database: {e}")
     finally:
@@ -111,7 +117,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Static file hosting for uploaded attachments
+# Ensure upload directory exists before static mounting
+os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
 
 # Include Central API Router

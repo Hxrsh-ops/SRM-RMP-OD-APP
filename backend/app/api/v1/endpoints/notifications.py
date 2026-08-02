@@ -20,6 +20,7 @@ def get_notifications(
     return noti_service.get_user_notifications(current_user.id)
 
 @router.patch("/mark-read")
+@router.post("/mark-read")
 def mark_all_notifications_read(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)

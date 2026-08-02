@@ -3,11 +3,11 @@ def get_auth_token(client, username, password):
     return res.json()["access_token"]
 
 def test_full_multi_role_approval_workflow(client):
-    student_token = get_auth_token(client, "RA2510026020400", "student123")
+    student_token = get_auth_token(client, "RA2511026020400", "student123")
     faculty_token = get_auth_token(client, "FA1001", "faculty123")
     coordinator_token = get_auth_token(client, "CO1001", "coord123")
 
-    # 1. Student creates OD request
+    # 1. Student creates Day Scholar OD request
     create_res = client.post(
         "/api/v1/od-requests",
         json={
@@ -18,7 +18,8 @@ def test_full_multi_role_approval_workflow(client):
             "purpose": "National AI Hackathon 2026",
             "venue": "Tech Park Auditorium",
             "organizer": "Dept of CSE",
-            "additional_notes": "Team Leader"
+            "additional_notes": "Team Leader",
+            "residence_type": "Day Scholar"
         },
         headers={"Authorization": f"Bearer {student_token}"}
     )
@@ -50,8 +51,27 @@ def test_full_multi_role_approval_workflow(client):
     assert final_data["status"] == "COMPLETED"
     assert len(final_data["timeline"]) == 4
 
+def test_hosteller_without_parent_consent_fails(client):
+    student_token = get_auth_token(client, "RA2511026020400", "student123")
+    res = client.post(
+        "/api/v1/od-requests",
+        json={
+            "reason": "Conference",
+            "start_date": "2026-08-10",
+            "end_date": "2026-08-12",
+            "duration_days": 3,
+            "purpose": "IEEE Conference",
+            "venue": "Campus Auditorium",
+            "organizer": "IEEE Student Chapter",
+            "residence_type": "Hosteller"
+        },
+        headers={"Authorization": f"Bearer {student_token}"}
+    )
+    assert res.status_code == 400
+    assert "parent consent" in res.json()["detail"].lower()
+
 def test_student_cannot_approve_own_request(client):
-    student_token = get_auth_token(client, "RA2510026020400", "student123")
+    student_token = get_auth_token(client, "RA2511026020400", "student123")
     res = client.post(
         "/api/v1/od-requests/OD-2026-001/faculty-action",
         json={"approve": True},

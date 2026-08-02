@@ -44,7 +44,7 @@ class ApiAuthenticationRepository implements AuthenticationRepository {
       role: userData['role'].toString(),
       program: userData['program']?.toString() ?? 'B.Tech CSE (AI & ML)',
       yearSection: userData['year_section']?.toString() ?? '2nd Year - Sec G',
-      assignedFacultyName: 'Dr. Karthik B (Mock)',
+      assignedFacultyName: userData['assigned_faculty_name']?.toString() ?? 'Dr. Karthik B',
       token: AuthToken(
         accessToken: accessToken,
         refreshToken: refreshToken,
@@ -71,7 +71,7 @@ class ApiAuthenticationRepository implements AuthenticationRepository {
         role: userData['role'].toString(),
         program: userData['program']?.toString() ?? 'B.Tech CSE (AI & ML)',
         yearSection: userData['year_section']?.toString() ?? '2nd Year - Sec G',
-        assignedFacultyName: 'Dr. Karthik B (Mock)',
+        assignedFacultyName: userData['assigned_faculty_name']?.toString() ?? 'Dr. Karthik B',
         token: AuthToken(
           accessToken: token,
           refreshToken: refreshToken,

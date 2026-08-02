@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/color_tokens.dart';
@@ -15,23 +16,33 @@ class LoginForm extends ConsumerStatefulWidget {
 
 class _LoginFormState extends ConsumerState<LoginForm> {
   final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController(text: 'RA2510026020400');
-  final _passwordController = TextEditingController(text: 'student123');
+  late final TextEditingController _usernameController;
+  late final TextEditingController _passwordController;
 
   int _selectedRoleIndex = 0; // 0: Student, 1: Faculty Advisor, 2: Coordinator
+
+  @override
+  void initState() {
+    super.initState();
+    // Prefill demo credentials ONLY in debug mode for convenience. Release builds require user input.
+    _usernameController = TextEditingController(text: kDebugMode ? 'RA2511026020400' : '');
+    _passwordController = TextEditingController(text: kDebugMode ? 'student123' : '');
+  }
 
   void _onRoleChanged(int index) {
     setState(() {
       _selectedRoleIndex = index;
-      if (index == 0) {
-        _usernameController.text = 'RA2510026020400';
-        _passwordController.text = 'student123';
-      } else if (index == 1) {
-        _usernameController.text = 'FA1001';
-        _passwordController.text = 'faculty123';
-      } else {
-        _usernameController.text = 'CO1001';
-        _passwordController.text = 'coord123';
+      if (kDebugMode) {
+        if (index == 0) {
+          _usernameController.text = 'RA2511026020400';
+          _passwordController.text = 'student123';
+        } else if (index == 1) {
+          _usernameController.text = 'FA1001';
+          _passwordController.text = 'faculty123';
+        } else {
+          _usernameController.text = 'CO1001';
+          _passwordController.text = 'coord123';
+        }
       }
     });
   }
@@ -46,8 +57,8 @@ class _LoginFormState extends ConsumerState<LoginForm> {
   void _onLoginPressed() {
     if (_formKey.currentState?.validate() ?? false) {
       ref.read(authControllerProvider.notifier).login(
-            username: _usernameController.text,
-            password: _passwordController.text,
+            username: _usernameController.text.trim(),
+            password: _passwordController.text.trim(),
           );
     }
   }
@@ -59,7 +70,7 @@ class _LoginFormState extends ConsumerState<LoginForm> {
     final isAuthenticating = authState.status == AuthStatus.authenticating;
 
     final String labelText = _selectedRoleIndex == 0 ? 'Register Number' : 'Employee ID';
-    final String hintText = _selectedRoleIndex == 0 ? 'RA2510026020400' : (_selectedRoleIndex == 1 ? 'FA1001' : 'CO1001');
+    final String hintText = _selectedRoleIndex == 0 ? 'RA2511026020400' : (_selectedRoleIndex == 1 ? 'FA1001' : 'CO1001');
 
     return Form(
       key: _formKey,
@@ -69,7 +80,7 @@ class _LoginFormState extends ConsumerState<LoginForm> {
           // Segmented Role Selector
           Container(
             padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: AppColors.surfaceVariant,
               borderRadius: AppRadius.borderMd,
             ),
@@ -192,7 +203,7 @@ class _LoginFormState extends ConsumerState<LoginForm> {
                       : () {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('Password reset placeholder. Contact HOD/Admin.'),
+                              content: Text('Password reset requested. Please contact Department Admin.'),
                             ),
                           );
                         },
