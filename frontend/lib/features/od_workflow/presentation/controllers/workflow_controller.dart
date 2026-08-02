@@ -81,6 +81,10 @@ class WorkflowController extends StateNotifier<WorkflowState> {
     required String venue,
     required String organizer,
     String? additionalNotes,
+    double? cgpa,
+    double? attendancePercentage,
+    String? residenceType,
+    String? parentConsentUrl,
     List<AttachmentItem>? attachments,
   }) async {
     state = state.copyWith(isLoading: true);
@@ -97,6 +101,10 @@ class WorkflowController extends StateNotifier<WorkflowState> {
         venue: venue,
         organizer: organizer,
         additionalNotes: additionalNotes,
+        cgpa: cgpa,
+        attendancePercentage: attendancePercentage,
+        residenceType: residenceType,
+        parentConsentUrl: parentConsentUrl,
         attachments: attachments,
       );
       await loadAllData();

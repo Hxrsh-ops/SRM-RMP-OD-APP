@@ -1,6 +1,5 @@
 import 'dart:async';
 import '../../domain/entities/attachment_item.dart';
-import '../../domain/entities/comment_item.dart';
 import '../../domain/entities/notification_item.dart';
 import '../../domain/entities/od_request.dart';
 import '../../domain/entities/od_status.dart';
@@ -27,9 +26,9 @@ class MockWorkflowRepository implements WorkflowRepository {
 
     final req1 = OdRequest(
       id: 'OD-2026-001',
-      studentId: 'RA2510026020400',
+      studentId: 'RA2511026020400',
       studentName: 'K.M. Harshanth',
-      registerNumber: 'RA2510026020400',
+      registerNumber: 'RA2511026020400',
       reason: 'Hackathon / Competition',
       startDate: now.subtract(const Duration(days: 2)),
       endDate: now.add(const Duration(days: 1)),
@@ -38,6 +37,10 @@ class MockWorkflowRepository implements WorkflowRepository {
       venue: 'Tech Park Auditorium, SRM Ramapuram',
       organizer: 'Department of CSE & AI Club',
       additionalNotes: 'Team Leader for Antigravity Hackers',
+      cgpa: 8.8,
+      attendancePercentage: 91.5,
+      residenceType: 'Hosteller',
+      parentConsentUrl: 'https://example.com/parent_consent_harshanth.pdf',
       facultyAdvisorId: 'FA1001',
       facultyAdvisorName: 'Dr. Karthik B (Mock)',
       status: OdStatus.pendingFaculty,
@@ -76,90 +79,7 @@ class MockWorkflowRepository implements WorkflowRepository {
       createdAt: now.subtract(const Duration(days: 2)),
     );
 
-    final req2 = OdRequest(
-      id: 'OD-2026-002',
-      studentId: 'RA2510026020400',
-      studentName: 'K.M. Harshanth',
-      registerNumber: 'RA2510026020400',
-      reason: 'Sports Event',
-      startDate: now.add(const Duration(days: 5)),
-      endDate: now.add(const Duration(days: 6)),
-      durationDays: 2,
-      purpose: 'Inter-College Basketball Championship',
-      venue: 'Indoor Sports Complex, Main Campus',
-      organizer: 'SRM Sports Council',
-      additionalNotes: 'Selected for University Varsity Team',
-      facultyAdvisorId: 'FA1001',
-      facultyAdvisorName: 'Dr. Karthik B (Mock)',
-      status: OdStatus.pendingCoordinator,
-      attachments: [],
-      timeline: [
-        TimelineStep(
-          id: 'TS-3',
-          title: 'Request Submitted',
-          actorName: 'K.M. Harshanth',
-          actorRole: 'Student',
-          status: OdStatus.submitted,
-          timestamp: now.subtract(const Duration(days: 4)),
-        ),
-        TimelineStep(
-          id: 'TS-4',
-          title: 'Faculty Approved',
-          actorName: 'Dr. Karthik B (Mock)',
-          actorRole: 'Faculty Advisor',
-          status: OdStatus.facultyApproved,
-          timestamp: now.subtract(const Duration(days: 1)),
-          note: 'Verified student sports participation details.',
-        ),
-        TimelineStep(
-          id: 'TS-5',
-          title: 'Pending Coordinator Sign-Off',
-          actorName: 'Prof. Ramesh Kumar',
-          actorRole: 'Coordinator',
-          status: OdStatus.pendingCoordinator,
-          timestamp: now.subtract(const Duration(days: 1)),
-        ),
-      ],
-      comments: [
-        CommentItem(
-          id: 'C-1',
-          authorName: 'Dr. Karthik B (Mock)',
-          authorRole: 'Faculty Advisor',
-          text: 'Approved. Attendance requirements verified.',
-          timestamp: now.subtract(const Duration(days: 1)),
-        ),
-      ],
-      createdAt: now.subtract(const Duration(days: 4)),
-    );
-
-    _requests.addAll([req1, req2]);
-
-    _notifications.addAll([
-      NotificationItem(
-        id: 'N-1',
-        recipientId: 'RA2510026020400',
-        title: 'OD Request Created',
-        message: 'Your OD request for National AI Hackathon 2026 has been submitted.',
-        timestamp: now.subtract(const Duration(days: 2)),
-        requestId: 'OD-2026-001',
-      ),
-      NotificationItem(
-        id: 'N-2',
-        recipientId: 'FA1001',
-        title: 'New OD Request Assigned',
-        message: 'Student K.M. Harshanth submitted OD request OD-2026-001 for your approval.',
-        timestamp: now.subtract(const Duration(days: 2)),
-        requestId: 'OD-2026-001',
-      ),
-      NotificationItem(
-        id: 'N-3',
-        recipientId: 'CO1001',
-        title: 'Faculty Approved OD Request',
-        message: 'Dr. Karthik B (Mock) approved OD-2026-002. Awaiting final coordinator sign-off.',
-        timestamp: now.subtract(const Duration(days: 1)),
-        requestId: 'OD-2026-002',
-      ),
-    ]);
+    _requests.add(req1);
   }
 
   @override
@@ -199,6 +119,10 @@ class MockWorkflowRepository implements WorkflowRepository {
     required String venue,
     required String organizer,
     String? additionalNotes,
+    double? cgpa,
+    double? attendancePercentage,
+    String? residenceType,
+    String? parentConsentUrl,
     List<AttachmentItem>? attachments,
   }) async {
     await Future.delayed(const Duration(milliseconds: 300));
@@ -218,6 +142,10 @@ class MockWorkflowRepository implements WorkflowRepository {
       venue: venue,
       organizer: organizer,
       additionalNotes: additionalNotes,
+      cgpa: cgpa ?? 8.5,
+      attendancePercentage: attendancePercentage ?? 88.0,
+      residenceType: residenceType ?? 'Day Scholar',
+      parentConsentUrl: parentConsentUrl,
       facultyAdvisorId: 'FA1001',
       facultyAdvisorName: 'Dr. Karthik B (Mock)',
       status: OdStatus.pendingFaculty,
@@ -232,46 +160,12 @@ class MockWorkflowRepository implements WorkflowRepository {
           timestamp: now,
           note: 'Submitted On Duty request for $reason',
         ),
-        TimelineStep(
-          id: 'TS-${now.millisecondsSinceEpoch}-2',
-          title: 'Assigned to Faculty Advisor',
-          actorName: 'Dr. Karthik B (Mock)',
-          actorRole: 'Faculty Advisor',
-          status: OdStatus.pendingFaculty,
-          timestamp: now,
-        ),
       ],
       comments: [],
       createdAt: now,
     );
 
     _requests.insert(0, newRequest);
-
-    // Dynamic Notifications
-    _notifications.insert(
-      0,
-      NotificationItem(
-        id: 'N-${now.millisecondsSinceEpoch}-1',
-        recipientId: studentId,
-        title: 'OD Request Submitted',
-        message: 'Your OD request for $reason has been submitted successfully.',
-        timestamp: now,
-        requestId: newId,
-      ),
-    );
-
-    _notifications.insert(
-      0,
-      NotificationItem(
-        id: 'N-${now.millisecondsSinceEpoch}-2',
-        recipientId: 'FA1001',
-        title: 'New OD Request Assigned',
-        message: '$studentName submitted OD request $newId for $reason.',
-        timestamp: now,
-        requestId: newId,
-      ),
-    );
-
     _notifyListeners();
     return newRequest;
   }
@@ -289,70 +183,9 @@ class MockWorkflowRepository implements WorkflowRepository {
     if (index == -1) return;
 
     final req = _requests[index];
-    final now = DateTime.now();
     final newStatus = approve ? OdStatus.pendingCoordinator : OdStatus.facultyRejected;
 
-    final updatedTimeline = List<TimelineStep>.from(req.timeline);
-    updatedTimeline.add(
-      TimelineStep(
-        id: 'TS-${now.millisecondsSinceEpoch}',
-        title: approve ? 'Faculty Advisor Approved' : 'Faculty Advisor Rejected',
-        actorName: facultyName,
-        actorRole: 'Faculty Advisor',
-        status: newStatus,
-        timestamp: now,
-        note: comment ?? (approve ? 'Approved by Faculty Advisor' : 'Rejected by Faculty Advisor'),
-      ),
-    );
-
-    final updatedComments = List<CommentItem>.from(req.comments);
-    if (comment != null && comment.trim().isNotEmpty) {
-      updatedComments.add(
-        CommentItem(
-          id: 'C-${now.millisecondsSinceEpoch}',
-          authorName: facultyName,
-          authorRole: 'Faculty Advisor',
-          text: comment.trim(),
-          timestamp: now,
-        ),
-      );
-    }
-
-    _requests[index] = req.copyWith(
-      status: newStatus,
-      timeline: updatedTimeline,
-      comments: updatedComments,
-    );
-
-    // Dynamic notifications for Student & Coordinator
-    _notifications.insert(
-      0,
-      NotificationItem(
-        id: 'N-${now.millisecondsSinceEpoch}-S',
-        recipientId: req.studentId,
-        title: approve ? 'Faculty Approved OD' : 'Faculty Rejected OD',
-        message: approve
-            ? 'Faculty Advisor $facultyName approved your request $requestId. Pending Coordinator.'
-            : 'Faculty Advisor $facultyName rejected your request $requestId.',
-        timestamp: now,
-        requestId: requestId,
-      ),
-    );
-
-    if (approve) {
-      _notifications.insert(
-        0,
-        NotificationItem(
-          id: 'N-${now.millisecondsSinceEpoch}-C',
-          recipientId: 'CO1001',
-          title: 'OD Awaiting Coordinator Sign-Off',
-          message: 'Faculty Advisor $facultyName approved request $requestId for ${req.studentName}.',
-          timestamp: now,
-          requestId: requestId,
-        ),
-      );
-    }
-
+    _requests[index] = req.copyWith(status: newStatus);
     _notifyListeners();
   }
 
@@ -370,70 +203,16 @@ class MockWorkflowRepository implements WorkflowRepository {
     if (index == -1) return;
 
     final req = _requests[index];
-    final now = DateTime.now();
-    final OdStatus newStatus;
-    if (returnForCorrection) {
-      newStatus = OdStatus.revisionRequested;
-    } else if (approve) {
-      newStatus = OdStatus.completed;
-    } else {
-      newStatus = OdStatus.rejected;
-    }
+    final newStatus = returnForCorrection ? OdStatus.revisionRequested : (approve ? OdStatus.completed : OdStatus.rejected);
 
-    final updatedTimeline = List<TimelineStep>.from(req.timeline);
-    updatedTimeline.add(
-      TimelineStep(
-        id: 'TS-${now.millisecondsSinceEpoch}',
-        title: returnForCorrection
-            ? 'Returned for Correction'
-            : (approve ? 'Final Approval Granted' : 'Coordinator Rejected'),
-        actorName: coordinatorName,
-        actorRole: 'Coordinator',
-        status: newStatus,
-        timestamp: now,
-        note: comment ?? (approve ? 'Approved by Coordinator' : 'Decision recorded'),
-      ),
-    );
-
-    final updatedComments = List<CommentItem>.from(req.comments);
-    if (comment != null && comment.trim().isNotEmpty) {
-      updatedComments.add(
-        CommentItem(
-          id: 'C-${now.millisecondsSinceEpoch}',
-          authorName: coordinatorName,
-          authorRole: 'Coordinator',
-          text: comment.trim(),
-          timestamp: now,
-        ),
-      );
-    }
-
-    _requests[index] = req.copyWith(
-      status: newStatus,
-      timeline: updatedTimeline,
-      comments: updatedComments,
-    );
-
-    // Push notification to Student & Faculty
-    _notifications.insert(
-      0,
-      NotificationItem(
-        id: 'N-${now.millisecondsSinceEpoch}-S',
-        recipientId: req.studentId,
-        title: approve ? 'OD Approved!' : (returnForCorrection ? 'OD Needs Revision' : 'OD Rejected'),
-        message: 'Coordinator $coordinatorName has processed your request $requestId.',
-        timestamp: now,
-        requestId: requestId,
-      ),
-    );
-
+    _requests[index] = req.copyWith(status: newStatus);
     _notifyListeners();
   }
 
   @override
   Future<List<NotificationItem>> getNotifications(String recipientId) async {
     await Future.delayed(const Duration(milliseconds: 100));
-    return _notifications.where((n) => n.recipientId == recipientId || n.recipientId == 'RA2510026020400').toList();
+    return _notifications.where((n) => n.recipientId == recipientId).toList();
   }
 
   @override

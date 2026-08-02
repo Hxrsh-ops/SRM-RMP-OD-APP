@@ -8,7 +8,7 @@ import 'package:srm_rmp_od_frontend/features/od_workflow/data/repositories/api_w
 import 'package:srm_rmp_od_frontend/features/od_workflow/domain/entities/od_status.dart';
 
 void main() {
-  group('Milestone 6.3.2 - End-to-End Live Workflow Integration Tests against PostgreSQL', () {
+  group('Milestone 6.5 - End-to-End Live Workflow Integration Tests against PostgreSQL', () {
     late MemorySecureStorage storage;
     late Dio dio;
     late ApiClient apiClient;
@@ -28,13 +28,14 @@ void main() {
       workflowRepo = ApiWorkflowRepository(apiClient: apiClient);
     });
 
-    test('Complete E2E Approval Workflow: Student Submit -> Faculty Approve -> Coordinator Final Approve', () async {
-      // 1. Student Login (RA2510026020400)
-      final studentSession = await authRepo.login(username: 'RA2510026020400', password: 'student123');
+    test('Complete Milestone 6.5 E2E Flow: Student (Hosteller) Submit -> Faculty Approve -> Coordinator Final Approve', () async {
+      // 1. Student Login (RA2511026020400)
+      final studentSession = await authRepo.login(username: 'RA2511026020400', password: 'student123');
       expect(studentSession.role, 'STUDENT');
+      expect(studentSession.username, 'RA2511026020400');
       dio.options.headers['Authorization'] = 'Bearer ${studentSession.token.accessToken}';
 
-      // 2. Student Submits OD Request to PostgreSQL
+      // 2. Student Submits Hosteller OD Request to PostgreSQL with Parent Consent & CGPA/Attendance
       final createdOd = await workflowRepo.submitOdRequest(
         studentId: studentSession.userId,
         studentName: studentSession.name,
@@ -47,10 +48,16 @@ void main() {
         venue: 'Main Auditorium',
         organizer: 'IEEE Student Branch',
         additionalNotes: 'Project prototype presentation',
+        cgpa: 8.8,
+        attendancePercentage: 91.5,
+        residenceType: 'Hosteller',
+        parentConsentUrl: 'https://example.com/parent_consent_harshanth.pdf',
       );
 
       expect(createdOd.id, startsWith('OD-2026-'));
       expect(createdOd.reason, 'National Hackathon 2026');
+      expect(createdOd.residenceType, 'Hosteller');
+      expect(createdOd.parentConsentUrl, 'https://example.com/parent_consent_harshanth.pdf');
       expect(createdOd.status, OdStatus.pendingFaculty);
 
       // 3. Faculty Advisor Login (FA1001)
@@ -69,7 +76,7 @@ void main() {
         facultyId: facultySession.userId,
         facultyName: facultySession.name,
         approve: true,
-        comment: 'Verified registration. Recommended.',
+        comment: 'Verified registration & parent consent letter. Approved.',
       );
 
       // 6. Coordinator Login (CO1001)

@@ -1,5 +1,6 @@
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_constants.dart';
+import '../../../../core/network/exceptions/api_exception.dart';
 import '../../../../core/security/secure_storage_service.dart';
 import '../../domain/entities/auth_token.dart';
 import '../../domain/entities/user_session.dart';
@@ -77,8 +78,10 @@ class ApiAuthenticationRepository implements AuthenticationRepository {
           expiresAt: DateTime.now().add(const Duration(hours: 24)),
         ),
       );
-    } catch (_) {
-      await logout();
+    } catch (e) {
+      if (e is UnauthorizedException) {
+        await logout();
+      }
       return null;
     }
   }

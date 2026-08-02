@@ -26,9 +26,9 @@ void main() {
 
     test('Authenticate against FastAPI backend and call GET /api/v1/auth/me', () async {
       // 1. Perform login
-      final session = await repo.login(username: 'RA2510026020400', password: 'student123');
+      final session = await repo.login(username: 'RA2511026020400', password: 'student123');
       expect(session, isNotNull);
-      expect(session.username, 'RA2510026020400');
+      expect(session.username, 'RA2511026020400');
       expect(session.name, 'K.M. Harshanth');
       expect(session.role, 'STUDENT');
 
@@ -38,7 +38,7 @@ void main() {
       // 3. Call GET /api/v1/auth/me
       final meSession = await repo.restoreSession();
       expect(meSession, isNotNull);
-      expect(meSession?.username, 'RA2510026020400');
+      expect(meSession?.username, 'RA2511026020400');
       expect(meSession?.name, 'K.M. Harshanth');
     });
   });

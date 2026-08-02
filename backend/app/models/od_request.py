@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Date, Integer, Text, Enum as SQLEnum, ForeignKey
+from sqlalchemy import Column, String, Date, Integer, Float, Text, Enum as SQLEnum, ForeignKey
 from sqlalchemy.orm import relationship
 from ..core.database import Base
 from .guid import GUID
@@ -22,6 +22,11 @@ class OdRequest(Base, AuditMixin, SoftDeleteMixin):
     venue = Column(String(255), nullable=False)
     organizer = Column(String(255), nullable=False)
     additional_notes = Column(Text, nullable=True)
+    
+    cgpa = Column(Float, nullable=True, default=8.5)
+    attendance_percentage = Column(Float, nullable=True, default=88.0)
+    residence_type = Column(String(20), nullable=False, default="Day Scholar")
+    parent_consent_url = Column(Text, nullable=True)
     
     status = Column(SQLEnum(OdStatus), nullable=False, default=OdStatus.PENDING_FACULTY)
 

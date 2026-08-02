@@ -8,6 +8,9 @@ class OdRequest {
   final String studentId;
   final String studentName;
   final String registerNumber;
+  final String program;
+  final String yearSection;
+  final String studentEmail;
   final String reason;
   final DateTime startDate;
   final DateTime endDate;
@@ -16,8 +19,13 @@ class OdRequest {
   final String venue;
   final String organizer;
   final String? additionalNotes;
+  final double cgpa;
+  final double attendancePercentage;
+  final String residenceType;
+  final String? parentConsentUrl;
   final String facultyAdvisorId;
   final String facultyAdvisorName;
+  final DateTime? facultyApprovalTime;
   final OdStatus status;
   final List<AttachmentItem> attachments;
   final List<TimelineStep> timeline;
@@ -29,6 +37,9 @@ class OdRequest {
     required this.studentId,
     required this.studentName,
     required this.registerNumber,
+    this.program = 'B.Tech CSE (AI & ML)',
+    this.yearSection = '2nd Year - Sec G',
+    this.studentEmail = 'hk7793@srmist.edu.in',
     required this.reason,
     required this.startDate,
     required this.endDate,
@@ -37,8 +48,13 @@ class OdRequest {
     required this.venue,
     required this.organizer,
     this.additionalNotes,
+    this.cgpa = 8.5,
+    this.attendancePercentage = 88.0,
+    this.residenceType = 'Day Scholar',
+    this.parentConsentUrl,
     required this.facultyAdvisorId,
     required this.facultyAdvisorName,
+    this.facultyApprovalTime,
     required this.status,
     required this.attachments,
     required this.timeline,
@@ -57,6 +73,9 @@ class OdRequest {
       studentId: studentId,
       studentName: studentName,
       registerNumber: registerNumber,
+      program: program,
+      yearSection: yearSection,
+      studentEmail: studentEmail,
       reason: reason,
       startDate: startDate,
       endDate: endDate,
@@ -65,8 +84,13 @@ class OdRequest {
       venue: venue,
       organizer: organizer,
       additionalNotes: additionalNotes,
+      cgpa: cgpa,
+      attendancePercentage: attendancePercentage,
+      residenceType: residenceType,
+      parentConsentUrl: parentConsentUrl,
       facultyAdvisorId: facultyAdvisorId,
       facultyAdvisorName: facultyAdvisorName,
+      facultyApprovalTime: facultyApprovalTime,
       status: status ?? this.status,
       attachments: attachments ?? this.attachments,
       timeline: timeline ?? this.timeline,

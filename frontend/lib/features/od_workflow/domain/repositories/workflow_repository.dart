@@ -19,6 +19,10 @@ abstract class WorkflowRepository {
     required String venue,
     required String organizer,
     String? additionalNotes,
+    double? cgpa,
+    double? attendancePercentage,
+    String? residenceType,
+    String? parentConsentUrl,
     List<AttachmentItem>? attachments,
   });
 

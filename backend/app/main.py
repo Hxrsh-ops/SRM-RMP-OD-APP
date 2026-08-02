@@ -60,22 +60,27 @@ def seed_demo_users():
             db.add(coord)
             db.commit()
 
-        # Student (K.M. Harshanth)
-        student = db.query(User).filter(User.username == "RA2510026020400").first()
+        # Student (K.M. Harshanth) - RA2511026020400
+        student = db.query(User).filter(User.username == "RA2511026020400").first()
         if not student:
-            student = User(
-                username="RA2510026020400",
-                email="hk7793@srmist.edu.in",
-                full_name="K.M. Harshanth",
-                hashed_password=get_password_hash("student123"),
-                role=UserRole.STUDENT,
-                department_id=dept.id,
-                program="B.Tech CSE (AI & ML)",
-                year_section="2nd Year - Sec G",
-                assigned_faculty_id=faculty.id,
-            )
-            db.add(student)
-            db.commit()
+            old_student = db.query(User).filter(User.username == "RA2510026020400").first()
+            if old_student:
+                old_student.username = "RA2511026020400"
+                db.commit()
+            else:
+                student = User(
+                    username="RA2511026020400",
+                    email="hk7793@srmist.edu.in",
+                    full_name="K.M. Harshanth",
+                    hashed_password=get_password_hash("student123"),
+                    role=UserRole.STUDENT,
+                    department_id=dept.id,
+                    program="B.Tech CSE (AI & ML)",
+                    year_section="2nd Year - Sec G",
+                    assigned_faculty_id=faculty.id if faculty else None,
+                )
+                db.add(student)
+                db.commit()
 
         logger.info("Demo users and seed data successfully initialized.")
     except Exception as e:

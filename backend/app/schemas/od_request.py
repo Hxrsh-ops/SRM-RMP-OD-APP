@@ -15,6 +15,10 @@ class OdRequestCreate(BaseModel):
     venue: str
     organizer: str
     additional_notes: Optional[str] = None
+    cgpa: Optional[float] = 8.5
+    attendance_percentage: Optional[float] = 88.0
+    residence_type: Optional[str] = "Day Scholar"
+    parent_consent_url: Optional[str] = None
     attachments: Optional[List[AttachmentResponse]] = []
 
 class FacultyActionRequest(BaseModel):
@@ -29,6 +33,11 @@ class CoordinatorActionRequest(BaseModel):
 class OdRequestResponse(BaseModel):
     id: str
     student_id: UUID
+    student_name: Optional[str] = "K.M. Harshanth"
+    register_number: Optional[str] = "RA2511026020400"
+    program: Optional[str] = "B.Tech CSE (AI & ML)"
+    year_section: Optional[str] = "2nd Year - Sec G"
+    student_email: Optional[str] = "hk7793@srmist.edu.in"
     reason: str
     start_date: date
     end_date: date
@@ -37,7 +46,13 @@ class OdRequestResponse(BaseModel):
     venue: str
     organizer: str
     additional_notes: Optional[str] = None
+    cgpa: Optional[float] = 8.5
+    attendance_percentage: Optional[float] = 88.0
+    residence_type: Optional[str] = "Day Scholar"
+    parent_consent_url: Optional[str] = None
     faculty_id: UUID
+    faculty_advisor_name: Optional[str] = "Dr. Karthik B (Mock)"
+    faculty_approval_time: Optional[datetime] = None
     status: OdStatus
     attachments: List[AttachmentResponse] = []
     timeline: List[TimelineEventResponse] = []

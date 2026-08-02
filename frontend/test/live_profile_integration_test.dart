@@ -25,10 +25,10 @@ void main() {
     });
 
     test('1. Student live profile contains program and year section', () async {
-      final session = await repo.login(username: 'RA2510026020400', password: 'student123');
+      final session = await repo.login(username: 'RA2511026020400', password: 'student123');
 
       expect(session.name, 'K.M. Harshanth');
-      expect(session.username, 'RA2510026020400');
+      expect(session.username, 'RA2511026020400');
       expect(session.email, 'hk7793@srmist.edu.in');
       expect(session.role, 'STUDENT');
       expect(session.program, 'B.Tech CSE (AI & ML)');

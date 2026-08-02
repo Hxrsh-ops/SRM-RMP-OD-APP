@@ -24,10 +24,10 @@ void main() {
       repo = ApiAuthenticationRepository(apiClient: apiClient, storageService: storage);
     });
 
-    test('1. Student Login (RA2510026020400) succeeds and persists JWT token', () async {
-      final session = await repo.login(username: 'RA2510026020400', password: 'student123');
+    test('1. Student Login (RA2511026020400) succeeds and persists JWT token', () async {
+      final session = await repo.login(username: 'RA2511026020400', password: 'student123');
 
-      expect(session.username, 'RA2510026020400');
+      expect(session.username, 'RA2511026020400');
       expect(session.name, 'K.M. Harshanth');
       expect(session.role, 'STUDENT');
 
@@ -54,25 +54,25 @@ void main() {
 
     test('4. Invalid credentials rejected with exception', () async {
       expect(
-        () async => await repo.login(username: 'RA2510026020400', password: 'invalidpassword'),
+        () async => await repo.login(username: 'RA2511026020400', password: 'invalidpassword'),
         throwsA(anything),
       );
     });
 
     test('5. Session restoration via GET /api/v1/auth/me succeeds', () async {
-      final loginSession = await repo.login(username: 'RA2510026020400', password: 'student123');
+      final loginSession = await repo.login(username: 'RA2511026020400', password: 'student123');
 
       // Attach token
       dio.options.headers['Authorization'] = 'Bearer ${loginSession.token.accessToken}';
 
       final restored = await repo.restoreSession();
       expect(restored, isNotNull);
-      expect(restored?.username, 'RA2510026020400');
+      expect(restored?.username, 'RA2511026020400');
       expect(restored?.name, 'K.M. Harshanth');
     });
 
     test('6. Logout clears JWT access token from storage', () async {
-      final loginSession = await repo.login(username: 'RA2510026020400', password: 'student123');
+      final loginSession = await repo.login(username: 'RA2511026020400', password: 'student123');
       dio.options.headers['Authorization'] = 'Bearer ${loginSession.token.accessToken}';
 
       await repo.logout();

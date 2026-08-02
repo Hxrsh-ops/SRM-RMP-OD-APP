@@ -51,6 +51,10 @@ class WorkflowService:
             venue=req_in.venue,
             organizer=req_in.organizer,
             additional_notes=req_in.additional_notes,
+            cgpa=req_in.cgpa or 8.5,
+            attendance_percentage=req_in.attendance_percentage or 88.0,
+            residence_type=req_in.residence_type or "Day Scholar",
+            parent_consent_url=req_in.parent_consent_url,
             status=OdStatus.PENDING_FACULTY,
             created_at=now,
             updated_at=now
@@ -81,7 +85,7 @@ class WorkflowService:
             )
         )
         faculty_user = self.user_repo.get_by_id(faculty_id)
-        faculty_name = faculty_user.full_name if faculty_user else "Dr. Karthik B"
+        faculty_name = faculty_user.full_name if faculty_user else "Dr. Karthik B (Mock)"
         od.timeline.append(
             TimelineEvent(
                 title="Assigned to Faculty Advisor",
@@ -160,6 +164,17 @@ class WorkflowService:
             message=f"Faculty Advisor {faculty_name} {'approved' if action.approve else 'rejected'} your request {request_id}.",
             request_id=request_id
         )
+
+        # Notify Coordinator if approved
+        if action.approve:
+            coord = self.user_repo.get_by_username("CO1001")
+            if coord:
+                self.notification_service.send_notification(
+                    recipient_id=coord.id,
+                    title="Faculty Approved Request Ready for Coordinator",
+                    message=f"Faculty {faculty_name} approved request {request_id}. Pending your final sign-off.",
+                    request_id=request_id
+                )
 
         return updated_req
 

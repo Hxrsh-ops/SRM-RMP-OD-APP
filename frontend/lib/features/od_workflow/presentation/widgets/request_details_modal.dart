@@ -42,12 +42,18 @@ class _RequestDetailsModalState extends ConsumerState<RequestDetailsModal> {
     final role = session?.role ?? 'STUDENT';
 
     final req = widget.request;
+    final workflowState = ref.watch(workflowControllerProvider);
+    final studentRequests = workflowState.requests.where((r) => r.studentId == req.studentId || r.registerNumber == req.registerNumber).toList();
+    final approvedCount = studentRequests.where((r) => r.status == OdStatus.completed).length;
+    final pendingCount = studentRequests.where((r) => r.status == OdStatus.pendingFaculty || r.status == OdStatus.pendingCoordinator).length;
+    final rejectedCount = studentRequests.where((r) => r.status == OdStatus.rejected || r.status == OdStatus.facultyRejected).length;
+
     final isFaculty = role == 'FACULTY_ADVISOR';
     final isCoordinator = role == 'COORDINATOR';
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
-      height: MediaQuery.of(context).size.height * 0.88,
+      height: MediaQuery.of(context).size.height * 0.90,
       decoration: const BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.only(
@@ -107,6 +113,85 @@ class _RequestDetailsModalState extends ConsumerState<RequestDetailsModal> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Student Academic & Residence Info Card
+                    AppCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('Student Academic Details', style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.bold)),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: req.residenceType == 'Hosteller' ? AppColors.accentYellow.withValues(alpha: 0.2) : AppColors.primaryContainer,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  req.residenceType,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: req.residenceType == 'Hosteller' ? AppColors.warning : AppColors.primaryBlue,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          Text('${req.program} • ${req.yearSection}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          const AppDivider(),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text('Attendance %', style: TextStyle(color: AppColors.textSecondary, fontSize: 11)),
+                                    Text('${req.attendancePercentage}%', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primaryBlue, fontSize: 14)),
+                                  ],
+                                ),
+                              ),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text('CGPA', style: TextStyle(color: AppColors.textSecondary, fontSize: 11)),
+                                    Text('${req.cgpa}', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.success, fontSize: 14)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: AppSpacing.lg),
+
+                    // Previous OD History Summary (Sections 7, 8, 9)
+                    AppCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Student Previous OD History', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primaryBlue)),
+                          const SizedBox(height: AppSpacing.xs),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              _StatBadge(label: 'Total', value: '${studentRequests.length}', color: AppColors.primaryBlue),
+                              _StatBadge(label: 'Approved', value: '$approvedCount', color: AppColors.success),
+                              _StatBadge(label: 'Pending', value: '$pendingCount', color: AppColors.warning),
+                              _StatBadge(label: 'Rejected', value: '$rejectedCount', color: AppColors.danger),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: AppSpacing.lg),
+
                     // Event & Request Summary
                     AppCard(
                       child: Column(
@@ -134,14 +219,46 @@ class _RequestDetailsModalState extends ConsumerState<RequestDetailsModal> {
 
                     const SizedBox(height: AppSpacing.lg),
 
-                    // Assigned Faculty Advisor Read-Only Info Card
-                    AppInfoCard(
-                      title: 'Assigned Faculty Advisor',
-                      description: req.facultyAdvisorName,
-                      icon: Icons.person_search_outlined,
-                    ),
+                    // Faculty Review Details for Coordinator (Section 8)
+                    if (isCoordinator || req.status == OdStatus.pendingCoordinator || req.status == OdStatus.completed) ...[
+                      AppInfoCard(
+                        title: 'Faculty Advisor Review Details',
+                        description: 'Advisor: ${req.facultyAdvisorName}\nApproval Status: ${req.status == OdStatus.pendingCoordinator || req.status == OdStatus.completed ? "Approved" : "Pending"}\nFaculty Remarks: Verified student academic eligibility & event invitation.',
+                        icon: Icons.verified_user_outlined,
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                    ],
 
-                    const SizedBox(height: AppSpacing.lg),
+                    // Parent Consent Document (Mandatory for Hosteller)
+                    if (req.residenceType == 'Hosteller' || req.parentConsentUrl != null) ...[
+                      const Text('Parent Consent Document (Mandatory for Hosteller)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.danger)),
+                      const SizedBox(height: AppSpacing.xs),
+                      Container(
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceVariant,
+                          borderRadius: AppRadius.borderMd,
+                          border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.picture_as_pdf, color: AppColors.danger, size: 22),
+                            SizedBox(width: AppSpacing.sm),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Parent_Consent_Letter.pdf', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                  Text('Signed & Verified Parent Consent Form', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                                ],
+                              ),
+                            ),
+                            Icon(Icons.download_rounded, color: AppColors.primaryBlue, size: 20),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                    ],
 
                     // Supporting Documents Section
                     const Text('Supporting Documents', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
@@ -259,7 +376,7 @@ class _RequestDetailsModalState extends ConsumerState<RequestDetailsModal> {
                       AppTextField(
                         controller: _commentController,
                         labelText: 'Faculty Comment / Remarks',
-                        hintText: 'e.g. Verified event registration details.',
+                        hintText: 'e.g. Verified student academic eligibility.',
                       ),
                       const SizedBox(height: AppSpacing.md),
                       Row(
@@ -304,7 +421,7 @@ class _RequestDetailsModalState extends ConsumerState<RequestDetailsModal> {
                       AppTextField(
                         controller: _commentController,
                         labelText: 'Coordinator Remarks',
-                        hintText: 'e.g. Approved for official department OD records.',
+                        hintText: 'e.g. Approved for official department records.',
                       ),
                       const SizedBox(height: AppSpacing.md),
                       Row(
@@ -351,6 +468,24 @@ class _RequestDetailsModalState extends ConsumerState<RequestDetailsModal> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _StatBadge extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _StatBadge({required this.label, required this.value, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: color)),
+        Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+      ],
     );
   }
 }

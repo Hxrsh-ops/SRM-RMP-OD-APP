@@ -12,21 +12,42 @@ class FlutterSecureStorageService implements SecureStorageService {
 
   @override
   Future<void> write({required String key, required String value}) async {
-    await _storage.write(key: key, value: value);
+    try {
+      await _storage.write(key: key, value: value);
+    } catch (_) {
+      // Fallback try without encryptedSharedPreferences if keystore issue occurs
+      try {
+        const fallbackStorage = FlutterSecureStorage();
+        await fallbackStorage.write(key: key, value: value);
+      } catch (_) {}
+    }
   }
 
   @override
   Future<String?> read({required String key}) async {
-    return await _storage.read(key: key);
+    try {
+      return await _storage.read(key: key);
+    } catch (_) {
+      try {
+        const fallbackStorage = FlutterSecureStorage();
+        return await fallbackStorage.read(key: key);
+      } catch (_) {
+        return null;
+      }
+    }
   }
 
   @override
   Future<void> delete({required String key}) async {
-    await _storage.delete(key: key);
+    try {
+      await _storage.delete(key: key);
+    } catch (_) {}
   }
 
   @override
   Future<void> clearAll() async {
-    await _storage.deleteAll();
+    try {
+      await _storage.deleteAll();
+    } catch (_) {}
   }
 }

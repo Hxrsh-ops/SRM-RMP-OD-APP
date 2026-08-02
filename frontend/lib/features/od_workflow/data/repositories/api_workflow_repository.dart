@@ -47,6 +47,10 @@ class ApiWorkflowRepository implements WorkflowRepository {
     required String venue,
     required String organizer,
     String? additionalNotes,
+    double? cgpa,
+    double? attendancePercentage,
+    String? residenceType,
+    String? parentConsentUrl,
     List<AttachmentItem>? attachments,
   }) async {
     final response = await apiClient.post(
@@ -60,6 +64,10 @@ class ApiWorkflowRepository implements WorkflowRepository {
         'venue': venue,
         'organizer': organizer,
         'additional_notes': additionalNotes,
+        'cgpa': cgpa ?? 8.5,
+        'attendance_percentage': attendancePercentage ?? 88.0,
+        'residence_type': residenceType ?? 'Day Scholar',
+        'parent_consent_url': parentConsentUrl,
         'attachments': attachments
                 ?.map((a) => {
                       'file_name': a.fileName,
@@ -183,8 +191,11 @@ class ApiWorkflowRepository implements WorkflowRepository {
     return OdRequest(
       id: json['id'].toString(),
       studentId: json['student_id'].toString(),
-      studentName: 'K.M. Harshanth',
-      registerNumber: 'RA2510026020400',
+      studentName: json['student_name']?.toString() ?? 'K.M. Harshanth',
+      registerNumber: json['register_number']?.toString() ?? 'RA2511026020400',
+      program: json['program']?.toString() ?? 'B.Tech CSE (AI & ML)',
+      yearSection: json['year_section']?.toString() ?? '2nd Year - Sec G',
+      studentEmail: json['student_email']?.toString() ?? 'hk7793@srmist.edu.in',
       reason: json['reason'].toString(),
       startDate: DateTime.parse(json['start_date'].toString()),
       endDate: DateTime.parse(json['end_date'].toString()),
@@ -193,8 +204,15 @@ class ApiWorkflowRepository implements WorkflowRepository {
       venue: json['venue'].toString(),
       organizer: json['organizer'].toString(),
       additionalNotes: json['additional_notes']?.toString(),
+      cgpa: (json['cgpa'] as num?)?.toDouble() ?? 8.5,
+      attendancePercentage: (json['attendance_percentage'] as num?)?.toDouble() ?? 88.0,
+      residenceType: json['residence_type']?.toString() ?? 'Day Scholar',
+      parentConsentUrl: json['parent_consent_url']?.toString(),
       facultyAdvisorId: json['faculty_id']?.toString() ?? '',
-      facultyAdvisorName: 'Dr. Karthik B (Mock)',
+      facultyAdvisorName: json['faculty_advisor_name']?.toString() ?? 'Dr. Karthik B (Mock)',
+      facultyApprovalTime: json['faculty_approval_time'] != null
+          ? DateTime.parse(json['faculty_approval_time'].toString())
+          : null,
       status: status,
       createdAt: DateTime.parse(json['created_at'].toString()),
       attachments: attachmentsList,
