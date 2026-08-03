@@ -55,6 +55,7 @@ class _MainShellDashboardScreenState extends ConsumerState<MainShellDashboardScr
 
     final safeIndex = _currentIndex < pages.length ? _currentIndex : 0;
     final isDesktop = ResponsiveLayout.isLaptop(context) || ResponsiveLayout.isDesktop(context);
+    final topInset = isDesktop ? 0.0 : MediaQuery.paddingOf(context).top;
 
     if (isDesktop) {
       return Scaffold(
@@ -122,7 +123,7 @@ class _MainShellDashboardScreenState extends ConsumerState<MainShellDashboardScr
             )
           : null,
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(64.0),
+        preferredSize: Size.fromHeight(64.0 + topInset),
         child: AppTopHeader(
           userName: userName,
           userSubtext: userSubtext,
@@ -139,6 +140,7 @@ class _MainShellDashboardScreenState extends ConsumerState<MainShellDashboardScr
         ),
       ),
       body: SafeArea(
+        top: false,
         child: IndexedStack(
           index: safeIndex,
           children: pages,

@@ -43,6 +43,15 @@ abstract class WorkflowRepository {
     String? comment,
   });
 
+  Future<OdRequest> submitCompletionEvidence({
+    required String requestId,
+    required String completionSummary,
+    required List<List<int>> filesBytes,
+    required List<String> fileNames,
+  });
+
+  Future<Map<String, int>> getCoordinatorAnalytics();
+
   Future<List<NotificationItem>> getNotifications(String recipientId);
   Future<void> markNotificationsRead(String recipientId);
   Future<AttachmentItem> uploadAttachment({

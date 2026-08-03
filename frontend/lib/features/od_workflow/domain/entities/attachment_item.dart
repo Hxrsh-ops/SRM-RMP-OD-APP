@@ -6,6 +6,7 @@ class AttachmentItem {
   final String fileUrl;
   final String uploadedBy;
   final DateTime uploadedAt;
+  final String documentCategory;
 
   const AttachmentItem({
     required this.id,
@@ -15,6 +16,7 @@ class AttachmentItem {
     required this.fileUrl,
     required this.uploadedBy,
     required this.uploadedAt,
+    this.documentCategory = 'pre_approval_support',
   });
 
   String get sizeFormatted {

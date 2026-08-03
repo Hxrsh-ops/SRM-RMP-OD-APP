@@ -97,13 +97,13 @@ class MockWorkflowRepository implements WorkflowRepository {
   @override
   Future<List<OdRequest>> getFacultyPendingRequests(String facultyId) async {
     await Future.delayed(const Duration(milliseconds: 150));
-    return _requests.where((r) => r.status == OdStatus.pendingFaculty || r.status == OdStatus.submitted).toList();
+    return _requests.where((r) => r.status == OdStatus.pendingFaculty || r.status == OdStatus.submitted || r.status == OdStatus.pendingEvidenceFaculty).toList();
   }
 
   @override
   Future<List<OdRequest>> getCoordinatorPendingRequests() async {
     await Future.delayed(const Duration(milliseconds: 150));
-    return _requests.where((r) => r.status == OdStatus.pendingCoordinator || r.status == OdStatus.facultyApproved).toList();
+    return _requests.where((r) => r.status == OdStatus.pendingCoordinator || r.status == OdStatus.facultyApproved || r.status == OdStatus.pendingEvidenceCoordinator).toList();
   }
 
   @override
@@ -183,7 +183,9 @@ class MockWorkflowRepository implements WorkflowRepository {
     if (index == -1) return;
 
     final req = _requests[index];
-    final newStatus = approve ? OdStatus.pendingCoordinator : OdStatus.facultyRejected;
+    final newStatus = req.status == OdStatus.pendingEvidenceFaculty
+        ? (approve ? OdStatus.pendingEvidenceCoordinator : OdStatus.evidenceRevisionRequested)
+        : (approve ? OdStatus.pendingCoordinator : OdStatus.facultyRejected);
 
     _requests[index] = req.copyWith(status: newStatus);
     _notifyListeners();
@@ -203,10 +205,46 @@ class MockWorkflowRepository implements WorkflowRepository {
     if (index == -1) return;
 
     final req = _requests[index];
-    final newStatus = returnForCorrection ? OdStatus.revisionRequested : (approve ? OdStatus.completed : OdStatus.rejected);
+    final newStatus = req.status == OdStatus.pendingEvidenceCoordinator
+        ? (approve ? OdStatus.completed : OdStatus.evidenceRevisionRequested)
+        : (returnForCorrection ? OdStatus.revisionRequested : (approve ? OdStatus.approvedAwaitingEvidence : OdStatus.rejected));
 
     _requests[index] = req.copyWith(status: newStatus);
     _notifyListeners();
+  }
+
+  @override
+  Future<OdRequest> submitCompletionEvidence({
+    required String requestId,
+    required String completionSummary,
+    required List<List<int>> filesBytes,
+    required List<String> fileNames,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    final index = _requests.indexWhere((r) => r.id == requestId);
+    if (index == -1) throw Exception('Request not found');
+
+    final req = _requests[index];
+    final updated = req.copyWith(
+      status: OdStatus.pendingEvidenceFaculty,
+      completionSummary: completionSummary,
+      completionSubmittedAt: DateTime.now(),
+    );
+    _requests[index] = updated;
+    _notifyListeners();
+    return updated;
+  }
+
+  @override
+  Future<Map<String, int>> getCoordinatorAnalytics() async {
+    await Future.delayed(const Duration(milliseconds: 150));
+    return {
+      'pending_coordinator_count': _requests.where((r) => r.status == OdStatus.pendingCoordinator).length,
+      'approved_awaiting_evidence_count': _requests.where((r) => r.status == OdStatus.approvedAwaitingEvidence).length,
+      'pending_evidence_coordinator_count': _requests.where((r) => r.status == OdStatus.pendingEvidenceCoordinator).length,
+      'completed_count': _requests.where((r) => r.status == OdStatus.completed).length,
+      'total_submissions_count': _requests.length,
+    };
   }
 
   @override

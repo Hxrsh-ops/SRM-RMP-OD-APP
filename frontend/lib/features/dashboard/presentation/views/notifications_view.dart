@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/responsive/responsive_layout.dart';
 import '../../../../core/theme/color_tokens.dart';
 import '../../../../core/theme/tokens/theme_tokens.dart';
 import '../../../../core/ui/ui.dart';
@@ -15,6 +16,7 @@ class NotificationsView extends ConsumerWidget {
     final workflowState = ref.watch(workflowControllerProvider);
     final notifications = workflowState.notifications;
     final requests = workflowState.requests;
+    final isMobile = ResponsiveLayout.isMobile(context);
 
     return RefreshIndicator(
       onRefresh: () => ref.read(workflowControllerProvider.notifier).loadAllData(),
@@ -25,33 +27,41 @@ class NotificationsView extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Notifications',
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primaryBlue,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Notifications',
+                        style: theme.textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primaryBlue,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      'Updates regarding your On Duty applications and advisor approvals',
-                      style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
-                    ),
-                  ],
-                ),
-                if (notifications.any((n) => !n.isRead))
-                  TextButton.icon(
-                    icon: const Icon(Icons.done_all_rounded, size: 18),
-                    label: const Text('Mark All Read'),
-                    onPressed: () {
-                      ref.read(workflowControllerProvider.notifier).markNotificationsRead();
-                    },
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        'Updates regarding your On Duty applications and advisor approvals',
+                        style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+                      ),
+                    ],
                   ),
+                ),
+                if (notifications.any((n) => !n.isRead)) ...[
+                  const SizedBox(width: AppSpacing.sm),
+                  if (isMobile)
+                    IconButton(
+                      icon: const Icon(Icons.done_all_rounded, color: AppColors.primaryBlue),
+                      onPressed: () => ref.read(workflowControllerProvider.notifier).markNotificationsRead(),
+                      tooltip: 'Mark All Read',
+                    )
+                  else
+                    TextButton.icon(
+                      icon: const Icon(Icons.done_all_rounded, size: 18),
+                      label: const Text('Mark All Read'),
+                      onPressed: () => ref.read(workflowControllerProvider.notifier).markNotificationsRead(),
+                    ),
+                ],
               ],
             ),
             const SizedBox(height: AppSpacing.lg),

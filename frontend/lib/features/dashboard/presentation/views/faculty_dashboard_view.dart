@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/responsive/responsive_layout.dart';
 import '../../../../core/theme/color_tokens.dart';
 import '../../../../core/theme/tokens/theme_tokens.dart';
 import '../../../../core/ui/ui.dart';
@@ -19,6 +20,7 @@ class FacultyDashboardView extends ConsumerStatefulWidget {
 class _FacultyDashboardViewState extends ConsumerState<FacultyDashboardView> {
   final _searchController = TextEditingController();
   String _filterQuery = '';
+  int _activeTab = 0; // 0 = Initial Approvals, 1 = Evidence Verification
 
   @override
   void dispose() {
@@ -27,17 +29,18 @@ class _FacultyDashboardViewState extends ConsumerState<FacultyDashboardView> {
   }
 
   void _showFacultyApproveDialog(BuildContext context, OdRequest request) {
-    final remarksController = TextEditingController(text: 'Verified student academic eligibility & event details.');
+    final remarksController = TextEditingController(text: 'Approved by Faculty Advisor.');
     final session = ref.read(authControllerProvider).session;
+    final isEvidenceMode = request.status == OdStatus.pendingEvidenceFaculty;
 
     showDialog(
       context: context,
       builder: (dialogCtx) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.check_circle_outline_rounded, color: AppColors.success, size: 24),
-            SizedBox(width: AppSpacing.xs),
-            Text('Approve OD Request'),
+            const Icon(Icons.check_circle_outline_rounded, color: AppColors.success, size: 24),
+            const SizedBox(width: AppSpacing.xs),
+            Text(isEvidenceMode ? 'Verify Completion Evidence' : 'Faculty Advisor Approval'),
           ],
         ),
         content: Column(
@@ -45,15 +48,19 @@ class _FacultyDashboardViewState extends ConsumerState<FacultyDashboardView> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Student: ${request.studentName} (${request.registerNumber})'),
-            Text('Event: ${request.reason} (${request.durationDays} Days)'),
+            Text('Event: ${request.reason} • ${request.durationDays} Days'),
+            if (isEvidenceMode && request.completionSummary != null) ...[
+              const SizedBox(height: AppSpacing.xs),
+              Text('Report: "${request.completionSummary}"', style: const TextStyle(fontStyle: FontStyle.italic, fontSize: 12)),
+            ],
             const SizedBox(height: AppSpacing.md),
-            const Text('Advisor Approval Remarks:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+            const Text('Advisor Recommendation Remarks:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
             const SizedBox(height: AppSpacing.xs),
             TextField(
               controller: remarksController,
               maxLines: 2,
               decoration: const InputDecoration(
-                hintText: 'Enter recommendation notes for Coordinator...',
+                hintText: 'Enter recommendation notes...',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -78,13 +85,13 @@ class _FacultyDashboardViewState extends ConsumerState<FacultyDashboardView> {
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Request ${request.id} approved and forwarded to Coordinator.'),
+                    content: Text(isEvidenceMode ? 'Evidence verified & passed to coordinator.' : 'Request ${request.id} approved.'),
                     backgroundColor: AppColors.success,
                   ),
                 );
               }
             },
-            child: const Text('Confirm Approval'),
+            child: Text(isEvidenceMode ? 'Verify Evidence' : 'Approve & Forward'),
           ),
         ],
       ),
@@ -94,15 +101,16 @@ class _FacultyDashboardViewState extends ConsumerState<FacultyDashboardView> {
   void _showFacultyRejectDialog(BuildContext context, OdRequest request) {
     final remarksController = TextEditingController();
     final session = ref.read(authControllerProvider).session;
+    final isEvidenceMode = request.status == OdStatus.pendingEvidenceFaculty;
 
     showDialog(
       context: context,
       builder: (dialogCtx) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.cancel_outlined, color: AppColors.danger, size: 24),
-            SizedBox(width: AppSpacing.xs),
-            Text('Reject OD Request'),
+            const Icon(Icons.cancel_outlined, color: AppColors.danger, size: 24),
+            const SizedBox(width: AppSpacing.xs),
+            Text(isEvidenceMode ? 'Request Evidence Revision' : 'Reject OD Request'),
           ],
         ),
         content: Column(
@@ -111,14 +119,14 @@ class _FacultyDashboardViewState extends ConsumerState<FacultyDashboardView> {
           children: [
             Text('Student: ${request.studentName} (${request.registerNumber})'),
             const SizedBox(height: AppSpacing.md),
-            const Text('Reason for Rejection (Mandatory):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+            const Text('Reason Remarks (Mandatory):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
             const SizedBox(height: AppSpacing.xs),
             TextField(
               controller: remarksController,
               maxLines: 2,
-              decoration: const InputDecoration(
-                hintText: 'Explain rejection criteria (e.g. Low attendance %)...',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                hintText: isEvidenceMode ? 'Explain evidence revision requirements...' : 'Enter rejection reason...',
+                border: const OutlineInputBorder(),
               ),
             ),
           ],
@@ -133,7 +141,7 @@ class _FacultyDashboardViewState extends ConsumerState<FacultyDashboardView> {
             onPressed: () async {
               if (remarksController.text.trim().isEmpty) {
                 ScaffoldMessenger.of(dialogCtx).showSnackBar(
-                  const SnackBar(content: Text('Please specify a rejection reason.'), backgroundColor: AppColors.danger),
+                  const SnackBar(content: Text('Please specify a valid explanation reason.'), backgroundColor: AppColors.danger),
                 );
                 return;
               }
@@ -148,13 +156,13 @@ class _FacultyDashboardViewState extends ConsumerState<FacultyDashboardView> {
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Request ${request.id} rejected.'),
+                    content: Text(isEvidenceMode ? 'Evidence revision requested.' : 'Request ${request.id} rejected.'),
                     backgroundColor: AppColors.warning,
                   ),
                 );
               }
             },
-            child: const Text('Reject Request'),
+            child: Text(isEvidenceMode ? 'Request Revision' : 'Confirm Rejection'),
           ),
         ],
       ),
@@ -165,11 +173,16 @@ class _FacultyDashboardViewState extends ConsumerState<FacultyDashboardView> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final workflowState = ref.watch(workflowControllerProvider);
-    final pendingRequests = workflowState.requests.where((r) {
-      final matchesStatus = r.status == OdStatus.pendingFaculty || r.status == OdStatus.submitted;
-      if (_filterQuery.isEmpty) return matchesStatus;
+    final allRequests = workflowState.requests;
+    final isMobile = ResponsiveLayout.isMobile(context);
+
+    final initialPending = allRequests.where((r) => r.status == OdStatus.pendingFaculty || r.status == OdStatus.submitted).toList();
+    final evidencePending = allRequests.where((r) => r.status == OdStatus.pendingEvidenceFaculty).toList();
+
+    final activeList = (_activeTab == 0 ? initialPending : evidencePending).where((r) {
+      if (_filterQuery.isEmpty) return true;
       final q = _filterQuery.toLowerCase();
-      return matchesStatus && (r.studentName.toLowerCase().contains(q) || r.registerNumber.toLowerCase().contains(q) || r.reason.toLowerCase().contains(q));
+      return r.studentName.toLowerCase().contains(q) || r.registerNumber.toLowerCase().contains(q) || r.reason.toLowerCase().contains(q);
     }).toList();
 
     return RefreshIndicator(
@@ -194,13 +207,46 @@ class _FacultyDashboardViewState extends ConsumerState<FacultyDashboardView> {
             ),
             const SizedBox(height: AppSpacing.lg),
 
-            AppMetricCard(
-              title: 'Pending Faculty Reviews',
-              value: '${pendingRequests.length}',
-              icon: Icons.assignment_late_outlined,
-              statusType: AppStatusType.warning,
+            Row(
+              children: [
+                Expanded(
+                  child: AppMetricCard(
+                    title: 'Pending Initial Reviews',
+                    value: '${initialPending.length}',
+                    icon: Icons.assignment_late_outlined,
+                    statusType: AppStatusType.warning,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: AppMetricCard(
+                    title: 'Pending Evidence Reviews',
+                    value: '${evidencePending.length}',
+                    icon: Icons.fact_check_outlined,
+                    statusType: AppStatusType.info,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: AppSpacing.lg),
+
+            // Tab Filter Buttons
+            Row(
+              children: [
+                ChoiceChip(
+                  label: Text('Initial Approvals (${initialPending.length})'),
+                  selected: _activeTab == 0,
+                  onSelected: (val) => setState(() => _activeTab = 0),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                ChoiceChip(
+                  label: Text('Evidence Verification (${evidencePending.length})'),
+                  selected: _activeTab == 1,
+                  onSelected: (val) => setState(() => _activeTab = 1),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
 
             // Search Bar
             SizedBox(
@@ -220,14 +266,16 @@ class _FacultyDashboardViewState extends ConsumerState<FacultyDashboardView> {
             ),
             const SizedBox(height: AppSpacing.lg),
 
-            if (pendingRequests.isEmpty)
-              const AppEmptyState(
-                title: 'No Pending Reviews',
-                description: 'All student OD requests assigned to your advisor queue have been reviewed.',
+            if (activeList.isEmpty)
+              AppEmptyState(
+                title: _activeTab == 0 ? 'No Pending Initial Reviews' : 'No Evidence Pending Verification',
+                description: _activeTab == 0
+                    ? 'All student OD requests assigned to your advisor queue have been reviewed.'
+                    : 'No student completion proof documents are currently awaiting your verification.',
               )
             else
               Column(
-                children: pendingRequests.map((req) {
+                children: activeList.map((req) {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: AppSpacing.md),
                     child: AppCard(
@@ -243,45 +291,90 @@ class _FacultyDashboardViewState extends ConsumerState<FacultyDashboardView> {
                                     Text(
                                       '${req.studentName} (${req.registerNumber})',
                                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                     Text(
                                       'Event: ${req.reason} • ${req.durationDays} Days',
                                       style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ],
                                 ),
                               ),
+                              const SizedBox(width: AppSpacing.xs),
                               AppStatusChip(label: req.status.displayName, statusType: req.status.statusType),
                             ],
                           ),
                           const AppDivider(),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              TextButton.icon(
-                                icon: const Icon(Icons.visibility_outlined, size: 16),
-                                label: const Text('View Full Details'),
-                                onPressed: () => RequestDetailsModal.show(context, req),
-                              ),
-                              Row(
-                                children: [
-                                  OutlinedButton.icon(
-                                    style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger),
-                                    icon: const Icon(Icons.close_rounded, size: 16),
-                                    label: const Text('Reject'),
-                                    onPressed: () => _showFacultyRejectDialog(context, req),
-                                  ),
-                                  const SizedBox(width: AppSpacing.sm),
-                                  ElevatedButton.icon(
-                                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.success, foregroundColor: Colors.white),
-                                    icon: const Icon(Icons.check_rounded, size: 16),
-                                    label: const Text('Approve'),
-                                    onPressed: () => _showFacultyApproveDialog(context, req),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
+                          if (isMobile)
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                TextButton.icon(
+                                  icon: const Icon(Icons.visibility_outlined, size: 16),
+                                  label: const Text('View Full Details'),
+                                  onPressed: () => RequestDetailsModal.show(context, req),
+                                ),
+                                const SizedBox(height: AppSpacing.xs),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: SizedBox(
+                                        height: 48,
+                                        child: OutlinedButton.icon(
+                                          style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger),
+                                          icon: const Icon(Icons.close_rounded, size: 16),
+                                          label: Text(_activeTab == 1 ? 'Revise' : 'Reject'),
+                                          onPressed: () => _showFacultyRejectDialog(context, req),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: AppSpacing.sm),
+                                    Expanded(
+                                      child: SizedBox(
+                                        height: 48,
+                                        child: ElevatedButton.icon(
+                                          style: ElevatedButton.styleFrom(backgroundColor: AppColors.success, foregroundColor: Colors.white),
+                                          icon: const Icon(Icons.check_rounded, size: 16),
+                                          label: Text(_activeTab == 1 ? 'Verify' : 'Approve'),
+                                          onPressed: () => _showFacultyApproveDialog(context, req),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            )
+                          else
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                TextButton.icon(
+                                  icon: const Icon(Icons.visibility_outlined, size: 16),
+                                  label: const Text('View Full Details'),
+                                  onPressed: () => RequestDetailsModal.show(context, req),
+                                ),
+                                Row(
+                                  children: [
+                                    OutlinedButton.icon(
+                                      style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger),
+                                      icon: const Icon(Icons.close_rounded, size: 16),
+                                      label: Text(_activeTab == 1 ? 'Revise' : 'Reject'),
+                                      onPressed: () => _showFacultyRejectDialog(context, req),
+                                    ),
+                                    const SizedBox(width: AppSpacing.sm),
+                                    ElevatedButton.icon(
+                                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.success, foregroundColor: Colors.white),
+                                      icon: const Icon(Icons.check_rounded, size: 16),
+                                      label: Text(_activeTab == 1 ? 'Verify' : 'Approve'),
+                                      onPressed: () => _showFacultyApproveDialog(context, req),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                         ],
                       ),
                     ),

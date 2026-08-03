@@ -20,6 +20,26 @@ class CoordinatorDashboardView extends ConsumerStatefulWidget {
 class _CoordinatorDashboardViewState extends ConsumerState<CoordinatorDashboardView> {
   final _searchController = TextEditingController();
   String _filterQuery = '';
+  int _activeTab = 0; // 0 = Initial Approvals, 1 = Evidence Verification
+  Map<String, int>? _analytics;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchAnalytics();
+  }
+
+  Future<void> _fetchAnalytics() async {
+    try {
+      final repo = ref.read(workflowRepositoryProvider);
+      final res = await repo.getCoordinatorAnalytics();
+      if (mounted) {
+        setState(() {
+          _analytics = res;
+        });
+      }
+    } catch (_) {}
+  }
 
   @override
   void dispose() {
@@ -28,17 +48,20 @@ class _CoordinatorDashboardViewState extends ConsumerState<CoordinatorDashboardV
   }
 
   void _showCoordinatorApproveDialog(BuildContext context, OdRequest request) {
-    final remarksController = TextEditingController(text: 'Final Department Approval Granted.');
+    final isEvidenceMode = request.status == OdStatus.pendingEvidenceCoordinator;
+    final remarksController = TextEditingController(
+      text: isEvidenceMode ? 'Completion evidence verified. Final OD granted.' : 'Approved for event participation. Awaiting post-event completion proof.',
+    );
     final session = ref.read(authControllerProvider).session;
 
     showDialog(
       context: context,
       builder: (dialogCtx) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.verified_rounded, color: AppColors.primaryBlue, size: 24),
-            SizedBox(width: AppSpacing.xs),
-            Text('Final Department Approval'),
+            const Icon(Icons.verified_rounded, color: AppColors.primaryBlue, size: 24),
+            const SizedBox(width: AppSpacing.xs),
+            Text(isEvidenceMode ? 'Final Evidence Verification' : 'Initial Department Approval'),
           ],
         ),
         content: Column(
@@ -47,6 +70,10 @@ class _CoordinatorDashboardViewState extends ConsumerState<CoordinatorDashboardV
           children: [
             Text('Student: ${request.studentName} (${request.registerNumber})'),
             Text('Faculty Advisor: ${request.facultyAdvisorName} (Verified)'),
+            if (isEvidenceMode && request.completionSummary != null) ...[
+              const SizedBox(height: AppSpacing.xs),
+              Text('Completion Report: "${request.completionSummary}"', style: const TextStyle(fontStyle: FontStyle.italic, fontSize: 12)),
+            ],
             const SizedBox(height: AppSpacing.md),
             const Text('Coordinator Decision Remarks:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
             const SizedBox(height: AppSpacing.xs),
@@ -54,7 +81,7 @@ class _CoordinatorDashboardViewState extends ConsumerState<CoordinatorDashboardV
               controller: remarksController,
               maxLines: 2,
               decoration: const InputDecoration(
-                hintText: 'Enter final approval notes...',
+                hintText: 'Enter decision notes...',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -76,16 +103,17 @@ class _CoordinatorDashboardViewState extends ConsumerState<CoordinatorDashboardV
                     approve: true,
                     comment: remarksController.text.trim(),
                   );
+              await _fetchAnalytics();
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Request ${request.id} granted final department approval.'),
+                    content: Text(isEvidenceMode ? 'OD Request ${request.id} completed & granted!' : 'Request ${request.id} approved, awaiting evidence.'),
                     backgroundColor: AppColors.success,
                   ),
                 );
               }
             },
-            child: const Text('Grant Final Approval'),
+            child: Text(isEvidenceMode ? 'Complete & Grant OD' : 'Approve Request'),
           ),
         ],
       ),
@@ -95,15 +123,16 @@ class _CoordinatorDashboardViewState extends ConsumerState<CoordinatorDashboardV
   void _showCoordinatorRejectDialog(BuildContext context, OdRequest request) {
     final remarksController = TextEditingController();
     final session = ref.read(authControllerProvider).session;
+    final isEvidenceMode = request.status == OdStatus.pendingEvidenceCoordinator;
 
     showDialog(
       context: context,
       builder: (dialogCtx) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.warning_amber_rounded, color: AppColors.danger, size: 24),
-            SizedBox(width: AppSpacing.xs),
-            Text('Reject / Return Request'),
+            const Icon(Icons.warning_amber_rounded, color: AppColors.danger, size: 24),
+            const SizedBox(width: AppSpacing.xs),
+            Text(isEvidenceMode ? 'Request Evidence Revision' : 'Reject / Return Request'),
           ],
         ),
         content: Column(
@@ -117,9 +146,9 @@ class _CoordinatorDashboardViewState extends ConsumerState<CoordinatorDashboardV
             TextField(
               controller: remarksController,
               maxLines: 2,
-              decoration: const InputDecoration(
-                hintText: 'Enter discrepancy explanation...',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                hintText: isEvidenceMode ? 'Enter evidence revision requirements...' : 'Enter discrepancy explanation...',
+                border: const OutlineInputBorder(),
               ),
             ),
           ],
@@ -134,7 +163,7 @@ class _CoordinatorDashboardViewState extends ConsumerState<CoordinatorDashboardV
             onPressed: () async {
               if (remarksController.text.trim().isEmpty) {
                 ScaffoldMessenger.of(dialogCtx).showSnackBar(
-                  const SnackBar(content: Text('Please specify a rejection reason.'), backgroundColor: AppColors.danger),
+                  const SnackBar(content: Text('Please specify a rejection/revision reason.'), backgroundColor: AppColors.danger),
                 );
                 return;
               }
@@ -144,18 +173,20 @@ class _CoordinatorDashboardViewState extends ConsumerState<CoordinatorDashboardV
                     coordinatorId: session?.userId ?? 'CO1001',
                     coordinatorName: session?.name ?? 'Prof. Ramesh Kumar',
                     approve: false,
+                    returnForCorrection: !isEvidenceMode,
                     comment: remarksController.text.trim(),
                   );
+              await _fetchAnalytics();
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Request ${request.id} rejected.'),
+                    content: Text('Request ${request.id} updated.'),
                     backgroundColor: AppColors.warning,
                   ),
                 );
               }
             },
-            child: const Text('Confirm Rejection'),
+            child: Text(isEvidenceMode ? 'Request Revision' : 'Confirm Return'),
           ),
         ],
       ),
@@ -167,17 +198,28 @@ class _CoordinatorDashboardViewState extends ConsumerState<CoordinatorDashboardV
     final theme = Theme.of(context);
     final workflowState = ref.watch(workflowControllerProvider);
     final allRequests = workflowState.requests;
-    final pendingRequests = allRequests.where((r) {
-      final matchesStatus = r.status == OdStatus.pendingCoordinator || r.status == OdStatus.facultyApproved;
-      if (_filterQuery.isEmpty) return matchesStatus;
+    final isMobile = ResponsiveLayout.isMobile(context);
+
+    final initialPending = allRequests.where((r) => r.status == OdStatus.pendingCoordinator || r.status == OdStatus.facultyApproved).toList();
+    final evidencePending = allRequests.where((r) => r.status == OdStatus.pendingEvidenceCoordinator).toList();
+
+    final activeList = (_activeTab == 0 ? initialPending : evidencePending).where((r) {
+      if (_filterQuery.isEmpty) return true;
       final q = _filterQuery.toLowerCase();
-      return matchesStatus && (r.studentName.toLowerCase().contains(q) || r.registerNumber.toLowerCase().contains(q) || r.reason.toLowerCase().contains(q));
+      return r.studentName.toLowerCase().contains(q) || r.registerNumber.toLowerCase().contains(q) || r.reason.toLowerCase().contains(q);
     }).toList();
 
-    final isDesktop = ResponsiveLayout.isLaptop(context) || ResponsiveLayout.isDesktop(context);
+    final pendingCoordCount = _analytics?['pending_coordinator_count'] ?? initialPending.length;
+    final awaitingEvidenceCount = _analytics?['approved_awaiting_evidence_count'] ?? allRequests.where((r) => r.status == OdStatus.approvedAwaitingEvidence).length;
+    final pendingEvidenceCount = _analytics?['pending_evidence_coordinator_count'] ?? evidencePending.length;
+    final completedCount = _analytics?['completed_count'] ?? allRequests.where((r) => r.status == OdStatus.completed).length;
+    final totalCount = _analytics?['total_submissions_count'] ?? allRequests.length;
 
     return RefreshIndicator(
-      onRefresh: () => ref.read(workflowControllerProvider.notifier).loadAllData(),
+      onRefresh: () async {
+        await ref.read(workflowControllerProvider.notifier).loadAllData();
+        await _fetchAnalytics();
+      },
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -193,78 +235,129 @@ class _CoordinatorDashboardViewState extends ConsumerState<CoordinatorDashboardV
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
-              'Department-wide On Duty approval queue & analytics overview',
+              'Department-wide On Duty approval queue & real-time analytics overview',
               style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
             ),
             const SizedBox(height: AppSpacing.lg),
 
-            // Department Analytics Cards
-            if (isDesktop)
-              Row(
-                children: [
-                  Expanded(
-                    child: AppMetricCard(
-                      title: 'Pending Coordinator',
-                      value: '${pendingRequests.length}',
-                      icon: Icons.hourglass_top_rounded,
-                      statusType: AppStatusType.warning,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: AppMetricCard(
-                      title: 'Total Department Completed',
-                      value: '${allRequests.where((r) => r.status == OdStatus.completed).length}',
-                      icon: Icons.verified_user_outlined,
-                      statusType: AppStatusType.success,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: AppMetricCard(
-                      title: 'Total Submissions',
-                      value: '${allRequests.length}',
-                      icon: Icons.analytics_outlined,
-                      statusType: AppStatusType.info,
-                    ),
-                  ),
-                ],
-              )
-            else
+            // Department Real-Time Analytics Cards
+            if (isMobile)
               Column(
                 children: [
-                  AppMetricCard(
-                    title: 'Pending Coordinator',
-                    value: '${pendingRequests.length}',
-                    icon: Icons.hourglass_top_rounded,
-                    statusType: AppStatusType.warning,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: AppMetricCard(
+                          title: 'Pending Initial',
+                          value: '$pendingCoordCount',
+                          icon: Icons.hourglass_top_rounded,
+                          statusType: AppStatusType.warning,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: AppMetricCard(
+                          title: 'Awaiting Proof',
+                          value: '$awaitingEvidenceCount',
+                          icon: Icons.pending_actions_rounded,
+                          statusType: AppStatusType.info,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Row(
                     children: [
                       Expanded(
                         child: AppMetricCard(
-                          title: 'Completed',
-                          value: '${allRequests.where((r) => r.status == OdStatus.completed).length}',
-                          icon: Icons.verified_user_outlined,
-                          statusType: AppStatusType.success,
+                          title: 'Pending Proof',
+                          value: '$pendingEvidenceCount',
+                          icon: Icons.fact_check_outlined,
+                          statusType: AppStatusType.warning,
                         ),
                       ),
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: AppMetricCard(
-                          title: 'Total',
-                          value: '${allRequests.length}',
-                          icon: Icons.analytics_outlined,
-                          statusType: AppStatusType.info,
+                          title: 'Completed',
+                          value: '$completedCount',
+                          icon: Icons.verified_user_outlined,
+                          statusType: AppStatusType.success,
                         ),
                       ),
                     ],
                   ),
                 ],
+              )
+            else
+              Row(
+                children: [
+                  Expanded(
+                    child: AppMetricCard(
+                      title: 'Pending Initial',
+                      value: '$pendingCoordCount',
+                      icon: Icons.hourglass_top_rounded,
+                      statusType: AppStatusType.warning,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: AppMetricCard(
+                      title: 'Awaiting Proof',
+                      value: '$awaitingEvidenceCount',
+                      icon: Icons.pending_actions_rounded,
+                      statusType: AppStatusType.info,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: AppMetricCard(
+                      title: 'Pending Proof',
+                      value: '$pendingEvidenceCount',
+                      icon: Icons.fact_check_outlined,
+                      statusType: AppStatusType.warning,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: AppMetricCard(
+                      title: 'Completed',
+                      value: '$completedCount',
+                      icon: Icons.verified_user_outlined,
+                      statusType: AppStatusType.success,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: AppMetricCard(
+                      title: 'Total Requests',
+                      value: '$totalCount',
+                      icon: Icons.analytics_outlined,
+                      statusType: AppStatusType.info,
+                    ),
+                  ),
+                ],
               ),
 
             const SizedBox(height: AppSpacing.lg),
+
+            // Queue Choice Chips
+            Row(
+              children: [
+                ChoiceChip(
+                  label: Text('Initial Approvals ($pendingCoordCount)'),
+                  selected: _activeTab == 0,
+                  onSelected: (val) => setState(() => _activeTab = 0),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                ChoiceChip(
+                  label: Text('Evidence Verification ($pendingEvidenceCount)'),
+                  selected: _activeTab == 1,
+                  onSelected: (val) => setState(() => _activeTab = 1),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
 
             // Search Bar
             SizedBox(
@@ -284,14 +377,16 @@ class _CoordinatorDashboardViewState extends ConsumerState<CoordinatorDashboardV
             ),
             const SizedBox(height: AppSpacing.lg),
 
-            if (pendingRequests.isEmpty)
-              const AppEmptyState(
-                title: 'No Pending Coordinator Approvals',
-                description: 'All requests passed by Faculty Advisors have been approved.',
+            if (activeList.isEmpty)
+              AppEmptyState(
+                title: _activeTab == 0 ? 'No Pending Initial Approvals' : 'No Evidence Verification Queue',
+                description: _activeTab == 0
+                    ? 'All requests passed by Faculty Advisors have been processed.'
+                    : 'No student completion proof documents are currently awaiting final coordinator sign-off.',
               )
             else
               Column(
-                children: pendingRequests.map((req) {
+                children: activeList.map((req) {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: AppSpacing.md),
                     child: AppCard(
@@ -307,45 +402,90 @@ class _CoordinatorDashboardViewState extends ConsumerState<CoordinatorDashboardV
                                     Text(
                                       '${req.studentName} (${req.registerNumber})',
                                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                     Text(
-                                      'Faculty Advisor: ${req.facultyAdvisorName} (Approved)',
+                                      'Faculty Advisor: ${req.facultyAdvisorName} (Verified)',
                                       style: const TextStyle(fontSize: 12, color: AppColors.success, fontWeight: FontWeight.w600),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ],
                                 ),
                               ),
+                              const SizedBox(width: AppSpacing.xs),
                               AppStatusChip(label: req.status.displayName, statusType: req.status.statusType),
                             ],
                           ),
                           const AppDivider(),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              TextButton.icon(
-                                icon: const Icon(Icons.visibility_outlined, size: 16),
-                                label: const Text('Inspect Request'),
-                                onPressed: () => RequestDetailsModal.show(context, req),
-                              ),
-                              Row(
-                                children: [
-                                  OutlinedButton.icon(
-                                    style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger),
-                                    icon: const Icon(Icons.close_rounded, size: 16),
-                                    label: const Text('Reject'),
-                                    onPressed: () => _showCoordinatorRejectDialog(context, req),
-                                  ),
-                                  const SizedBox(width: AppSpacing.sm),
-                                  ElevatedButton.icon(
-                                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue, foregroundColor: Colors.white),
-                                    icon: const Icon(Icons.verified_rounded, size: 16),
-                                    label: const Text('Grant Approval'),
-                                    onPressed: () => _showCoordinatorApproveDialog(context, req),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
+                          if (isMobile)
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                TextButton.icon(
+                                  icon: const Icon(Icons.visibility_outlined, size: 16),
+                                  label: const Text('Inspect Request'),
+                                  onPressed: () => RequestDetailsModal.show(context, req),
+                                ),
+                                const SizedBox(height: AppSpacing.xs),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: SizedBox(
+                                        height: 48,
+                                        child: OutlinedButton.icon(
+                                          style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger),
+                                          icon: const Icon(Icons.close_rounded, size: 16),
+                                          label: Text(_activeTab == 1 ? 'Revise' : 'Reject'),
+                                          onPressed: () => _showCoordinatorRejectDialog(context, req),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: AppSpacing.sm),
+                                    Expanded(
+                                      child: SizedBox(
+                                        height: 48,
+                                        child: ElevatedButton.icon(
+                                          style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue, foregroundColor: Colors.white),
+                                          icon: const Icon(Icons.verified_rounded, size: 16),
+                                          label: Text(_activeTab == 1 ? 'Grant OD' : 'Approve'),
+                                          onPressed: () => _showCoordinatorApproveDialog(context, req),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            )
+                          else
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                TextButton.icon(
+                                  icon: const Icon(Icons.visibility_outlined, size: 16),
+                                  label: const Text('Inspect Request'),
+                                  onPressed: () => RequestDetailsModal.show(context, req),
+                                ),
+                                Row(
+                                  children: [
+                                    OutlinedButton.icon(
+                                      style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger),
+                                      icon: const Icon(Icons.close_rounded, size: 16),
+                                      label: Text(_activeTab == 1 ? 'Revise' : 'Reject'),
+                                      onPressed: () => _showCoordinatorRejectDialog(context, req),
+                                    ),
+                                    const SizedBox(width: AppSpacing.sm),
+                                    ElevatedButton.icon(
+                                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue, foregroundColor: Colors.white),
+                                      icon: const Icon(Icons.verified_rounded, size: 16),
+                                      label: Text(_activeTab == 1 ? 'Grant OD' : 'Approve'),
+                                      onPressed: () => _showCoordinatorApproveDialog(context, req),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                         ],
                       ),
                     ),

@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Date, Integer, Float, Text, Enum as SQLEnum, ForeignKey
+from sqlalchemy import Column, String, Date, Integer, Float, Text, DateTime, Enum as SQLEnum, ForeignKey
 from sqlalchemy.orm import relationship
 from ..core.database import Base
 from .guid import GUID
@@ -29,6 +29,11 @@ class OdRequest(Base, AuditMixin, SoftDeleteMixin):
     parent_consent_url = Column(Text, nullable=True)
     
     status = Column(SQLEnum(OdStatus), nullable=False, default=OdStatus.PENDING_FACULTY)
+
+    # Post-Event Completion Proof Fields
+    completion_summary = Column(Text, nullable=True)
+    completion_submitted_at = Column(DateTime(timezone=True), nullable=True)
+    completion_verified_at = Column(DateTime(timezone=True), nullable=True)
 
     student = relationship("User", foreign_keys=[student_id], back_populates="od_requests")
     faculty = relationship("User", foreign_keys=[faculty_id], back_populates="assigned_od_requests")

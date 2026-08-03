@@ -109,6 +109,28 @@ class WorkflowController extends StateNotifier<WorkflowState> {
     }
   }
 
+  Future<bool> submitCompletionEvidence({
+    required String requestId,
+    required String completionSummary,
+    required List<List<int>> filesBytes,
+    required List<String> fileNames,
+  }) async {
+    state = state.copyWith(isLoading: true, errorMessage: null);
+    try {
+      await _repository.submitCompletionEvidence(
+        requestId: requestId,
+        completionSummary: completionSummary,
+        filesBytes: filesBytes,
+        fileNames: fileNames,
+      );
+      await loadAllData();
+      return true;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, errorMessage: e.toString());
+      return false;
+    }
+  }
+
   Future<AttachmentItem?> uploadAttachment({
     required List<int> fileBytes,
     required String fileName,

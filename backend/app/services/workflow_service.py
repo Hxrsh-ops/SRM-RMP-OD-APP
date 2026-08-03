@@ -1,6 +1,6 @@
 import uuid
-from datetime import datetime, timezone
-from typing import List, Optional
+from datetime import datetime, timezone, date
+from typing import List, Optional, Dict, Any
 from uuid import UUID
 from ..core.exceptions import NotFoundException, PermissionDeniedException, BadRequestException
 from ..repositories.od_request_repository import OdRequestRepository
@@ -140,28 +140,36 @@ class WorkflowService:
         if req.faculty_id != faculty_user_id:
             raise PermissionDeniedException("You are not the assigned Faculty Advisor for this request.")
 
-        # State transition validation
-        if req.status not in (OdStatus.PENDING_FACULTY, OdStatus.SUBMITTED):
-            raise BadRequestException(f"Cannot perform faculty action on request in status {req.status.value}")
+        # Require non-empty comment on rejection or revision request
+        if not action.approve and (not action.comment or not action.comment.strip()):
+            raise BadRequestException("Faculty rejection or revision request requires a valid explanation note.")
 
         faculty_user = self.user_repo.get_by_id(faculty_user_id)
         faculty_name = faculty_user.full_name if faculty_user else "Faculty Advisor"
-
         now = datetime.now(timezone.utc)
-        new_status = OdStatus.PENDING_COORDINATOR if action.approve else OdStatus.FACULTY_REJECTED
+
+        # Process depending on current state
+        if req.status in (OdStatus.PENDING_FACULTY, OdStatus.SUBMITTED):
+            new_status = OdStatus.PENDING_COORDINATOR if action.approve else OdStatus.FACULTY_REJECTED
+            step_title = "Faculty Advisor Approved" if action.approve else "Faculty Advisor Rejected"
+        elif req.status == OdStatus.PENDING_EVIDENCE_FACULTY:
+            new_status = OdStatus.PENDING_EVIDENCE_COORDINATOR if action.approve else OdStatus.EVIDENCE_REVISION_REQUESTED
+            step_title = "Faculty Verified Evidence" if action.approve else "Faculty Requested Evidence Revision"
+        else:
+            raise BadRequestException(f"Cannot perform faculty action on request in status {req.status.value}")
 
         req.status = new_status
         req.updated_at = now
-        if action.approve:
+        if action.approve and req.status == OdStatus.PENDING_COORDINATOR:
             req.faculty_approval_time = now
 
         req.timeline.append(
             TimelineEvent(
-                title="Faculty Advisor Approved" if action.approve else "Faculty Advisor Rejected",
+                title=step_title,
                 actor_name=faculty_name,
                 actor_role="Faculty Advisor",
                 status=new_status,
-                note=action.comment or ("Approved by Faculty Advisor" if action.approve else "Rejected by Faculty Advisor"),
+                note=action.comment or step_title,
                 timestamp=now
             )
         )
@@ -180,19 +188,18 @@ class WorkflowService:
 
         self.notification_service.send_notification(
             recipient_id=req.student_id,
-            title="Faculty Approved OD" if action.approve else "Faculty Rejected OD",
-            message=f"Faculty Advisor {faculty_name} {'approved' if action.approve else 'rejected'} your request {request_id}.",
+            title=step_title,
+            message=f"Faculty Advisor {faculty_name} updated request {request_id}.",
             request_id=request_id
         )
 
-        # Notify Coordinator if approved
         if action.approve:
             coord = self.user_repo.get_by_username("CO1001")
             if coord:
                 self.notification_service.send_notification(
                     recipient_id=coord.id,
-                    title="Faculty Approved Request Ready for Coordinator",
-                    message=f"Faculty {faculty_name} approved request {request_id}. Pending your final sign-off.",
+                    title=f"Request {request_id} Ready for Coordinator",
+                    message=f"Faculty {faculty_name} approved request {request_id}. Pending your review.",
                     request_id=request_id
                 )
 
@@ -212,22 +219,33 @@ class WorkflowService:
         if not coordinator_user or coordinator_user.role not in (UserRole.COORDINATOR, UserRole.MASTER_ADMIN, UserRole.HOD, UserRole.DEAN):
             raise PermissionDeniedException("Only Coordinators can perform this action.")
 
-        # State transition validation
-        if req.status != OdStatus.PENDING_COORDINATOR:
-            raise BadRequestException(f"Cannot perform coordinator action on request in status {req.status.value}")
+        # Require non-empty comment on rejection or return for correction
+        if (not action.approve or action.return_for_correction) and (not action.comment or not action.comment.strip()):
+            raise BadRequestException("Coordinator rejection or return for correction requires a valid reason note.")
 
         coordinator_name = coordinator_user.full_name if coordinator_user else "Coordinator"
-
         now = datetime.now(timezone.utc)
-        if action.return_for_correction:
-            new_status = OdStatus.REVISION_REQUESTED
-            step_title = "Returned for Correction"
-        elif action.approve:
-            new_status = OdStatus.COMPLETED
-            step_title = "Final Approval Granted"
+
+        if req.status == OdStatus.PENDING_COORDINATOR:
+            if action.return_for_correction:
+                new_status = OdStatus.REVISION_REQUESTED
+                step_title = "Returned for Correction"
+            elif action.approve:
+                new_status = OdStatus.APPROVED_AWAITING_EVIDENCE
+                step_title = "Coordinator Approved (Awaiting Event Completion Evidence)"
+            else:
+                new_status = OdStatus.REJECTED
+                step_title = "Coordinator Rejected"
+        elif req.status == OdStatus.PENDING_EVIDENCE_COORDINATOR:
+            if action.return_for_correction or not action.approve:
+                new_status = OdStatus.EVIDENCE_REVISION_REQUESTED
+                step_title = "Coordinator Requested Evidence Revision"
+            else:
+                new_status = OdStatus.COMPLETED
+                step_title = "Completion Verified & OD Granted"
+                req.completion_verified_at = now
         else:
-            new_status = OdStatus.REJECTED
-            step_title = "Coordinator Rejected"
+            raise BadRequestException(f"Cannot perform coordinator action on request in status {req.status.value}")
 
         req.status = new_status
         req.updated_at = now
@@ -238,7 +256,7 @@ class WorkflowService:
                 actor_name=coordinator_name,
                 actor_role="Coordinator",
                 status=new_status,
-                note=action.comment or f"Processed by {coordinator_name}",
+                note=action.comment or step_title,
                 timestamp=now
             )
         )
@@ -257,9 +275,95 @@ class WorkflowService:
 
         self.notification_service.send_notification(
             recipient_id=req.student_id,
-            title=f"OD {new_status.value.capitalize()}",
-            message=f"Coordinator {coordinator_name} updated your request {request_id}.",
+            title=step_title,
+            message=f"Coordinator {coordinator_name} updated request {request_id}.",
             request_id=request_id
         )
 
         return updated_req
+
+    def submit_completion_evidence(
+        self,
+        request_id: str,
+        student_user_id: UUID,
+        completion_summary: str,
+        attachments_info: List[Dict[str, Any]]
+    ) -> OdRequest:
+        req = self.od_repo.get_by_id(request_id)
+        if not req:
+            raise NotFoundException("OD Request not found")
+
+        if req.student_id != student_user_id:
+            raise PermissionDeniedException("You can only submit completion evidence for your own OD request.")
+
+        # Require completion summary and at least one proof document
+        if not completion_summary or not completion_summary.strip():
+            raise BadRequestException("A written completion summary is required.")
+
+        if not attachments_info:
+            raise BadRequestException("At least one evidence proof document is required.")
+
+        # Validate event end date
+        today = date.today()
+        if today < req.start_date or today < req.end_date:
+            raise BadRequestException("Completion proof can only be submitted on or after the event end date.")
+
+        # Validate request status
+        if req.status not in (OdStatus.APPROVED_AWAITING_EVIDENCE, OdStatus.EVIDENCE_REVISION_REQUESTED):
+            raise BadRequestException(f"Cannot submit completion evidence for request in status {req.status.value}")
+
+        student = self.user_repo.get_by_id(student_user_id)
+        student_name = student.full_name if student else "Student"
+        now = datetime.now(timezone.utc)
+
+        req.completion_summary = completion_summary.strip()
+        req.completion_submitted_at = now
+        req.status = OdStatus.PENDING_EVIDENCE_FACULTY
+        req.updated_at = now
+
+        for att_info in attachments_info:
+            req.attachments.append(
+                Attachment(
+                    file_name=att_info["file_name"],
+                    file_type=att_info["file_type"],
+                    size_bytes=att_info["size_bytes"],
+                    file_url=att_info["file_url"],
+                    document_category="completion_evidence",
+                    uploaded_by=student_name,
+                    uploaded_at=now
+                )
+            )
+
+        req.timeline.append(
+            TimelineEvent(
+                title="Completion Evidence Submitted",
+                actor_name=student_name,
+                actor_role="Student",
+                status=OdStatus.PENDING_EVIDENCE_FACULTY,
+                note=f"Submitted completion report: {completion_summary.strip()[:100]}...",
+                timestamp=now
+            )
+        )
+
+        updated_req = self.od_repo.update(req)
+
+        # Notify Faculty Advisor
+        if req.faculty_id:
+            self.notification_service.send_notification(
+                recipient_id=req.faculty_id,
+                title="Completion Evidence Submitted",
+                message=f"Student {student_name} submitted completion proof for {request_id}. Pending your verification.",
+                request_id=request_id
+            )
+
+        return updated_req
+
+    def get_coordinator_analytics(self) -> Dict[str, int]:
+        all_requests = self.od_repo.list_all()
+        return {
+            "pending_coordinator_count": len([r for r in all_requests if r.status in (OdStatus.PENDING_COORDINATOR, OdStatus.FACULTY_APPROVED)]),
+            "approved_awaiting_evidence_count": len([r for r in all_requests if r.status == OdStatus.APPROVED_AWAITING_EVIDENCE]),
+            "pending_evidence_coordinator_count": len([r for r in all_requests if r.status == OdStatus.PENDING_EVIDENCE_COORDINATOR]),
+            "completed_count": len([r for r in all_requests if r.status == OdStatus.COMPLETED]),
+            "total_submissions_count": len(all_requests),
+        }

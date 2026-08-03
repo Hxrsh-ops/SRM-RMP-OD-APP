@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -74,6 +75,171 @@ class _RequestDetailsModalState extends ConsumerState<RequestDetailsModal> {
     }
   }
 
+  void _showCompletionProofDialog(BuildContext context, OdRequest req) {
+    final summaryController = TextEditingController();
+    List<PlatformFile> selectedFiles = [];
+    bool isSubmitting = false;
+    String? errorText;
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.assignment_turned_in_rounded, color: AppColors.primaryBlue, size: 24),
+                SizedBox(width: AppSpacing.xs),
+                Text('Submit Completion Proof'),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Request: ${req.id} • ${req.reason}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  const SizedBox(height: AppSpacing.sm),
+                  const Text('Completion Report Summary (Mandatory):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  const SizedBox(height: 4),
+                  TextField(
+                    controller: summaryController,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      hintText: 'Describe event achievements, attendance outcome, certificates received...',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  const Text('Proof Evidence Documents (Min. 1 File):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  const SizedBox(height: 4),
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.upload_file_rounded, size: 18),
+                    label: const Text('Attach Proof PDF / Certificate / Image'),
+                    onPressed: isSubmitting
+                        ? null
+                        : () async {
+                            final result = await FilePicker.platform.pickFiles(
+                              allowMultiple: true,
+                              type: FileType.custom,
+                              allowedExtensions: ['pdf', 'png', 'jpg', 'jpeg'],
+                              withData: true,
+                            );
+                            if (result != null) {
+                              setDialogState(() {
+                                selectedFiles.addAll(result.files);
+                                errorText = null;
+                              });
+                            }
+                          },
+                  ),
+                  if (selectedFiles.isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    ...selectedFiles.map((f) => Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.insert_drive_file_outlined, size: 16, color: AppColors.primaryBlue),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  f.name,
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.close_rounded, size: 16, color: AppColors.danger),
+                                onPressed: isSubmitting
+                                    ? null
+                                    : () {
+                                        setDialogState(() {
+                                          selectedFiles.remove(f);
+                                        });
+                                      },
+                              ),
+                            ],
+                          ),
+                        )),
+                  ],
+                  if (errorText != null) ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(errorText!, style: const TextStyle(color: AppColors.danger, fontSize: 12, fontWeight: FontWeight.bold)),
+                  ],
+                  if (isSubmitting) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    const LinearProgressIndicator(),
+                    const SizedBox(height: 4),
+                    const Text('Uploading proof evidence...', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                  ],
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: isSubmitting ? null : () => Navigator.pop(dialogCtx),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue, foregroundColor: Colors.white),
+                onPressed: isSubmitting
+                    ? null
+                    : () async {
+                        if (summaryController.text.trim().isEmpty) {
+                          setDialogState(() => errorText = 'A written completion summary is required.');
+                          return;
+                        }
+                        if (selectedFiles.isEmpty) {
+                          setDialogState(() => errorText = 'At least one proof file must be attached.');
+                          return;
+                        }
+
+                        setDialogState(() {
+                          isSubmitting = true;
+                          errorText = null;
+                        });
+
+                        final filesBytes = selectedFiles.map((f) => f.bytes!.toList()).toList();
+                        final fileNames = selectedFiles.map((f) => f.name).toList();
+
+                        final success = await ref.read(workflowControllerProvider.notifier).submitCompletionEvidence(
+                              requestId: req.id,
+                              completionSummary: summaryController.text.trim(),
+                              filesBytes: filesBytes,
+                              fileNames: fileNames,
+                            );
+
+                        if (dialogCtx.mounted) Navigator.pop(dialogCtx);
+
+                        if (context.mounted) {
+                          if (success) {
+                            Navigator.pop(context); // Close details modal
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Completion proof submitted! Pending Faculty Advisor verification.'),
+                                backgroundColor: AppColors.success,
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Failed to submit completion evidence. Please check event end date.'),
+                                backgroundColor: AppColors.danger,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                child: const Text('Submit Proof'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -84,12 +250,14 @@ class _RequestDetailsModalState extends ConsumerState<RequestDetailsModal> {
     final workflowState = ref.watch(workflowControllerProvider);
     final studentRequests = workflowState.requests.where((r) => r.studentId == req.studentId || r.registerNumber == req.registerNumber).toList();
     final approvedCount = studentRequests.where((r) => r.status == OdStatus.completed).length;
-    final pendingCount = studentRequests.where((r) => r.status == OdStatus.pendingFaculty || r.status == OdStatus.pendingCoordinator).length;
+    final pendingCount = studentRequests.where((r) => r.status == OdStatus.pendingFaculty || r.status == OdStatus.pendingCoordinator || r.status == OdStatus.pendingEvidenceFaculty || r.status == OdStatus.pendingEvidenceCoordinator).length;
     final rejectedCount = studentRequests.where((r) => r.status == OdStatus.rejected || r.status == OdStatus.facultyRejected).length;
 
-    final isFaculty = role == 'FACULTY_ADVISOR';
-    final isCoordinator = role == 'COORDINATOR';
+    final isStudent = role == 'STUDENT';
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
+    final preApprovalDocs = req.attachments.where((a) => a.documentCategory != 'completion_evidence').toList();
+    final completionDocs = req.attachments.where((a) => a.documentCategory == 'completion_evidence').toList();
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.90,
@@ -152,7 +320,7 @@ class _RequestDetailsModalState extends ConsumerState<RequestDetailsModal> {
               ),
             ),
 
-            // Scrollable Body Content with Keyboard Avoidance Padding
+            // Scrollable Body Content
             Expanded(
               child: SingleChildScrollView(
                 padding: EdgeInsets.only(
@@ -221,7 +389,7 @@ class _RequestDetailsModalState extends ConsumerState<RequestDetailsModal> {
 
                     const SizedBox(height: AppSpacing.lg),
 
-                    // Previous OD History Summary (Sections 7, 8, 9)
+                    // Previous OD History Summary
                     AppCard(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -270,19 +438,52 @@ class _RequestDetailsModalState extends ConsumerState<RequestDetailsModal> {
 
                     const SizedBox(height: AppSpacing.lg),
 
-                    // Faculty Review Details for Coordinator (Section 8)
-                    if (isCoordinator || req.status == OdStatus.pendingCoordinator || req.status == OdStatus.completed) ...[
-                      AppInfoCard(
-                        title: 'Faculty Advisor Review Details',
-                        description: 'Advisor: ${req.facultyAdvisorName}\nApproval Status: ${req.status == OdStatus.pendingCoordinator || req.status == OdStatus.completed ? "Approved" : "Pending"}\nFaculty Remarks: Verified student academic eligibility & event invitation.',
-                        icon: Icons.verified_user_outlined,
+                    // Post-Event Completion Report Card
+                    if (req.completionSummary != null || req.status == OdStatus.approvedAwaitingEvidence || req.status == OdStatus.evidenceRevisionRequested) ...[
+                      AppCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text('Post-Event Completion Proof', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primaryBlue)),
+                                AppStatusChip(label: req.status.displayName, statusType: req.status.statusType),
+                              ],
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
+                            if (req.completionSummary != null) ...[
+                              Text('Written Report Summary:', style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textSecondary)),
+                              Text(req.completionSummary!, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                              if (req.completionSubmittedAt != null)
+                                Text('Submitted on: ${req.completionSubmittedAt.toString().split('.')[0]}', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                            ] else ...[
+                              const Text('Event initial approval granted. Student must upload completion proof documents on/after event end date.', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                            ],
+                          ],
+                        ),
                       ),
                       const SizedBox(height: AppSpacing.lg),
                     ],
 
-                    // Parent Consent Document (Mandatory for Hosteller)
+                    // Student Action: Submit Completion Proof Button
+                    if (isStudent && (req.status == OdStatus.approvedAwaitingEvidence || req.status == OdStatus.evidenceRevisionRequested)) ...[
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue, foregroundColor: Colors.white),
+                          icon: const Icon(Icons.upload_file_rounded, size: 20),
+                          label: const Text('Submit Completion Proof & Report'),
+                          onPressed: () => _showCompletionProofDialog(context, req),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                    ],
+
+                    // Parent Consent Document (Hosteller)
                     if (req.residenceType == 'Hosteller' || req.parentConsentUrl != null) ...[
-                      const Text('Parent Consent Document (Mandatory for Hosteller)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.danger)),
+                      const Text('Parent Consent Document', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.danger)),
                       const SizedBox(height: AppSpacing.xs),
                       InkWell(
                         onTap: () => _openAttachment(context, req.parentConsentUrl ?? '', 'Parent_Consent_Letter.pdf'),
@@ -303,7 +504,7 @@ class _RequestDetailsModalState extends ConsumerState<RequestDetailsModal> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text('Parent_Consent_Letter.pdf', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                                    Text('Tap to view / download signed parent consent', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                                    Text('Tap to view signed parent consent', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
                                   ],
                                 ),
                               ),
@@ -315,32 +516,24 @@ class _RequestDetailsModalState extends ConsumerState<RequestDetailsModal> {
                       const SizedBox(height: AppSpacing.lg),
                     ],
 
-                    // Supporting Documents Section
-                    const Text('Supporting Documents', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    // Pre-approval Documents
+                    const Text('Pre-approval Documents', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                     const SizedBox(height: AppSpacing.xs),
-                    if (req.attachments.isEmpty)
+                    if (preApprovalDocs.isEmpty)
                       Container(
                         padding: const EdgeInsets.all(AppSpacing.md),
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceVariant,
-                          borderRadius: AppRadius.borderMd,
-                        ),
+                        decoration: BoxDecoration(color: AppColors.surfaceVariant, borderRadius: AppRadius.borderMd),
                         child: const Row(
                           children: [
                             Icon(Icons.attachment_outlined, color: AppColors.textSecondary, size: 20),
                             SizedBox(width: AppSpacing.sm),
-                            Expanded(
-                              child: Text(
-                                'No supporting documents attached.',
-                                style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
-                              ),
-                            ),
+                            Expanded(child: Text('No pre-approval documents attached.', style: TextStyle(color: AppColors.textSecondary, fontSize: 13))),
                           ],
                         ),
                       )
                     else
                       Column(
-                        children: req.attachments.map((att) {
+                        children: preApprovalDocs.map((att) {
                           return Container(
                             margin: const EdgeInsets.only(bottom: AppSpacing.xs),
                             child: InkWell(
@@ -361,18 +554,62 @@ class _RequestDetailsModalState extends ConsumerState<RequestDetailsModal> {
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Text(
-                                            att.fileName,
-                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          Text(
-                                            'Uploaded by ${att.uploadedBy} • ${att.sizeFormatted}',
-                                            style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
+                                          Text(att.fileName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                          Text('Uploaded by ${att.uploadedBy} • ${att.sizeFormatted}', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                        ],
+                                      ),
+                                    ),
+                                    const Icon(Icons.open_in_new_rounded, color: AppColors.primaryBlue, size: 18),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+
+                    const SizedBox(height: AppSpacing.lg),
+
+                    // Completion Proof Documents Section
+                    const Text('Post-Event Completion Proof Documents', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.primaryBlue)),
+                    const SizedBox(height: AppSpacing.xs),
+                    if (completionDocs.isEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        decoration: BoxDecoration(color: AppColors.surfaceVariant, borderRadius: AppRadius.borderMd),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.fact_check_outlined, color: AppColors.textSecondary, size: 20),
+                            SizedBox(width: AppSpacing.sm),
+                            Expanded(child: Text('No completion proof documents uploaded yet.', style: TextStyle(color: AppColors.textSecondary, fontSize: 13))),
+                          ],
+                        ),
+                      )
+                    else
+                      Column(
+                        children: completionDocs.map((att) {
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: AppSpacing.xs),
+                            child: InkWell(
+                              onTap: () => _openAttachment(context, att.fileUrl, att.fileName),
+                              borderRadius: AppRadius.borderMd,
+                              child: Container(
+                                padding: const EdgeInsets.all(AppSpacing.md),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primaryContainer,
+                                  borderRadius: AppRadius.borderMd,
+                                  border: Border.all(color: AppColors.primaryBlue.withValues(alpha: 0.3)),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.verified_outlined, color: AppColors.primaryBlue, size: 20),
+                                    const SizedBox(width: AppSpacing.sm),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(att.fileName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                          Text('Proof Uploaded by ${att.uploadedBy} • ${att.sizeFormatted}', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary), maxLines: 1, overflow: TextOverflow.ellipsis),
                                         ],
                                       ),
                                     ),
@@ -428,100 +665,6 @@ class _RequestDetailsModalState extends ConsumerState<RequestDetailsModal> {
                         );
                       }).toList(),
                     ),
-
-                    // Actions area for Faculty Advisor or Coordinator
-                    if (isFaculty && (req.status == OdStatus.pendingFaculty || req.status == OdStatus.submitted)) ...[
-                      const AppDivider(),
-                      const Text('Faculty Decision Action', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                      const SizedBox(height: AppSpacing.sm),
-                      AppTextField(
-                        controller: _commentController,
-                        labelText: 'Faculty Comment / Remarks',
-                        hintText: 'e.g. Verified student academic eligibility.',
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: AppSecondaryButton(
-                              label: 'Reject Request',
-                              onPressed: () {
-                                ref.read(workflowControllerProvider.notifier).processFacultyAction(
-                                      requestId: req.id,
-                                      facultyId: session?.username ?? 'FA1001',
-                                      facultyName: session?.name ?? 'Dr. Karthik B',
-                                      approve: false,
-                                      comment: _commentController.text,
-                                    );
-                                Navigator.pop(context);
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.md),
-                          Expanded(
-                            child: AppPrimaryButton(
-                              label: 'Approve Request',
-                              onPressed: () {
-                                ref.read(workflowControllerProvider.notifier).processFacultyAction(
-                                      requestId: req.id,
-                                      facultyId: session?.username ?? 'FA1001',
-                                      facultyName: session?.name ?? 'Dr. Karthik B',
-                                      approve: true,
-                                      comment: _commentController.text,
-                                    );
-                                Navigator.pop(context);
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                    ] else if (isCoordinator && (req.status == OdStatus.pendingCoordinator || req.status == OdStatus.facultyApproved)) ...[
-                      const AppDivider(),
-                      const Text('Coordinator Decision Action', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                      const SizedBox(height: AppSpacing.sm),
-                      AppTextField(
-                        controller: _commentController,
-                        labelText: 'Coordinator Remarks',
-                        hintText: 'e.g. Approved for official department records.',
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: AppOutlineButton(
-                              label: 'Needs Revision',
-                              onPressed: () {
-                                ref.read(workflowControllerProvider.notifier).processCoordinatorAction(
-                                      requestId: req.id,
-                                      coordinatorId: session?.username ?? 'CO1001',
-                                      coordinatorName: session?.name ?? 'Prof. Ramesh Kumar',
-                                      approve: false,
-                                      returnForCorrection: true,
-                                      comment: _commentController.text,
-                                    );
-                                Navigator.pop(context);
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-                          Expanded(
-                            child: AppPrimaryButton(
-                              label: 'Final Approve',
-                              onPressed: () {
-                                ref.read(workflowControllerProvider.notifier).processCoordinatorAction(
-                                      requestId: req.id,
-                                      coordinatorId: session?.username ?? 'CO1001',
-                                      coordinatorName: session?.name ?? 'Prof. Ramesh Kumar',
-                                      approve: true,
-                                      comment: _commentController.text,
-                                    );
-                                Navigator.pop(context);
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
                   ],
                 ),
               ),

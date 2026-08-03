@@ -27,6 +27,9 @@ class OdRequest {
   final String facultyAdvisorName;
   final DateTime? facultyApprovalTime;
   final OdStatus status;
+  final String? completionSummary;
+  final DateTime? completionSubmittedAt;
+  final DateTime? completionVerifiedAt;
   final List<AttachmentItem> attachments;
   final List<TimelineStep> timeline;
   final List<CommentItem> comments;
@@ -56,6 +59,9 @@ class OdRequest {
     required this.facultyAdvisorName,
     this.facultyApprovalTime,
     required this.status,
+    this.completionSummary,
+    this.completionSubmittedAt,
+    this.completionVerifiedAt,
     required this.attachments,
     required this.timeline,
     required this.comments,
@@ -64,6 +70,9 @@ class OdRequest {
 
   OdRequest copyWith({
     OdStatus? status,
+    String? completionSummary,
+    DateTime? completionSubmittedAt,
+    DateTime? completionVerifiedAt,
     List<AttachmentItem>? attachments,
     List<TimelineStep>? timeline,
     List<CommentItem>? comments,
@@ -92,6 +101,9 @@ class OdRequest {
       facultyAdvisorName: facultyAdvisorName,
       facultyApprovalTime: facultyApprovalTime,
       status: status ?? this.status,
+      completionSummary: completionSummary ?? this.completionSummary,
+      completionSubmittedAt: completionSubmittedAt ?? this.completionSubmittedAt,
+      completionVerifiedAt: completionVerifiedAt ?? this.completionVerifiedAt,
       attachments: attachments ?? this.attachments,
       timeline: timeline ?? this.timeline,
       comments: comments ?? this.comments,

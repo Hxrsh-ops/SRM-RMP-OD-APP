@@ -1,14 +1,21 @@
-from typing import List
-from fastapi import APIRouter, Depends, status
+from typing import List, Optional
+from fastapi import APIRouter, Depends, status, UploadFile, File, Form, HTTPException
 from sqlalchemy.orm import Session
 from ....core.database import get_db
-from ....core.exceptions import NotFoundException, PermissionDeniedException
+from ....core.exceptions import NotFoundException, PermissionDeniedException, BadRequestException
 from ....repositories.user_repository import UserRepository
 from ....repositories.od_request_repository import OdRequestRepository
 from ....repositories.notification_repository import NotificationRepository
 from ....services.notification_service import NotificationService
 from ....services.workflow_service import WorkflowService
-from ....schemas.od_request import OdRequestCreate, OdRequestResponse, FacultyActionRequest, CoordinatorActionRequest
+from ....services.storage_service import LocalStorageProvider
+from ....schemas.od_request import (
+    OdRequestCreate,
+    OdRequestResponse,
+    FacultyActionRequest,
+    CoordinatorActionRequest,
+    CoordinatorAnalyticsResponse,
+)
 from ....models.user import User
 from ....models.enums import UserRole
 from ....models.od_request import OdRequest
@@ -67,6 +74,14 @@ def list_od_requests(
 
     return [_build_od_response(req, user_repo) for req in requests]
 
+@router.get("/analytics/coordinator", response_model=CoordinatorAnalyticsResponse)
+def get_coordinator_analytics(
+    current_user: User = Depends(require_roles([UserRole.COORDINATOR, UserRole.MASTER_ADMIN, UserRole.HOD, UserRole.DEAN])),
+    workflow_service: WorkflowService = Depends(get_workflow_service),
+):
+    counts = workflow_service.get_coordinator_analytics()
+    return CoordinatorAnalyticsResponse(**counts)
+
 @router.post("", response_model=OdRequestResponse, status_code=status.HTTP_201_CREATED)
 def create_od_request(
     req_in: OdRequestCreate,
@@ -100,7 +115,6 @@ def get_od_request_by_id(
             raise PermissionDeniedException("You are not authorized to view this OD request")
 
     if current_user.role == UserRole.COORDINATOR:
-        # Coordinator can view requests in their department or overall coordinator queue
         if current_user.department_id and req.student and req.student.department_id != current_user.department_id:
             raise PermissionDeniedException("You are not authorized to view requests outside your department")
 
@@ -122,10 +136,36 @@ def faculty_action(
 def coordinator_action(
     request_id: str,
     action: CoordinatorActionRequest,
-    current_user: User = Depends(require_roles([UserRole.COORDINATOR])),
+    current_user: User = Depends(require_roles([UserRole.COORDINATOR, UserRole.MASTER_ADMIN, UserRole.HOD, UserRole.DEAN])),
     workflow_service: WorkflowService = Depends(get_workflow_service),
     db: Session = Depends(get_db)
 ):
     updated_req = workflow_service.process_coordinator_action(request_id, current_user.id, action)
+    user_repo = UserRepository(db)
+    return _build_od_response(updated_req, user_repo)
+
+@router.post("/{request_id}/completion-evidence", response_model=OdRequestResponse)
+async def submit_completion_evidence(
+    request_id: str,
+    completion_summary: str = Form(...),
+    files: List[UploadFile] = File(...),
+    current_user: User = Depends(require_roles([UserRole.STUDENT])),
+    workflow_service: WorkflowService = Depends(get_workflow_service),
+    db: Session = Depends(get_db)
+):
+    storage = LocalStorageProvider()
+    attachments_info = []
+
+    for file in files:
+        meta = await storage.upload_file(file=file, uploaded_by=current_user.full_name, document_category="completion_evidence")
+        attachments_info.append(meta)
+
+    updated_req = workflow_service.submit_completion_evidence(
+        request_id=request_id,
+        student_user_id=current_user.id,
+        completion_summary=completion_summary,
+        attachments_info=attachments_info
+    )
+
     user_repo = UserRepository(db)
     return _build_od_response(updated_req, user_repo)

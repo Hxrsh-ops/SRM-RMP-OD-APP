@@ -100,19 +100,40 @@ class ProfileDetailRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = ResponsiveLayout.isMobile(context);
+
+    if (isMobile) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
+            const SizedBox(height: 2),
+            Text(
+              value,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+              softWrap: true,
+            ),
+          ],
+        ),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+          const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Text(
               value,
               textAlign: TextAlign.end,
               style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              softWrap: true,
             ),
           ),
         ],

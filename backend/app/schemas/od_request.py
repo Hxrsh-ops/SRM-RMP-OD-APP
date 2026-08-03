@@ -30,6 +30,16 @@ class CoordinatorActionRequest(BaseModel):
     return_for_correction: bool = False
     comment: Optional[str] = None
 
+class CompletionEvidenceSubmit(BaseModel):
+    completion_summary: str
+
+class CoordinatorAnalyticsResponse(BaseModel):
+    pending_coordinator_count: int
+    approved_awaiting_evidence_count: int
+    pending_evidence_coordinator_count: int
+    completed_count: int
+    total_submissions_count: int
+
 class OdRequestResponse(BaseModel):
     id: str
     student_id: UUID
@@ -54,6 +64,9 @@ class OdRequestResponse(BaseModel):
     faculty_advisor_name: Optional[str] = None
     faculty_approval_time: Optional[datetime] = None
     status: OdStatus
+    completion_summary: Optional[str] = None
+    completion_submitted_at: Optional[datetime] = None
+    completion_verified_at: Optional[datetime] = None
     attachments: List[AttachmentResponse] = []
     timeline: List[TimelineEventResponse] = []
     comments: List[CommentResponse] = []
