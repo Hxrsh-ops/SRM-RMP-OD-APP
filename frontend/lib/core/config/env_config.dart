@@ -8,8 +8,6 @@ enum Environment {
 }
 
 class EnvConfig {
-  static const String _defaultLanIp = '192.168.1.14';
-
   final Environment environment;
   final int connectTimeoutMs;
   final int receiveTimeoutMs;
@@ -21,7 +19,12 @@ class EnvConfig {
   });
 
   static Environment get currentEnvironment {
-    if (kReleaseMode) return Environment.prod;
+    const envStr = String.fromEnvironment('ENVIRONMENT', defaultValue: '');
+    if (envStr.toLowerCase() == 'prod' || kReleaseMode) {
+      return Environment.prod;
+    } else if (envStr.toLowerCase() == 'staging') {
+      return Environment.staging;
+    }
     return Environment.dev;
   }
 
@@ -37,6 +40,10 @@ class EnvConfig {
       return 'http://$overrideLanIp:8000/api/v1';
     }
 
+    if (currentEnvironment == Environment.prod) {
+      return 'https://srm-od.ramapuram.srmist.edu.in/api/v1';
+    }
+
     if (kIsWeb) {
       return 'http://127.0.0.1:8000/api/v1';
     }
@@ -45,8 +52,8 @@ class EnvConfig {
         bool.fromEnvironment('FLUTTER_TEST');
 
     if (defaultTargetPlatform == TargetPlatform.android && !isTest) {
-      // Default to LAN IP for physical device development
-      return 'http://$_defaultLanIp:8000/api/v1';
+      // Standard Android Emulator loopback IP to host machine
+      return 'http://10.0.2.2:8000/api/v1';
     }
 
     return 'http://127.0.0.1:8000/api/v1';
@@ -62,7 +69,6 @@ class EnvConfig {
   }
 
   /// Resolves any relative or legacy attachment path into a fully accessible absolute URL.
-  /// Handles backward compatibility for historical requests uploaded during earlier dev sessions.
   static String resolveAttachmentUrl(String? rawPath) {
     if (rawPath == null || rawPath.trim().isEmpty) return '';
 
@@ -70,11 +76,11 @@ class EnvConfig {
 
     // Handle full URLs saved in DB
     if (path.startsWith('http://') || path.startsWith('https://')) {
-      // Fix historical localhost/127.0.0.1 URLs when accessed from physical Android phone
+      // Convert historical localhost/127.0.0.1 URLs when accessed from Android Emulator
       if (defaultTargetPlatform == TargetPlatform.android && !kIsWeb) {
         return path
-            .replaceAll('127.0.0.1:8000', '$_defaultLanIp:8000')
-            .replaceAll('localhost:8000', '$_defaultLanIp:8000')
+            .replaceAll('127.0.0.1:8000', '10.0.2.2:8000')
+            .replaceAll('localhost:8000', '10.0.2.2:8000')
             .replaceAll('/api/v1/uploads/', '/uploads/');
       }
       return path.replaceAll('/api/v1/uploads/', '/uploads/');

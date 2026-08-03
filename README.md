@@ -6,133 +6,97 @@ A production-grade workflow platform designed to digitize the On Duty approval p
 
 ## 🏛️ Project Architecture Overview
 
-This project is built as a monorepo adhering to **SOLID principles**, **Clean Architecture**, and **Feature-First Architecture**.
+This project is built as a single shared Flutter codebase targeting **Android** and **Flutter Web**, communicating with a **FastAPI (Python 3.11)** backend powered by **PostgreSQL** and **SQLAlchemy 2.0 ORM**.
 
 ### Technology Stack
-- **Frontend**: Flutter (Latest Stable), Material Design 3, Dart
-- **State Management**: Riverpod (`flutter_riverpod`)
-- **Routing**: GoRouter (`go_router`)
-- **Networking**: Dio (`dio`)
-- **Backend**: FastAPI, Python 3.11+, Uvicorn
-- **Database**: PostgreSQL (SQLAlchemy Async Engine)
+- **Frontend**: Flutter (Material Design 3, Riverpod 2.5, GoRouter 14, Dio 5.4, Flutter Secure Storage)
+- **Backend**: FastAPI (Python 3.11+), Pydantic v2, SQLAlchemy 2.0, Alembic Migrations
+- **Database**: PostgreSQL (`srm_od`)
+- **Authentication**: JWT Access & Refresh Tokens, BCrypt Hashing, Role-Based Access Control (RBAC)
 
 ---
 
-## 📂 Project Structure
+## 🔑 Demo & Test Credentials
 
-```
-SRM RMP OD/
-├── frontend/             # Flutter Web & Mobile Client Application
-│   ├── assets/           # App fonts, icons, images, illustrations, animations
-│   ├── lib/
-│   │   ├── core/
-│   │   │   ├── config/   # Environment configurations (dev, staging, prod)
-│   │   │   ├── constants/# Application-wide constants
-│   │   │   ├── network/  # Dio HTTP client, interceptors & error mapping
-│   │   │   ├── routing/  # GoRouter setup
-│   │   │   ├── services/ # Local storage & logging services
-│   │   │   ├── theme/    # M3 Color tokens, typography, dimensions & ThemeExtensions
-│   │   │   ├── ui/       # Reusable UI component foundations (buttons, cards, etc.)
-│   │   │   └── utils/    # Failures, Exceptions, Error Mapper
-│   │   ├── features/     # Feature-first domain modules
-│   │   └── main.dart     # Entry point initializing core providers & router
-│   └── pubspec.yaml
-├── backend/              # FastAPI Server Application
-│   ├── app/
-│   │   ├── api/          # Route handlers (/health, /version)
-│   │   ├── config/       # Environment & Database settings (pydantic-settings)
-│   │   ├── core/         # Application lifespan & core utilities
-│   │   ├── database/     # Async SQLAlchemy session factory & configuration
-│   │   ├── middleware/   # Request logging & CORS middleware
-│   │   ├── repositories/ # Repository layer
-│   │   ├── schemas/      # Pydantic request & response schemas
-│   │   ├── security/     # Reserved for future Auth/JWT/RBAC modules
-│   │   ├── services/     # Health & system services
-│   │   ├── utils/        # Structured JSON logging formatter
-│   │   └── main.py       # FastAPI application factory
-│   ├── requirements.txt
-│   └── .env.example
-├── docs/                 # Documentation & Architecture Decision Records (ADRs)
-│   ├── adr/              # ADR-001, ADR-002, ADR-003
-│   └── architecture.md
-├── database/             # Future migration scripts & SQL files
-├── scripts/              # Setup, development, and deployment scripts
-├── assets/               # Monorepo static assets
-├── README.md             # Project documentation
-├── .gitignore            # Version control exclusions
-└── LICENSE               # Software License
-```
+| Role | Username | Password | Full Name | Primary View |
+| :--- | :--- | :--- | :--- | :--- |
+| **Student** | `RA2511026020400` | `student123` | K.M. Harshanth | Student Home, My Requests, Submit OD Form |
+| **Faculty Advisor** | `FA1001` | `faculty123` | Dr. Karthik B | Faculty Advisor Queue, Recommendation Notes |
+| **Department Coordinator** | `CO1001` | `coord123` | Prof. Ramesh Kumar | Coordinator Queue, Department Analytics |
+
+---
+
+## ⚙️ Environment Configuration
+
+### Frontend Build-time Variables (`--dart-define`)
+- `API_BASE_URL`: Override base backend URL (e.g. `http://192.168.1.14:8000/api/v1` or `https://api.srm-od.edu`).
+- `PC_LAN_IP`: Set host PC LAN IP for physical device development (e.g. `192.168.1.14`).
+- `ENVIRONMENT`: Set runtime environment (`dev`, `staging`, `prod`).
 
 ---
 
 ## 🚀 How to Run
 
-### Prerequisites
-- Flutter SDK (Channel Stable)
-- Python 3.11+
-- Git
+### 1. Backend Setup & Database Migrations
+
+```bash
+cd backend
+
+# Create & Activate Virtual Environment
+python -m venv venv
+.\venv\Scripts\Activate.ps1   # Windows PowerShell
+source venv/bin/activate      # Linux / macOS
+
+# Install Dependencies
+pip install -r requirements.txt
+
+# Run Alembic Database Migrations
+alembic upgrade head
+
+# Start FastAPI Development Server
+uvicorn app.main:app --reload --port 8000
+```
+
+- OpenAPI Interactive Docs: `http://127.0.0.1:8000/api/v1/docs`
 
 ---
 
-### Running the Backend
+### 2. Frontend Execution & Release Builds
 
-1. Navigate to the backend directory:
-   ```bash
-   cd backend
-   ```
-2. Create and activate a Python virtual environment:
-   ```bash
-   # Windows (PowerShell)
-   python -m venv venv
-   .\venv\Scripts\Activate.ps1
+```bash
+cd frontend
 
-   # Linux / macOS
-   python3 -m venv venv
-   source venv/bin/activate
-   ```
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. Copy the environment configuration:
-   ```bash
-   cp .env.example .env
-   ```
-5. Start the FastAPI development server:
-   ```bash
-   uvicorn app.main:app --reload --port 8000
-   ```
-6. Access endpoints:
-   - Health Check: `http://127.0.0.1:8000/health`
-   - Version: `http://127.0.0.1:8000/version`
-   - Interactive OpenAPI Docs: `http://127.0.0.1:8000/docs`
+# Fetch Dependencies
+flutter pub get
+
+# Run Web Development
+flutter run -d chrome
+
+# Run Android Physical Device (LAN Development)
+flutter run --dart-define=PC_LAN_IP=192.168.1.14
+
+# Run Android Emulator
+flutter run
+
+# Build Release Web Bundle
+flutter build web --release
+
+# Build Release APK
+flutter build apk --release
+```
 
 ---
 
-### Running the Frontend
+## 🧪 Verification & Testing Commands
 
-1. Navigate to the frontend directory:
-   ```bash
-   cd frontend
-   ```
-2. Fetch dependencies:
-   ```bash
-   flutter pub get
-   ```
-3. Run the app:
-   ```bash
-   # Web
-   flutter run -d chrome
+```bash
+# Run Frontend Static Analysis
+flutter analyze
 
-   # Mobile (iOS/Android emulator)
-   flutter run
-   ```
+# Run Frontend Unit Test Suite
+flutter test
 
----
-
-## 🔮 Future Milestones
-
-- **Milestone 2**: Authentication & Role-Based Access Control (RBAC) - Student, Faculty, Coordinator.
-- **Milestone 3**: Database Schemas, Migrations & User Profiles.
-- **Milestone 4**: OD Request Creation, Digital Signatures, and Workflow Approval Pipeline.
-- **Milestone 5**: Real-time Notifications & Operations Dashboard.
+# Run Backend Pytest Suite
+cd backend
+python -m pytest tests
+```

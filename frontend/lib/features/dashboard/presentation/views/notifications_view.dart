@@ -4,6 +4,7 @@ import '../../../../core/theme/color_tokens.dart';
 import '../../../../core/theme/tokens/theme_tokens.dart';
 import '../../../../core/ui/ui.dart';
 import '../../../od_workflow/presentation/controllers/workflow_controller.dart';
+import '../../../od_workflow/presentation/widgets/request_details_modal.dart';
 
 class NotificationsView extends ConsumerWidget {
   const NotificationsView({super.key});
@@ -13,6 +14,7 @@ class NotificationsView extends ConsumerWidget {
     final theme = Theme.of(context);
     final workflowState = ref.watch(workflowControllerProvider);
     final notifications = workflowState.notifications;
+    final requests = workflowState.requests;
 
     return RefreshIndicator(
       onRefresh: () => ref.read(workflowControllerProvider.notifier).loadAllData(),
@@ -62,10 +64,14 @@ class NotificationsView extends ConsumerWidget {
             else
               Column(
                 children: notifications.map((n) {
+                  final req = n.requestId != null
+                      ? requests.where((r) => r.id == n.requestId).firstOrNull
+                      : null;
+
                   return Padding(
                     padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                    child: AppCard(
-                      backgroundColor: n.isRead ? AppColors.surface : AppColors.primaryContainer.withValues(alpha: 0.25),
+                    child: AppClickableCard(
+                      onTap: req != null ? () => RequestDetailsModal.show(context, req) : null,
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -99,6 +105,8 @@ class NotificationsView extends ConsumerWidget {
                               ],
                             ),
                           ),
+                          if (req != null)
+                            const Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary, size: 20),
                         ],
                       ),
                     ),

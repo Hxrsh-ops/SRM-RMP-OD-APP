@@ -5,6 +5,7 @@ import '../../../../core/theme/color_tokens.dart';
 import '../../../../core/ui/ui.dart';
 import '../../../authentication/authentication.dart';
 import '../../../od_workflow/presentation/controllers/workflow_controller.dart';
+import '../../../od_workflow/presentation/views/create_od_request_view.dart';
 import '../views/coordinator_dashboard_view.dart';
 import '../views/faculty_dashboard_view.dart';
 import '../views/my_requests_view.dart';
@@ -36,12 +37,14 @@ class _MainShellDashboardScreenState extends ConsumerState<MainShellDashboardScr
     final unreadCount = workflowState.notifications.where((n) => !n.isRead).length;
 
     final List<Widget> pages = isStudent
-        ? const [
-            _HomeDashboardView(),
-            MyRequestsView(),
-            _CreateOdRequestFlowView(),
-            NotificationsView(),
-            ProfileView(),
+        ? [
+            const _HomeDashboardView(),
+            const MyRequestsView(),
+            _CreateOdRequestFlowView(
+              onSuccess: () => setState(() => _currentIndex = 1),
+            ),
+            const NotificationsView(),
+            const ProfileView(),
           ]
         : const [
             _HomeDashboardView(),
@@ -193,13 +196,15 @@ class _AllRequestsView extends ConsumerWidget {
 }
 
 // -----------------------------------------------------------------------------
-// CREATE OD REQUEST FLOW VIEW (DELEGATES TO TAB OR ACTION)
+// CREATE OD REQUEST FLOW VIEW
 // -----------------------------------------------------------------------------
 class _CreateOdRequestFlowView extends ConsumerWidget {
-  const _CreateOdRequestFlowView();
+  final VoidCallback? onSuccess;
+
+  const _CreateOdRequestFlowView({this.onSuccess});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return const MyRequestsView();
+    return CreateOdRequestView(onSuccess: onSuccess);
   }
 }

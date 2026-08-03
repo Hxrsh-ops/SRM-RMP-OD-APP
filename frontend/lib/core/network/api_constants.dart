@@ -1,13 +1,11 @@
 import '../config/env_config.dart';
 
 class ApiConstants {
-  static const String desktopBaseUrl = 'http://127.0.0.1:8000/api/v1';
-
   static String get baseUrl => EnvConfig.apiBaseUrl;
   static String get serverRootUrl => EnvConfig.serverRootUrl;
 
-  static const Duration connectTimeout = Duration(seconds: 5);
-  static const Duration receiveTimeout = Duration(seconds: 5);
+  static const Duration connectTimeout = Duration(seconds: 10);
+  static const Duration receiveTimeout = Duration(seconds: 10);
 
   // Authentication Endpoints
   static const String login = '/auth/login/json';

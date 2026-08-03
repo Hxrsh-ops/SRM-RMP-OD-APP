@@ -9,10 +9,10 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
     API_V1_STR: str = "/api/v1"
     ENVIRONMENT: str = "development"
-    
+
     SECRET_KEY: str = "srm_rmp_od_super_secret_jwt_key_2026_change_in_production"
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 # 1 day for demo ease
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 day for demo ease
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     # PostgreSQL Connection Credentials
@@ -26,7 +26,13 @@ class Settings(BaseSettings):
     DATABASE_URL: Optional[str] = None
 
     @model_validator(mode="after")
-    def assemble_db_connection(self) -> "Settings":
+    def validate_and_assemble(self) -> "Settings":
+        if self.ENVIRONMENT.lower() in ("production", "prod"):
+            if self.SECRET_KEY == "srm_rmp_od_super_secret_jwt_key_2026_change_in_production":
+                raise ValueError("SECRET_KEY must be configured via environment variable in production!")
+            if "*" in self.CORS_ORIGINS:
+                raise ValueError("CORS_ORIGINS cannot contain '*' when allow_credentials is True in production!")
+
         if not self.DATABASE_URL:
             user = quote_plus(self.POSTGRES_USER) if self.POSTGRES_USER else ""
             pwd = quote_plus(self.POSTGRES_PASSWORD) if self.POSTGRES_PASSWORD else ""

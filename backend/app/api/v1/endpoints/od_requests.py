@@ -93,8 +93,16 @@ def get_od_request_by_id(
     # Object-level authorization check
     if current_user.role == UserRole.STUDENT and req.student_id != current_user.id:
         raise PermissionDeniedException("You are not authorized to view another student's OD request")
-    if current_user.role == UserRole.FACULTY_ADVISOR and req.faculty_id != current_user.id:
-        raise PermissionDeniedException("You are not authorized to view this assigned request")
+
+    if current_user.role == UserRole.FACULTY_ADVISOR:
+        is_assigned = (req.faculty_id == current_user.id) or (req.student and req.student.assigned_faculty_id == current_user.id)
+        if not is_assigned:
+            raise PermissionDeniedException("You are not authorized to view this OD request")
+
+    if current_user.role == UserRole.COORDINATOR:
+        # Coordinator can view requests in their department or overall coordinator queue
+        if current_user.department_id and req.student and req.student.department_id != current_user.department_id:
+            raise PermissionDeniedException("You are not authorized to view requests outside your department")
 
     return _build_od_response(req, user_repo)
 
