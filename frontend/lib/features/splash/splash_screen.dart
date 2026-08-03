@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import '../../core/constants/app_constants.dart';
 import '../../core/theme/color_tokens.dart';
 import '../../core/theme/tokens/theme_tokens.dart';
 import '../../core/ui/layout/app_brand_logo.dart';
+import '../authentication/domain/entities/auth_status.dart';
 import '../authentication/presentation/controllers/auth_controller.dart';
 
 class AuthSplashScreen extends ConsumerStatefulWidget {
@@ -18,24 +17,23 @@ class _AuthSplashScreenState extends ConsumerState<AuthSplashScreen> {
   @override
   void initState() {
     super.initState();
-    _initializeApp();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _triggerSessionRestoration();
+    });
   }
 
-  Future<void> _initializeApp() async {
-    // Session restoration happens via authControllerProvider
-    await ref.read(authControllerProvider.notifier).restoreSession();
-
-    if (!mounted) return;
-    final authState = ref.read(authControllerProvider);
-    if (authState.session != null) {
-      context.go('/dashboard');
-    } else {
-      context.go(AppConstants.loginRoute);
+  void _triggerSessionRestoration() {
+    final status = ref.read(authControllerProvider).status;
+    if (status == AuthStatus.initial) {
+      ref.read(authControllerProvider.notifier).restoreSession();
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authControllerProvider);
+    final isRestoring = authState.status == AuthStatus.initial;
+
     return Scaffold(
       backgroundColor: AppColors.primaryBlue,
       body: SafeArea(
@@ -60,9 +58,25 @@ class _AuthSplashScreenState extends ConsumerState<AuthSplashScreen> {
                 letterSpacing: 1.5,
               ),
             ),
+            const SizedBox(height: AppSpacing.lg),
+            if (isRestoring) ...[
+              const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white70),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              const Text(
+                'Initializing Session...',
+                style: TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+            ],
             const Spacer(),
             // Campus Graphic Footer Placeholder
-            Opacity(
+            const Opacity(
               opacity: 0.15,
               child: Icon(
                 Icons.account_balance_rounded,

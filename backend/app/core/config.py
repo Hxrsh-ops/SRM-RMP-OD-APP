@@ -1,5 +1,7 @@
 import os
-from typing import List
+from typing import List, Optional
+from urllib.parse import quote_plus
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
@@ -13,16 +15,36 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 # 1 day for demo ease
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
+    # PostgreSQL Connection Credentials
+    POSTGRES_SERVER: str = "localhost"
+    POSTGRES_PORT: int = 5432
+    POSTGRES_USER: str = "postgres"
+    POSTGRES_PASSWORD: str = ""
+    POSTGRES_DB: str = "srm_od"
+
     # Single Source of Truth for Database Configuration (PostgreSQL)
-    DATABASE_URL: str = os.getenv(
-        "DATABASE_URL", 
-        "postgresql://postgres:postgres@localhost:5432/srm_od"
-    )
+    DATABASE_URL: Optional[str] = None
+
+    @model_validator(mode="after")
+    def assemble_db_connection(self) -> "Settings":
+        if not self.DATABASE_URL:
+            user = quote_plus(self.POSTGRES_USER) if self.POSTGRES_USER else ""
+            pwd = quote_plus(self.POSTGRES_PASSWORD) if self.POSTGRES_PASSWORD else ""
+            auth = f"{user}:{pwd}@" if user or pwd else ""
+            self.DATABASE_URL = f"postgresql://{auth}{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        return self
 
     # Local Storage Directory
     UPLOAD_DIR: str = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads")
 
-    CORS_ORIGINS: List[str] = ["*"]
+    CORS_ORIGINS: List[str] = [
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
 
     model_config = SettingsConfigDict(
         env_file=".env",

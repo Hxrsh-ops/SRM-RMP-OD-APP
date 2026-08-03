@@ -220,6 +220,31 @@ class _LoginFormState extends ConsumerState<LoginForm> {
             size: AppButtonSize.large,
             onPressed: isAuthenticating ? null : _onLoginPressed,
           ),
+
+          if (authState.errorMessage != null && authState.errorMessage!.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.md),
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: AppColors.danger.withValues(alpha: 0.1),
+                borderRadius: AppRadius.borderMd,
+                border: Border.all(color: AppColors.danger.withValues(alpha: 0.4)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.error_outline_rounded, color: AppColors.danger, size: 20),
+                  const SizedBox(width: AppSpacing.xs),
+                  Expanded(
+                    child: Text(
+                      authState.errorMessage!,
+                      style: const TextStyle(color: AppColors.danger, fontSize: 13, fontWeight: FontWeight.w600),
+                      softWrap: true,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

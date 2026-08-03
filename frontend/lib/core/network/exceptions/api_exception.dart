@@ -10,11 +10,14 @@ class ApiException implements Exception {
   });
 
   @override
-  String toString() => 'ApiException: $message (StatusCode: $statusCode)';
+  String toString() => message;
 }
 
 class NetworkException extends ApiException {
-  const NetworkException({super.message = 'No internet connection or server unreachable.', super.data});
+  const NetworkException({
+    super.message = 'Unable to reach server. Please check your network connection.',
+    super.data,
+  });
 }
 
 class UnauthorizedException extends ApiException {

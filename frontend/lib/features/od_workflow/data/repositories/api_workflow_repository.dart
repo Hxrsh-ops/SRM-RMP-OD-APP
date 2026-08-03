@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_constants.dart';
 import '../../domain/entities/attachment_item.dart';
@@ -140,6 +141,33 @@ class ApiWorkflowRepository implements WorkflowRepository {
   @override
   Future<void> markNotificationsRead(String recipientId) async {
     await apiClient.patch(ApiConstants.markNotificationsRead);
+  }
+
+  @override
+  Future<AttachmentItem> uploadAttachment({
+    required List<int> fileBytes,
+    required String fileName,
+    required String documentCategory,
+  }) async {
+    final formData = FormData.fromMap({
+      'file': MultipartFile.fromBytes(fileBytes, filename: fileName),
+      'document_category': documentCategory,
+    });
+
+    final response = await apiClient.post(
+      ApiConstants.uploadAttachment,
+      data: formData,
+    );
+
+    return AttachmentItem(
+      id: response['id']?.toString() ?? 'ATT-${DateTime.now().millisecondsSinceEpoch}',
+      fileName: response['file_name'].toString(),
+      fileType: response['file_type'].toString(),
+      sizeBytes: response['size_bytes'] as int,
+      fileUrl: response['file_url'].toString(),
+      uploadedBy: response['uploaded_by'].toString(),
+      uploadedAt: DateTime.parse(response['uploaded_at'].toString()),
+    );
   }
 
   OdRequest _mapJsonToOdRequest(Map<String, dynamic> json) {

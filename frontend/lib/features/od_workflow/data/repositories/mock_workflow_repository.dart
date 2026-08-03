@@ -223,4 +223,23 @@ class MockWorkflowRepository implements WorkflowRepository {
       }
     }
   }
+
+  @override
+  Future<AttachmentItem> uploadAttachment({
+    required List<int> fileBytes,
+    required String fileName,
+    required String documentCategory,
+  }) async {
+    final now = DateTime.now();
+    final ext = fileName.contains('.') ? fileName.split('.').last : 'pdf';
+    return AttachmentItem(
+      id: 'ATT-${now.millisecondsSinceEpoch}',
+      fileName: fileName,
+      fileType: ext,
+      sizeBytes: fileBytes.length,
+      fileUrl: 'http://127.0.0.1:8000/uploads/$fileName',
+      uploadedBy: 'Student',
+      uploadedAt: now,
+    );
+  }
 }

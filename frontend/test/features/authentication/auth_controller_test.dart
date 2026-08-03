@@ -32,8 +32,8 @@ void main() {
       );
     });
 
-    test('Initial state is unauthenticated', () {
-      expect(controller.state.status, AuthStatus.unauthenticated);
+    test('Initial state is initial', () {
+      expect(controller.state.status, AuthStatus.initial);
       expect(controller.state.session, isNull);
     });
 

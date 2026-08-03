@@ -9,7 +9,7 @@ class AuthState extends Equatable {
   final bool rememberMe;
 
   const AuthState({
-    this.status = AuthStatus.unauthenticated,
+    this.status = AuthStatus.initial,
     this.session,
     this.errorMessage,
     this.rememberMe = false,

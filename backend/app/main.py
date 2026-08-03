@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 from .core.config import settings
 from .core.database import Base, engine, SessionLocal
@@ -19,7 +20,15 @@ setup_logging()
 def seed_demo_users():
     """Seed default development accounts if environment is development."""
     if settings.ENVIRONMENT.lower() not in ("development", "dev"):
+        logger.info("Non-development environment detected; skipping demo seeding.")
         return
+
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+    except Exception as e:
+        logger.critical(f"Database connection failed during startup: {e}")
+        raise RuntimeError(f"Database connection failed: {e}") from e
 
     db: Session = SessionLocal()
     try:
@@ -90,7 +99,8 @@ def seed_demo_users():
 
         logger.info("Development seed data successfully initialized.")
     except Exception as e:
-        logger.error(f"Error seeding database: {e}")
+        logger.critical(f"Error seeding database: {e}")
+        raise RuntimeError(f"Database seeding failed: {e}") from e
     finally:
         db.close()
 
@@ -112,6 +122,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

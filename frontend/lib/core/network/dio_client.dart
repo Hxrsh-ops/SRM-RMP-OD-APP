@@ -8,7 +8,7 @@ class DioClient {
   DioClient(EnvConfig config) {
     _dio = Dio(
       BaseOptions(
-        baseUrl: config.apiBaseUrl,
+        baseUrl: EnvConfig.apiBaseUrl,
         connectTimeout: Duration(milliseconds: config.connectTimeoutMs),
         receiveTimeout: Duration(milliseconds: config.receiveTimeoutMs),
         headers: {

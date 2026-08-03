@@ -2,17 +2,22 @@ import 'package:flutter/material.dart';
 import '../../theme/color_tokens.dart';
 import '../../theme/tokens/theme_tokens.dart';
 import 'app_brand_logo.dart';
+import 'app_initials_avatar.dart';
 
 class AppDesktopSidebar extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onDestinationSelected;
   final String role;
+  final String userName;
+  final VoidCallback? onLogout;
 
   const AppDesktopSidebar({
     super.key,
     required this.selectedIndex,
     required this.onDestinationSelected,
     this.role = 'STUDENT',
+    this.userName = 'User',
+    this.onLogout,
   });
 
   @override
@@ -20,17 +25,24 @@ class AppDesktopSidebar extends StatelessWidget {
     final isStudent = role == 'STUDENT';
     final isFaculty = role == 'FACULTY_ADVISOR';
 
+    final roleLabel = isStudent
+        ? 'Student'
+        : (isFaculty ? 'Faculty Advisor' : 'Coordinator');
+
     return Container(
       width: 260,
       color: AppColors.primaryBlue,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // SRM RMP Header Logo
           const Padding(
             padding: EdgeInsets.all(AppSpacing.xl),
             child: AppBrandLogo(size: 40, showWordmark: true, isDarkBackground: true),
           ),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.sm),
+
+          // Navigation Links List
           Expanded(
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
@@ -38,14 +50,14 @@ class AppDesktopSidebar extends StatelessWidget {
                 _SidebarItem(
                   icon: Icons.dashboard_outlined,
                   activeIcon: Icons.dashboard_rounded,
-                  label: 'Dashboard',
+                  label: 'Overview',
                   isSelected: selectedIndex == 0,
                   onTap: () => onDestinationSelected(0),
                 ),
                 _SidebarItem(
                   icon: Icons.assignment_outlined,
                   activeIcon: Icons.assignment_rounded,
-                  label: isStudent ? 'My OD Requests' : (isFaculty ? 'Pending Requests' : 'Approval Queue'),
+                  label: isStudent ? 'My Requests' : (isFaculty ? 'Pending Reviews' : 'Approval Queue'),
                   isSelected: selectedIndex == 1,
                   onTap: () => onDestinationSelected(1),
                 ),
@@ -74,12 +86,61 @@ class AppDesktopSidebar extends StatelessWidget {
               ],
             ),
           ),
+
           const Divider(color: Colors.white24, height: 1),
-          const Padding(
-            padding: EdgeInsets.all(AppSpacing.lg),
-            child: Text(
-              'SRM Ramapuram • OD Portal v2.0',
-              style: TextStyle(color: Colors.white54, fontSize: 11),
+
+          // Bottom Profile Initials Card & Logout Button
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Container(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.08),
+                borderRadius: AppRadius.borderMd,
+              ),
+              child: Row(
+                children: [
+                  AppInitialsAvatar(
+                    name: userName,
+                    size: 38,
+                    backgroundColor: AppColors.accentYellow,
+                    foregroundColor: AppColors.primaryBlue,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          userName,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          roleLabel,
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 11,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (onLogout != null)
+                    IconButton(
+                      icon: const Icon(Icons.logout_rounded, color: Colors.white70, size: 18),
+                      onPressed: onLogout,
+                      tooltip: 'Logout',
+                    ),
+                ],
+              ),
             ),
           ),
         ],
@@ -125,12 +186,16 @@ class _SidebarItem extends StatelessWidget {
               children: [
                 Icon(isSelected ? activeIcon : icon, color: textColor, size: 20),
                 const SizedBox(width: AppSpacing.md),
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: textColor,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                    fontSize: 14,
+                Expanded(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      color: textColor,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                      fontSize: 14,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],

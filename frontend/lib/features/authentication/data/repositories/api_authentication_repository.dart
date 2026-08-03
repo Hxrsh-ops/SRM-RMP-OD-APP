@@ -62,7 +62,7 @@ class ApiAuthenticationRepository implements AuthenticationRepository {
     }
 
     try {
-      final userData = await apiClient.get(ApiConstants.me);
+      final userData = await apiClient.get(ApiConstants.me).timeout(const Duration(seconds: 3));
       return UserSession(
         userId: userData['id'].toString(),
         username: userData['username'].toString(),

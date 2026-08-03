@@ -6,33 +6,31 @@ import '../../features/dashboard/presentation/screens/dashboard_screen.dart';
 import '../constants/app_constants.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final authNotifier = ref.watch(authControllerProvider.notifier);
-
   return GoRouter(
     initialLocation: AppConstants.splashRoute,
-    refreshListenable: _ListenableAdapter(authNotifier),
+    refreshListenable: _ListenableAdapter(ref),
     redirect: (BuildContext context, GoRouterState state) {
       final authState = ref.read(authControllerProvider);
-      final isAuth = authState.status == AuthStatus.authenticated;
+      final status = authState.status;
 
       final isSplashLocation = state.matchedLocation == AppConstants.splashRoute;
       final isLoginLocation = state.matchedLocation == AppConstants.loginRoute;
 
-      // Allow splash to perform startup session restoration without interference
-      if (isSplashLocation) {
-        return null;
+      // 1. While initial/restoring, keep user on Splash
+      if (status == AuthStatus.initial) {
+        return isSplashLocation ? null : AppConstants.splashRoute;
       }
 
-      // If authenticated, redirect away from public login to protected dashboard
-      if (isAuth) {
-        if (isLoginLocation) {
+      // 2. If authenticated, redirect away from Splash & Login to Dashboard
+      if (status == AuthStatus.authenticated) {
+        if (isSplashLocation || isLoginLocation) {
           return '/dashboard';
         }
         return null;
       }
 
-      // If unauthenticated and trying to access protected routes, redirect to login
-      if (!isAuth && !isLoginLocation) {
+      // 3. For unauthenticated, failure, sessionExpired: redirect away from Splash & protected routes to Login
+      if (isSplashLocation || !isLoginLocation) {
         return AppConstants.loginRoute;
       }
 
@@ -56,8 +54,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 });
 
 class _ListenableAdapter extends ChangeNotifier {
-  _ListenableAdapter(StateNotifier notifier) {
-    notifier.addListener((_) {
+  _ListenableAdapter(Ref ref) {
+    ref.listen(authControllerProvider, (_, __) {
       notifyListeners();
     });
   }

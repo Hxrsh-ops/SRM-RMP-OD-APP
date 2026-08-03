@@ -55,7 +55,7 @@ class AuthController extends StateNotifier<AuthState> {
   })  : _loginUseCase = loginUseCase,
         _logoutUseCase = logoutUseCase,
         _restoreSessionUseCase = restoreSessionUseCase,
-        super(const AuthState());
+        super(const AuthState(status: AuthStatus.initial));
 
   void toggleRememberMe(bool value) {
     state = state.copyWith(rememberMe: value);
@@ -85,7 +85,7 @@ class AuthController extends StateNotifier<AuthState> {
   }
 
   Future<void> restoreSession() async {
-    state = state.copyWith(status: AuthStatus.authenticating);
+    state = state.copyWith(status: AuthStatus.initial, errorMessage: null);
     try {
       final session = await _restoreSessionUseCase.execute();
       if (session != null) {

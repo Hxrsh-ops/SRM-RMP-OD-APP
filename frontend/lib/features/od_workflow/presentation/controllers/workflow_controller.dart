@@ -63,7 +63,7 @@ class WorkflowController extends StateNotifier<WorkflowState> {
     }
   }
 
-  Future<void> submitRequest({
+  Future<bool> submitRequest({
     required String studentId,
     required String studentName,
     required String registerNumber,
@@ -81,7 +81,7 @@ class WorkflowController extends StateNotifier<WorkflowState> {
     String? parentConsentUrl,
     List<AttachmentItem>? attachments,
   }) async {
-    state = state.copyWith(isLoading: true);
+    state = state.copyWith(isLoading: true, errorMessage: null);
     try {
       await _repository.submitOdRequest(
         studentId: studentId,
@@ -102,8 +102,30 @@ class WorkflowController extends StateNotifier<WorkflowState> {
         attachments: attachments,
       );
       await loadAllData();
+      return true;
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());
+      return false;
+    }
+  }
+
+  Future<AttachmentItem?> uploadAttachment({
+    required List<int> fileBytes,
+    required String fileName,
+    required String documentCategory,
+  }) async {
+    state = state.copyWith(isLoading: true, errorMessage: null);
+    try {
+      final item = await _repository.uploadAttachment(
+        fileBytes: fileBytes,
+        fileName: fileName,
+        documentCategory: documentCategory,
+      );
+      state = state.copyWith(isLoading: false);
+      return item;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, errorMessage: e.toString());
+      return null;
     }
   }
 
@@ -147,6 +169,16 @@ class WorkflowController extends StateNotifier<WorkflowState> {
         returnForCorrection: returnForCorrection,
         comment: comment,
       );
+      await loadAllData();
+    } catch (e) {
+      state = state.copyWith(isLoading: false, errorMessage: e.toString());
+    }
+  }
+
+  Future<void> markNotificationsRead() async {
+    state = state.copyWith(isLoading: true);
+    try {
+      await _repository.markNotificationsRead(_currentUserId);
       await loadAllData();
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../../../core/config/env_config.dart';
 import '../../../../core/theme/color_tokens.dart';
 import '../../../../core/theme/tokens/theme_tokens.dart';
 import '../../../../core/ui/ui.dart';
@@ -35,6 +37,43 @@ class _RequestDetailsModalState extends ConsumerState<RequestDetailsModal> {
     super.dispose();
   }
 
+  Future<void> _openAttachment(BuildContext context, String rawUrl, String fileName) async {
+    final resolvedUrl = EnvConfig.resolveAttachmentUrl(rawUrl);
+    if (resolvedUrl.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Document "$fileName" path is unavailable.'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+      return;
+    }
+
+    try {
+      final uri = Uri.parse(resolvedUrl);
+      final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!launched && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Unable to open "$fileName". URL: $resolvedUrl'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to download/open "$fileName": $e'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -64,6 +103,18 @@ class _RequestDetailsModalState extends ConsumerState<RequestDetailsModal> {
       child: SafeArea(
         child: Column(
           children: [
+            // Top Drag Pill Handle
+            const SizedBox(height: AppSpacing.sm),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.border,
+                borderRadius: AppRadius.borderFull,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+
             // Header Bar
             Container(
               padding: const EdgeInsets.all(AppSpacing.lg),
@@ -233,28 +284,32 @@ class _RequestDetailsModalState extends ConsumerState<RequestDetailsModal> {
                     if (req.residenceType == 'Hosteller' || req.parentConsentUrl != null) ...[
                       const Text('Parent Consent Document (Mandatory for Hosteller)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.danger)),
                       const SizedBox(height: AppSpacing.xs),
-                      Container(
-                        padding: const EdgeInsets.all(AppSpacing.md),
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceVariant,
-                          borderRadius: AppRadius.borderMd,
-                          border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
-                        ),
-                        child: const Row(
-                          children: [
-                            Icon(Icons.picture_as_pdf, color: AppColors.danger, size: 22),
-                            SizedBox(width: AppSpacing.sm),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Parent_Consent_Letter.pdf', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                                  Text('Signed & Verified Parent Consent Form', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-                                ],
+                      InkWell(
+                        onTap: () => _openAttachment(context, req.parentConsentUrl ?? '', 'Parent_Consent_Letter.pdf'),
+                        borderRadius: AppRadius.borderMd,
+                        child: Container(
+                          padding: const EdgeInsets.all(AppSpacing.md),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceVariant,
+                            borderRadius: AppRadius.borderMd,
+                            border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.picture_as_pdf, color: AppColors.danger, size: 22),
+                              SizedBox(width: AppSpacing.sm),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Parent_Consent_Letter.pdf', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                    Text('Tap to view / download signed parent consent', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                                  ],
+                                ),
                               ),
-                            ),
-                            Icon(Icons.download_rounded, color: AppColors.primaryBlue, size: 20),
-                          ],
+                              Icon(Icons.open_in_new_rounded, color: AppColors.primaryBlue, size: 20),
+                            ],
+                          ),
                         ),
                       ),
                       const SizedBox(height: AppSpacing.lg),
@@ -288,37 +343,43 @@ class _RequestDetailsModalState extends ConsumerState<RequestDetailsModal> {
                         children: req.attachments.map((att) {
                           return Container(
                             margin: const EdgeInsets.only(bottom: AppSpacing.xs),
-                            padding: const EdgeInsets.all(AppSpacing.md),
-                            decoration: BoxDecoration(
-                              color: AppColors.surfaceVariant,
+                            child: InkWell(
+                              onTap: () => _openAttachment(context, att.fileUrl, att.fileName),
                               borderRadius: AppRadius.borderMd,
-                              border: Border.all(color: AppColors.border),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.picture_as_pdf_outlined, color: AppColors.danger, size: 20),
-                                const SizedBox(width: AppSpacing.sm),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        att.fileName,
-                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      Text(
-                                        'Uploaded by ${att.uploadedBy} • ${att.sizeFormatted}',
-                                        style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ],
-                                  ),
+                              child: Container(
+                                padding: const EdgeInsets.all(AppSpacing.md),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surfaceVariant,
+                                  borderRadius: AppRadius.borderMd,
+                                  border: Border.all(color: AppColors.border),
                                 ),
-                                const Icon(Icons.download_rounded, color: AppColors.primaryBlue, size: 20),
-                              ],
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.picture_as_pdf_outlined, color: AppColors.danger, size: 20),
+                                    const SizedBox(width: AppSpacing.sm),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            att.fileName,
+                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          Text(
+                                            'Uploaded by ${att.uploadedBy} • ${att.sizeFormatted}',
+                                            style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const Icon(Icons.open_in_new_rounded, color: AppColors.primaryBlue, size: 18),
+                                  ],
+                                ),
+                              ),
                             ),
                           );
                         }).toList(),

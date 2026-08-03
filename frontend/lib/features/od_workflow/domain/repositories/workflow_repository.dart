@@ -45,4 +45,9 @@ abstract class WorkflowRepository {
 
   Future<List<NotificationItem>> getNotifications(String recipientId);
   Future<void> markNotificationsRead(String recipientId);
+  Future<AttachmentItem> uploadAttachment({
+    required List<int> fileBytes,
+    required String fileName,
+    required String documentCategory,
+  });
 }
