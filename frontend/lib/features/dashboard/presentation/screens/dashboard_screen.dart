@@ -7,7 +7,9 @@ import '../../../authentication/authentication.dart';
 import '../../../od_workflow/presentation/controllers/workflow_controller.dart';
 import '../../../od_workflow/presentation/views/create_od_request_view.dart';
 import '../views/coordinator_dashboard_view.dart';
+import '../views/coordinator_overview_view.dart';
 import '../views/faculty_dashboard_view.dart';
+import '../views/faculty_overview_view.dart';
 import '../views/my_requests_view.dart';
 import '../views/notifications_view.dart';
 import '../views/profile_view.dart';
@@ -38,7 +40,7 @@ class _MainShellDashboardScreenState extends ConsumerState<MainShellDashboardScr
 
     final List<Widget> pages = isStudent
         ? [
-            const _HomeDashboardView(),
+            const StudentDashboardView(),
             const MyRequestsView(),
             _CreateOdRequestFlowView(
               onSuccess: () => setState(() => _currentIndex = 1),
@@ -46,11 +48,13 @@ class _MainShellDashboardScreenState extends ConsumerState<MainShellDashboardScr
             const NotificationsView(),
             const ProfileView(),
           ]
-        : const [
-            _HomeDashboardView(),
-            _AllRequestsView(),
-            NotificationsView(),
-            ProfileView(),
+        : [
+            _HomeDashboardView(
+              onNavigateToQueue: () => setState(() => _currentIndex = 1),
+            ),
+            const _AllRequestsView(),
+            const NotificationsView(),
+            const ProfileView(),
           ];
 
     final safeIndex = _currentIndex < pages.length ? _currentIndex : 0;
@@ -161,16 +165,18 @@ class _MainShellDashboardScreenState extends ConsumerState<MainShellDashboardScr
 // HOME DASHBOARD DELEGATOR VIEW
 // -----------------------------------------------------------------------------
 class _HomeDashboardView extends ConsumerWidget {
-  const _HomeDashboardView();
+  final VoidCallback? onNavigateToQueue;
+
+  const _HomeDashboardView({this.onNavigateToQueue});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final role = ref.watch(authControllerProvider.select((s) => s.session?.role ?? 'STUDENT'));
 
     if (role == 'FACULTY_ADVISOR') {
-      return const FacultyDashboardView();
+      return FacultyOverviewView(onNavigateToQueue: onNavigateToQueue);
     } else if (role == 'COORDINATOR') {
-      return const CoordinatorDashboardView();
+      return CoordinatorOverviewView(onNavigateToQueue: onNavigateToQueue);
     }
 
     return const StudentDashboardView();

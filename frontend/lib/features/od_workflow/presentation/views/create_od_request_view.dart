@@ -393,7 +393,7 @@ class _CreateOdRequestViewState extends ConsumerState<CreateOdRequestView> {
                   const Text('Residence Type & Parent Consent', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.primaryBlue)),
                   const SizedBox(height: AppSpacing.md),
                   DropdownButtonFormField<String>(
-                    value: _residenceType,
+                    initialValue: _residenceType,
                     decoration: const InputDecoration(
                       labelText: 'Residence Type *',
                       border: OutlineInputBorder(),

@@ -7,6 +7,7 @@ import '../../../../core/ui/ui.dart';
 import '../../../authentication/authentication.dart';
 import '../../../od_workflow/domain/entities/od_status.dart';
 import '../../../od_workflow/presentation/controllers/workflow_controller.dart';
+import '../../../od_workflow/presentation/widgets/request_details_modal.dart';
 
 class StudentDashboardView extends ConsumerWidget {
   const StudentDashboardView({super.key});
@@ -17,9 +18,22 @@ class StudentDashboardView extends ConsumerWidget {
     final workflowState = ref.watch(workflowControllerProvider);
     final requests = workflowState.requests;
 
-    final pendingCount = requests.where((r) => r.status == OdStatus.pendingFaculty || r.status == OdStatus.pendingCoordinator).length;
-    final approvedCount = requests.where((r) => r.status == OdStatus.completed).length;
-    final rejectedCount = requests.where((r) => r.status == OdStatus.rejected || r.status == OdStatus.facultyRejected).length;
+    final pendingCount = requests.where((r) =>
+        r.status == OdStatus.pendingFaculty ||
+        r.status == OdStatus.pendingCoordinator ||
+        r.status == OdStatus.pendingEvidenceFaculty ||
+        r.status == OdStatus.pendingEvidenceCoordinator).length;
+
+    final approvedCount = requests.where((r) =>
+        r.status == OdStatus.completed ||
+        r.status == OdStatus.approvedAwaitingEvidence).length;
+
+    final rejectedCount = requests.where((r) =>
+        r.status == OdStatus.rejected ||
+        r.status == OdStatus.facultyRejected ||
+        r.status == OdStatus.revisionRequested ||
+        r.status == OdStatus.evidenceRevisionRequested).length;
+
     final totalCount = requests.length;
 
     final isDesktop = ResponsiveLayout.isLaptop(context) || ResponsiveLayout.isDesktop(context);
@@ -46,7 +60,7 @@ class StudentDashboardView extends ConsumerWidget {
         const SizedBox(width: AppSpacing.md),
         Expanded(
           child: AppMetricCard(
-            title: 'Rejected ODs',
+            title: 'Rejected / Revision',
             value: '$rejectedCount',
             icon: Icons.cancel_outlined,
             statusType: AppStatusType.rejected,
@@ -121,7 +135,7 @@ class StudentDashboardView extends ConsumerWidget {
                             return Padding(
                               padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                               child: AppClickableCard(
-                                onTap: () {},
+                                onTap: () => RequestDetailsModal.show(context, req),
                                 child: Row(
                                   children: [
                                     const Icon(Icons.assignment_outlined, color: AppColors.primaryBlue, size: 20),
@@ -194,7 +208,7 @@ class StudentDashboardView extends ConsumerWidget {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: AppSpacing.md),
                       child: AppClickableCard(
-                        onTap: () {},
+                        onTap: () => RequestDetailsModal.show(context, req),
                         child: Row(
                           children: [
                             const Icon(Icons.assignment_outlined, color: AppColors.primaryBlue, size: 20),
