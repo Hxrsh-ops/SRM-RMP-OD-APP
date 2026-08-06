@@ -1,4 +1,5 @@
 import enum
+from typing import Set, List
 
 class UserRole(str, enum.Enum):
     STUDENT = "STUDENT"
@@ -21,3 +22,57 @@ class OdStatus(str, enum.Enum):
     COMPLETED = "COMPLETED"
     REJECTED = "REJECTED"
     REVISION_REQUESTED = "REVISION_REQUESTED"
+
+class WorkflowStatusGroups:
+    FACULTY_PENDING: List[OdStatus] = [
+        OdStatus.PENDING_FACULTY,
+        OdStatus.SUBMITTED,
+        OdStatus.PENDING_EVIDENCE_FACULTY,
+    ]
+
+    COORDINATOR_PENDING: List[OdStatus] = [
+        OdStatus.PENDING_COORDINATOR,
+        OdStatus.FACULTY_APPROVED,
+        OdStatus.PENDING_EVIDENCE_COORDINATOR,
+    ]
+
+    COMPLETED: List[OdStatus] = [
+        OdStatus.COMPLETED,
+    ]
+
+    REJECTED: List[OdStatus] = [
+        OdStatus.REJECTED,
+        OdStatus.FACULTY_REJECTED,
+    ]
+
+    AWAITING_EVIDENCE: List[OdStatus] = [
+        OdStatus.APPROVED_AWAITING_EVIDENCE,
+    ]
+
+    ACTION_REQUIRED_STUDENT: List[OdStatus] = [
+        OdStatus.APPROVED_AWAITING_EVIDENCE,
+        OdStatus.REVISION_REQUESTED,
+        OdStatus.EVIDENCE_REVISION_REQUESTED,
+    ]
+
+class WorkflowTransitions:
+    VALID_FACULTY_INITIAL: Set[OdStatus] = {OdStatus.PENDING_FACULTY, OdStatus.SUBMITTED}
+    VALID_FACULTY_EVIDENCE: Set[OdStatus] = {OdStatus.PENDING_EVIDENCE_FACULTY}
+
+    VALID_COORDINATOR_INITIAL: Set[OdStatus] = {OdStatus.PENDING_COORDINATOR, OdStatus.FACULTY_APPROVED}
+    VALID_COORDINATOR_EVIDENCE: Set[OdStatus] = {OdStatus.PENDING_EVIDENCE_COORDINATOR}
+
+    VALID_EVIDENCE_SUBMISSION: Set[OdStatus] = {OdStatus.APPROVED_AWAITING_EVIDENCE, OdStatus.EVIDENCE_REVISION_REQUESTED}
+
+class WorkflowHelpers:
+    @staticmethod
+    def is_terminal_status(status: OdStatus) -> bool:
+        return status in (OdStatus.COMPLETED, OdStatus.REJECTED, OdStatus.FACULTY_REJECTED)
+
+    @staticmethod
+    def is_pending_faculty(status: OdStatus) -> bool:
+        return status in WorkflowStatusGroups.FACULTY_PENDING
+
+    @staticmethod
+    def is_pending_coordinator(status: OdStatus) -> bool:
+        return status in WorkflowStatusGroups.COORDINATOR_PENDING

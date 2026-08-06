@@ -10,7 +10,7 @@ from ..models.od_request import OdRequest
 from ..models.attachment import Attachment
 from ..models.timeline import TimelineEvent
 from ..models.comment import Comment
-from ..models.enums import OdStatus, UserRole
+from ..models.enums import OdStatus, UserRole, WorkflowTransitions
 from ..schemas.od_request import OdRequestCreate, FacultyActionRequest, CoordinatorActionRequest
 
 class WorkflowService:
@@ -158,10 +158,10 @@ class WorkflowService:
         now = datetime.now(timezone.utc)
 
         # Process depending on current state
-        if req.status in (OdStatus.PENDING_FACULTY, OdStatus.SUBMITTED):
+        if req.status in WorkflowTransitions.VALID_FACULTY_INITIAL:
             new_status = OdStatus.PENDING_COORDINATOR if action.approve else OdStatus.FACULTY_REJECTED
             step_title = "Faculty Advisor Approved" if action.approve else "Faculty Advisor Rejected"
-        elif req.status == OdStatus.PENDING_EVIDENCE_FACULTY:
+        elif req.status in WorkflowTransitions.VALID_FACULTY_EVIDENCE:
             new_status = OdStatus.PENDING_EVIDENCE_COORDINATOR if action.approve else OdStatus.EVIDENCE_REVISION_REQUESTED
             step_title = "Faculty Verified Evidence" if action.approve else "Faculty Requested Evidence Revision"
         else:
@@ -239,7 +239,7 @@ class WorkflowService:
         coordinator_name = coordinator_user.full_name if coordinator_user else "Coordinator"
         now = datetime.now(timezone.utc)
 
-        if req.status in (OdStatus.PENDING_COORDINATOR, OdStatus.FACULTY_APPROVED):
+        if req.status in WorkflowTransitions.VALID_COORDINATOR_INITIAL:
             if action.return_for_correction:
                 new_status = OdStatus.REVISION_REQUESTED
                 step_title = "Returned for Correction"
@@ -249,7 +249,7 @@ class WorkflowService:
             else:
                 new_status = OdStatus.REJECTED
                 step_title = "Coordinator Rejected"
-        elif req.status == OdStatus.PENDING_EVIDENCE_COORDINATOR:
+        elif req.status in WorkflowTransitions.VALID_COORDINATOR_EVIDENCE:
             if action.return_for_correction or not action.approve:
                 new_status = OdStatus.EVIDENCE_REVISION_REQUESTED
                 step_title = "Coordinator Requested Evidence Revision"
@@ -322,7 +322,7 @@ class WorkflowService:
             raise BadRequestException("Completion proof can only be submitted on or after the event end date.")
 
         # Validate request status
-        if req.status not in (OdStatus.APPROVED_AWAITING_EVIDENCE, OdStatus.EVIDENCE_REVISION_REQUESTED):
+        if req.status not in WorkflowTransitions.VALID_EVIDENCE_SUBMISSION:
             raise BadRequestException(f"Cannot submit completion evidence for request in status {req.status.value}")
 
         student = self.user_repo.get_by_id(student_user_id)

@@ -3,7 +3,7 @@ from uuid import UUID
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload, selectinload
 from ..models.od_request import OdRequest
-from ..models.enums import OdStatus
+from ..models.enums import OdStatus, WorkflowStatusGroups
 
 class OdRequestRepository:
     def __init__(self, db: Session):
@@ -33,11 +33,7 @@ class OdRequestRepository:
     def list_faculty_pending(self, faculty_id: UUID) -> List[OdRequest]:
         return self._base_query().filter(
             OdRequest.faculty_id == faculty_id,
-            OdRequest.status.in_([
-                OdStatus.PENDING_FACULTY,
-                OdStatus.SUBMITTED,
-                OdStatus.PENDING_EVIDENCE_FACULTY
-            ]),
+            OdRequest.status.in_(WorkflowStatusGroups.FACULTY_PENDING),
             OdRequest.is_deleted == False
         ).order_by(OdRequest.created_at.desc()).all()
 
@@ -49,11 +45,7 @@ class OdRequestRepository:
 
     def list_coordinator_pending(self) -> List[OdRequest]:
         return self._base_query().filter(
-            OdRequest.status.in_([
-                OdStatus.PENDING_COORDINATOR,
-                OdStatus.FACULTY_APPROVED,
-                OdStatus.PENDING_EVIDENCE_COORDINATOR
-            ]),
+            OdRequest.status.in_(WorkflowStatusGroups.COORDINATOR_PENDING),
             OdRequest.is_deleted == False
         ).order_by(OdRequest.created_at.desc()).all()
 
