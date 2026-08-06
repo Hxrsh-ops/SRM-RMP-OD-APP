@@ -239,7 +239,7 @@ class WorkflowService:
         coordinator_name = coordinator_user.full_name if coordinator_user else "Coordinator"
         now = datetime.now(timezone.utc)
 
-        if req.status == OdStatus.PENDING_COORDINATOR:
+        if req.status in (OdStatus.PENDING_COORDINATOR, OdStatus.FACULTY_APPROVED):
             if action.return_for_correction:
                 new_status = OdStatus.REVISION_REQUESTED
                 step_title = "Returned for Correction"

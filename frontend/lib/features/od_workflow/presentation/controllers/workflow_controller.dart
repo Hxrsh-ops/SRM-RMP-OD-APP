@@ -163,7 +163,7 @@ class WorkflowController extends StateNotifier<WorkflowState> {
     }
   }
 
-  Future<void> processFacultyAction({
+  Future<bool> processFacultyAction({
     required String requestId,
     required String facultyId,
     required String facultyName,
@@ -181,12 +181,14 @@ class WorkflowController extends StateNotifier<WorkflowState> {
       );
       final updatedRequests = state.requests.map((r) => r.id == requestId ? updated : r).toList();
       state = state.copyWith(requests: updatedRequests, isLoading: false);
+      return true;
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());
+      return false;
     }
   }
 
-  Future<void> processCoordinatorAction({
+  Future<bool> processCoordinatorAction({
     required String requestId,
     required String coordinatorId,
     required String coordinatorName,
@@ -206,8 +208,10 @@ class WorkflowController extends StateNotifier<WorkflowState> {
       );
       final updatedRequests = state.requests.map((r) => r.id == requestId ? updated : r).toList();
       state = state.copyWith(requests: updatedRequests, isLoading: false);
+      return true;
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());
+      return false;
     }
   }
 

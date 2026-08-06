@@ -96,19 +96,22 @@ class _CoordinatorDashboardViewState extends ConsumerState<CoordinatorDashboardV
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue, foregroundColor: Colors.white),
             onPressed: () async {
               Navigator.pop(dialogCtx);
-              await ref.read(workflowControllerProvider.notifier).processCoordinatorAction(
+              final success = await ref.read(workflowControllerProvider.notifier).processCoordinatorAction(
                     requestId: request.id,
-                    coordinatorId: session?.userId ?? 'CO1001',
-                    coordinatorName: session?.name ?? 'Prof. Ramesh Kumar',
+                    coordinatorId: session?.userId ?? '',
+                    coordinatorName: session?.name ?? '',
                     approve: true,
                     comment: remarksController.text.trim(),
                   );
               await _fetchAnalytics();
               if (context.mounted) {
+                final errorMsg = ref.read(workflowControllerProvider).errorMessage;
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text(isEvidenceMode ? 'OD Request ${request.id} completed & granted!' : 'Request ${request.id} approved, awaiting evidence.'),
-                    backgroundColor: AppColors.success,
+                    content: Text(success
+                        ? (isEvidenceMode ? 'OD Request ${request.id} completed & granted!' : 'Request ${request.id} approved, awaiting evidence.')
+                        : (errorMsg ?? 'Failed to approve request ${request.id}')),
+                    backgroundColor: success ? AppColors.success : AppColors.danger,
                   ),
                 );
               }
@@ -145,7 +148,7 @@ class _CoordinatorDashboardViewState extends ConsumerState<CoordinatorDashboardV
             const SizedBox(height: AppSpacing.xs),
             TextField(
               controller: remarksController,
-              maxLines: 2,
+              maxLines: 3,
               decoration: InputDecoration(
                 hintText: isEvidenceMode ? 'Enter evidence revision requirements...' : 'Enter discrepancy explanation...',
                 border: const OutlineInputBorder(),
@@ -168,20 +171,21 @@ class _CoordinatorDashboardViewState extends ConsumerState<CoordinatorDashboardV
                 return;
               }
               Navigator.pop(dialogCtx);
-              await ref.read(workflowControllerProvider.notifier).processCoordinatorAction(
+              final success = await ref.read(workflowControllerProvider.notifier).processCoordinatorAction(
                     requestId: request.id,
-                    coordinatorId: session?.userId ?? 'CO1001',
-                    coordinatorName: session?.name ?? 'Prof. Ramesh Kumar',
+                    coordinatorId: session?.userId ?? '',
+                    coordinatorName: session?.name ?? '',
                     approve: false,
                     returnForCorrection: !isEvidenceMode,
                     comment: remarksController.text.trim(),
                   );
               await _fetchAnalytics();
               if (context.mounted) {
+                final errorMsg = ref.read(workflowControllerProvider).errorMessage;
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Request ${request.id} updated.'),
-                    backgroundColor: AppColors.warning,
+                    content: Text(success ? 'Request ${request.id} updated.' : (errorMsg ?? 'Failed to update request ${request.id}')),
+                    backgroundColor: success ? AppColors.warning : AppColors.danger,
                   ),
                 );
               }
@@ -208,11 +212,11 @@ class _CoordinatorDashboardViewState extends ConsumerState<CoordinatorDashboardV
       return r.studentName.toLowerCase().contains(q) || r.registerNumber.toLowerCase().contains(q) || r.reason.toLowerCase().contains(q);
     }).toList();
 
-    final pendingCoordCount = _analytics?['pending_coordinator_count'] ?? initialPending.length;
+    final pendingCoordCount = initialPending.length;
     final awaitingEvidenceCount = _analytics?['approved_awaiting_evidence_count'] ?? allRequests.where((r) => r.status == OdStatus.approvedAwaitingEvidence).length;
-    final pendingEvidenceCount = _analytics?['pending_evidence_coordinator_count'] ?? evidencePending.length;
+    final pendingEvidenceCount = evidencePending.length;
     final completedCount = _analytics?['completed_count'] ?? allRequests.where((r) => r.status == OdStatus.completed).length;
-    final totalCount = _analytics?['total_submissions_count'] ?? allRequests.length;
+    final totalCount = allRequests.length;
 
     return RefreshIndicator(
       onRefresh: () async {

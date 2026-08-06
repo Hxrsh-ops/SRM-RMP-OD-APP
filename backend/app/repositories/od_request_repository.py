@@ -69,7 +69,10 @@ class OdRequestRepository:
             OdRequest.is_deleted == False
         ).group_by(OdRequest.status).all()
 
-        counts = {s.name: count for s, count in results}
+        counts = {}
+        for s, count in results:
+            key = s.value if hasattr(s, 'value') else (s.name if hasattr(s, 'name') else str(s))
+            counts[key.upper()] = count
         
         pending_coord = counts.get('PENDING_COORDINATOR', 0) + counts.get('FACULTY_APPROVED', 0)
         approved_awaiting = counts.get('APPROVED_AWAITING_EVIDENCE', 0)

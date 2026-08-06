@@ -9,48 +9,26 @@ import '../../../od_workflow/domain/entities/od_status.dart';
 import '../../../od_workflow/presentation/controllers/workflow_controller.dart';
 import '../../../od_workflow/presentation/widgets/request_details_modal.dart';
 
-class CoordinatorOverviewView extends ConsumerStatefulWidget {
+class CoordinatorOverviewView extends ConsumerWidget {
   final VoidCallback? onNavigateToQueue;
 
   const CoordinatorOverviewView({super.key, this.onNavigateToQueue});
 
   @override
-  ConsumerState<CoordinatorOverviewView> createState() => _CoordinatorOverviewViewState();
-}
-
-class _CoordinatorOverviewViewState extends ConsumerState<CoordinatorOverviewView> {
-  Map<String, int>? _analytics;
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchAnalytics();
-  }
-
-  Future<void> _fetchAnalytics() async {
-    try {
-      final repo = ref.read(workflowRepositoryProvider);
-      final res = await repo.getCoordinatorAnalytics();
-      if (mounted) setState(() => _analytics = res);
-    } catch (_) {}
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(authControllerProvider.select((s) => s.session));
     final allRequests = ref.watch(workflowControllerProvider.select((s) => s.requests));
 
-    final pendingCoordCount = _analytics?['pending_coordinator_count'] ?? allRequests.where((r) => r.status == OdStatus.pendingCoordinator).length;
-    final awaitingEvidenceCount = _analytics?['approved_awaiting_evidence_count'] ?? allRequests.where((r) => r.status == OdStatus.approvedAwaitingEvidence).length;
-    final pendingEvidenceCount = _analytics?['pending_evidence_coordinator_count'] ?? allRequests.where((r) => r.status == OdStatus.pendingEvidenceCoordinator).length;
-    final completedCount = _analytics?['completed_count'] ?? allRequests.where((r) => r.status == OdStatus.completed).length;
+    final pendingCoordCount = allRequests.where((r) => r.status == OdStatus.pendingCoordinator || r.status == OdStatus.facultyApproved).length;
+    final awaitingEvidenceCount = allRequests.where((r) => r.status == OdStatus.approvedAwaitingEvidence).length;
+    final pendingEvidenceCount = allRequests.where((r) => r.status == OdStatus.pendingEvidenceCoordinator).length;
+    final completedCount = allRequests.where((r) => r.status == OdStatus.completed).length;
 
     final isDesktop = ResponsiveLayout.isLaptop(context) || ResponsiveLayout.isDesktop(context);
 
     return RefreshIndicator(
       onRefresh: () async {
         await ref.read(workflowControllerProvider.notifier).loadAllData();
-        await _fetchAnalytics();
       },
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -64,7 +42,7 @@ class _CoordinatorOverviewViewState extends ConsumerState<CoordinatorOverviewVie
             ),
             const SizedBox(height: AppSpacing.lg),
 
-            // Metrics Cards
+            // Metrics Row
             if (isDesktop)
               Row(
                 children: [
@@ -178,7 +156,7 @@ class _CoordinatorOverviewViewState extends ConsumerState<CoordinatorOverviewVie
                   const SizedBox(width: AppSpacing.sm),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue, foregroundColor: Colors.white),
-                    onPressed: widget.onNavigateToQueue,
+                    onPressed: onNavigateToQueue,
                     child: const Text('Open Queue'),
                   ),
                 ],

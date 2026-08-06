@@ -75,18 +75,21 @@ class _FacultyDashboardViewState extends ConsumerState<FacultyDashboardView> {
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.success, foregroundColor: Colors.white),
             onPressed: () async {
               Navigator.pop(dialogCtx);
-              await ref.read(workflowControllerProvider.notifier).processFacultyAction(
+              final success = await ref.read(workflowControllerProvider.notifier).processFacultyAction(
                     requestId: request.id,
-                    facultyId: session?.userId ?? 'FA1001',
-                    facultyName: session?.name ?? 'Dr. Karthik B',
+                    facultyId: session?.userId ?? '',
+                    facultyName: session?.name ?? '',
                     approve: true,
                     comment: remarksController.text.trim(),
                   );
               if (context.mounted) {
+                final errorMsg = ref.read(workflowControllerProvider).errorMessage;
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text(isEvidenceMode ? 'Evidence verified & passed to coordinator.' : 'Request ${request.id} approved.'),
-                    backgroundColor: AppColors.success,
+                    content: Text(success
+                        ? (isEvidenceMode ? 'Evidence verified & passed to coordinator.' : 'Request ${request.id} approved.')
+                        : (errorMsg ?? 'Failed to process action.')),
+                    backgroundColor: success ? AppColors.success : AppColors.danger,
                   ),
                 );
               }
@@ -146,18 +149,21 @@ class _FacultyDashboardViewState extends ConsumerState<FacultyDashboardView> {
                 return;
               }
               Navigator.pop(dialogCtx);
-              await ref.read(workflowControllerProvider.notifier).processFacultyAction(
+              final success = await ref.read(workflowControllerProvider.notifier).processFacultyAction(
                     requestId: request.id,
-                    facultyId: session?.userId ?? 'FA1001',
-                    facultyName: session?.name ?? 'Dr. Karthik B',
+                    facultyId: session?.userId ?? '',
+                    facultyName: session?.name ?? '',
                     approve: false,
                     comment: remarksController.text.trim(),
                   );
               if (context.mounted) {
+                final errorMsg = ref.read(workflowControllerProvider).errorMessage;
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text(isEvidenceMode ? 'Evidence revision requested.' : 'Request ${request.id} rejected.'),
-                    backgroundColor: AppColors.warning,
+                    content: Text(success
+                        ? (isEvidenceMode ? 'Evidence revision requested.' : 'Request ${request.id} rejected.')
+                        : (errorMsg ?? 'Failed to update request ${request.id}')),
+                    backgroundColor: success ? AppColors.warning : AppColors.danger,
                   ),
                 );
               }
