@@ -472,18 +472,31 @@ class _CoordinatorDashboardViewState extends ConsumerState<CoordinatorDashboardV
                                 ),
                                 Row(
                                   children: [
-                                    OutlinedButton.icon(
-                                      style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger),
-                                      icon: const Icon(Icons.close_rounded, size: 16),
-                                      label: Text(_activeTab == 1 ? 'Revise' : 'Reject'),
-                                      onPressed: () => _showCoordinatorRejectDialog(context, req),
+                                    SizedBox(
+                                      height: 44,
+                                      child: OutlinedButton.icon(
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: AppColors.danger,
+                                          minimumSize: const Size(120, 44),
+                                        ),
+                                        icon: const Icon(Icons.close_rounded, size: 16),
+                                        label: Text(_activeTab == 1 ? 'Revise' : 'Reject'),
+                                        onPressed: () => _showCoordinatorRejectDialog(context, req),
+                                      ),
                                     ),
                                     const SizedBox(width: AppSpacing.sm),
-                                    ElevatedButton.icon(
-                                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue, foregroundColor: Colors.white),
-                                      icon: const Icon(Icons.verified_rounded, size: 16),
-                                      label: Text(_activeTab == 1 ? 'Grant OD' : 'Approve'),
-                                      onPressed: () => _showCoordinatorApproveDialog(context, req),
+                                    SizedBox(
+                                      height: 44,
+                                      child: ElevatedButton.icon(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: AppColors.primaryBlue,
+                                          foregroundColor: Colors.white,
+                                          minimumSize: const Size(120, 44),
+                                        ),
+                                        icon: const Icon(Icons.verified_rounded, size: 16),
+                                        label: Text(_activeTab == 1 ? 'Grant OD' : 'Approve'),
+                                        onPressed: () => _showCoordinatorApproveDialog(context, req),
+                                      ),
                                     ),
                                   ],
                                 ),

@@ -47,10 +47,12 @@ enum OdStatus {
     switch (this) {
       case OdStatus.submitted:
       case OdStatus.pendingFaculty:
-      case OdStatus.facultyApproved:
       case OdStatus.pendingCoordinator:
-      case OdStatus.approvedAwaitingEvidence:
         return AppStatusType.pending;
+      case OdStatus.facultyApproved:
+        return AppStatusType.approved;
+      case OdStatus.approvedAwaitingEvidence:
+        return AppStatusType.info;
       case OdStatus.pendingEvidenceFaculty:
       case OdStatus.pendingEvidenceCoordinator:
         return AppStatusType.warning;
@@ -58,9 +60,10 @@ enum OdStatus {
         return AppStatusType.approved;
       case OdStatus.facultyRejected:
       case OdStatus.rejected:
+        return AppStatusType.rejected;
       case OdStatus.evidenceRevisionRequested:
       case OdStatus.revisionRequested:
-        return AppStatusType.error;
+        return AppStatusType.warning;
     }
   }
 
