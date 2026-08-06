@@ -2,6 +2,7 @@ from typing import Optional, List
 from uuid import UUID
 from sqlalchemy.orm import Session
 from ..models.user import User
+from ..models.enums import UserRole
 
 class UserRepository:
     def __init__(self, db: Session):
@@ -15,6 +16,12 @@ class UserRepository:
 
     def get_by_email(self, email: str) -> Optional[User]:
         return self.db.query(User).filter(User.email == email, User.is_deleted == False).first()
+
+    def get_by_role(self, role: UserRole, department_id: Optional[UUID] = None) -> Optional[User]:
+        query = self.db.query(User).filter(User.role == role, User.is_deleted == False)
+        if department_id:
+            query = query.filter(User.department_id == department_id)
+        return query.first()
 
     def create(self, user: User) -> User:
         self.db.add(user)

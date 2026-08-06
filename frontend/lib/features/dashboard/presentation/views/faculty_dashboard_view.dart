@@ -172,8 +172,7 @@ class _FacultyDashboardViewState extends ConsumerState<FacultyDashboardView> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final workflowState = ref.watch(workflowControllerProvider);
-    final allRequests = workflowState.requests;
+    final allRequests = ref.watch(workflowControllerProvider.select((s) => s.requests));
     final isMobile = ResponsiveLayout.isMobile(context);
 
     final initialPending = allRequests.where((r) => r.status == OdStatus.pendingFaculty || r.status == OdStatus.submitted).toList();

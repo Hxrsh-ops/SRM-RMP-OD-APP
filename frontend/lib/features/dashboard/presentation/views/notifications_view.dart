@@ -13,9 +13,8 @@ class NotificationsView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final workflowState = ref.watch(workflowControllerProvider);
-    final notifications = workflowState.notifications;
-    final requests = workflowState.requests;
+    final notifications = ref.watch(workflowControllerProvider.select((s) => s.notifications));
+    final requests = ref.watch(workflowControllerProvider.select((s) => s.requests));
     final isMobile = ResponsiveLayout.isMobile(context);
 
     return RefreshIndicator(

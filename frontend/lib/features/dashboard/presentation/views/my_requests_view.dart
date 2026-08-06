@@ -32,8 +32,8 @@ class _MyRequestsViewState extends ConsumerState<MyRequestsView> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final workflowState = ref.watch(workflowControllerProvider);
-    final requests = workflowState.requests.where((r) {
+    final allRequests = ref.watch(workflowControllerProvider.select((s) => s.requests));
+    final requests = allRequests.where((r) {
       final matchesSearch = _searchQuery.isEmpty ||
           r.reason.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           r.id.toLowerCase().contains(_searchQuery.toLowerCase());

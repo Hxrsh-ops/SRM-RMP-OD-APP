@@ -29,7 +29,14 @@ class WorkflowService:
         if not student:
             raise NotFoundException("Student record not found")
 
-        # Validate Hosteller Parent Consent requirement
+        # Calendar Date & Duration Validation
+        if req_in.end_date < req_in.start_date:
+            raise BadRequestException("End date cannot be prior to start date.")
+        expected_duration = (req_in.end_date - req_in.start_date).days + 1
+        if req_in.duration_days <= 0 or req_in.duration_days != expected_duration:
+            req_in.duration_days = expected_duration
+
+        # Hosteller Parent Consent Validation
         if req_in.residence_type == "Hosteller":
             has_parent_consent = bool(req_in.parent_consent_url) or any(
                 att.document_category == "parent_consent" or "consent" in att.file_name.lower() or "parent" in att.file_name.lower()
@@ -38,10 +45,12 @@ class WorkflowService:
             if not has_parent_consent:
                 raise BadRequestException("Hosteller students MUST provide a valid parent consent document.")
 
-        # Determine Faculty Advisor
+        # Determine Faculty Advisor dynamically
         faculty_id = student.assigned_faculty_id
         if not faculty_id:
-            faculty = self.user_repo.get_by_username("FA1001")
+            faculty = self.user_repo.get_by_role(UserRole.FACULTY_ADVISOR, department_id=student.department_id)
+            if not faculty:
+                faculty = self.user_repo.get_by_username("FA1001")
             faculty_id = faculty.id if faculty else student_id
 
         # Collision-safe ID generation
@@ -83,7 +92,7 @@ class WorkflowService:
                     )
                 )
 
-        # Audit Trail Timeline Step 1 & 2
+        # Audit Trail Timeline
         od.timeline.append(
             TimelineEvent(
                 title="Request Submitted",
@@ -95,7 +104,7 @@ class WorkflowService:
             )
         )
         faculty_user = self.user_repo.get_by_id(faculty_id)
-        faculty_name = faculty_user.full_name if faculty_user else "Dr. Karthik B"
+        faculty_name = faculty_user.full_name if faculty_user else "Faculty Advisor"
         od.timeline.append(
             TimelineEvent(
                 title="Assigned to Faculty Advisor",
@@ -140,7 +149,7 @@ class WorkflowService:
         if req.faculty_id != faculty_user_id:
             raise PermissionDeniedException("You are not the assigned Faculty Advisor for this request.")
 
-        # Require non-empty comment on rejection or revision request
+        # Require non-empty comment on rejection
         if not action.approve and (not action.comment or not action.comment.strip()):
             raise BadRequestException("Faculty rejection or revision request requires a valid explanation note.")
 
@@ -194,7 +203,11 @@ class WorkflowService:
         )
 
         if action.approve:
-            coord = self.user_repo.get_by_username("CO1001")
+            student = self.user_repo.get_by_id(req.student_id)
+            dept_id = student.department_id if student else None
+            coord = self.user_repo.get_by_role(UserRole.COORDINATOR, department_id=dept_id)
+            if not coord:
+                coord = self.user_repo.get_by_username("CO1001")
             if coord:
                 self.notification_service.send_notification(
                     recipient_id=coord.id,
@@ -359,11 +372,4 @@ class WorkflowService:
         return updated_req
 
     def get_coordinator_analytics(self) -> Dict[str, int]:
-        all_requests = self.od_repo.list_all()
-        return {
-            "pending_coordinator_count": len([r for r in all_requests if r.status in (OdStatus.PENDING_COORDINATOR, OdStatus.FACULTY_APPROVED)]),
-            "approved_awaiting_evidence_count": len([r for r in all_requests if r.status == OdStatus.APPROVED_AWAITING_EVIDENCE]),
-            "pending_evidence_coordinator_count": len([r for r in all_requests if r.status == OdStatus.PENDING_EVIDENCE_COORDINATOR]),
-            "completed_count": len([r for r in all_requests if r.status == OdStatus.COMPLETED]),
-            "total_submissions_count": len(all_requests),
-        }
+        return self.od_repo.count_by_status()

@@ -158,15 +158,17 @@ class WorkflowController extends StateNotifier<WorkflowState> {
     required bool approve,
     String? comment,
   }) async {
-    state = state.copyWith(isLoading: true);
+    state = state.copyWith(isLoading: true, errorMessage: null);
     try {
-      await _repository.facultyAction(
+      final updated = await _repository.facultyAction(
         requestId: requestId,
         facultyId: facultyId,
         facultyName: facultyName,
         approve: approve,
         comment: comment,
       );
+      final updatedRequests = state.requests.map((r) => r.id == requestId ? updated : r).toList();
+      state = state.copyWith(requests: updatedRequests, isLoading: false);
       await loadAllData();
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());
@@ -181,9 +183,9 @@ class WorkflowController extends StateNotifier<WorkflowState> {
     bool returnForCorrection = false,
     String? comment,
   }) async {
-    state = state.copyWith(isLoading: true);
+    state = state.copyWith(isLoading: true, errorMessage: null);
     try {
-      await _repository.coordinatorAction(
+      final updated = await _repository.coordinatorAction(
         requestId: requestId,
         coordinatorId: coordinatorId,
         coordinatorName: coordinatorName,
@@ -191,6 +193,8 @@ class WorkflowController extends StateNotifier<WorkflowState> {
         returnForCorrection: returnForCorrection,
         comment: comment,
       );
+      final updatedRequests = state.requests.map((r) => r.id == requestId ? updated : r).toList();
+      state = state.copyWith(requests: updatedRequests, isLoading: false);
       await loadAllData();
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());

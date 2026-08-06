@@ -17,8 +17,7 @@ class FacultyOverviewView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(authControllerProvider.select((s) => s.session));
-    final workflowState = ref.watch(workflowControllerProvider);
-    final allRequests = workflowState.requests;
+    final allRequests = ref.watch(workflowControllerProvider.select((s) => s.requests));
 
     final initialPending = allRequests.where((r) => r.status == OdStatus.pendingFaculty || r.status == OdStatus.submitted).toList();
     final evidencePending = allRequests.where((r) => r.status == OdStatus.pendingEvidenceFaculty).toList();

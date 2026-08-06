@@ -1,5 +1,5 @@
 import time
-from app.config.settings import settings
+from app.core.config import settings
 from app.schemas.health import HealthResponse, VersionResponse
 
 

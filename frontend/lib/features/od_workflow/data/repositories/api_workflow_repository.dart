@@ -90,24 +90,25 @@ class ApiWorkflowRepository implements WorkflowRepository {
   }
 
   @override
-  Future<void> facultyAction({
+  Future<OdRequest> facultyAction({
     required String requestId,
     required String facultyId,
     required String facultyName,
     required bool approve,
     String? comment,
   }) async {
-    await apiClient.post(
+    final response = await apiClient.post(
       '/od-requests/$requestId/faculty-action',
       data: {
         'approve': approve,
         'comment': comment,
       },
     );
+    return _mapJsonToOdRequest(response as Map<String, dynamic>);
   }
 
   @override
-  Future<void> coordinatorAction({
+  Future<OdRequest> coordinatorAction({
     required String requestId,
     required String coordinatorId,
     required String coordinatorName,
@@ -115,7 +116,7 @@ class ApiWorkflowRepository implements WorkflowRepository {
     bool returnForCorrection = false,
     String? comment,
   }) async {
-    await apiClient.post(
+    final response = await apiClient.post(
       '/od-requests/$requestId/coordinator-action',
       data: {
         'approve': approve,
@@ -123,6 +124,7 @@ class ApiWorkflowRepository implements WorkflowRepository {
         'comment': comment,
       },
     );
+    return _mapJsonToOdRequest(response as Map<String, dynamic>);
   }
 
   @override

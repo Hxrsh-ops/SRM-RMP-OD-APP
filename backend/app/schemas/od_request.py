@@ -1,7 +1,7 @@
 from uuid import UUID
 from datetime import date, datetime
 from typing import List, Optional
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 from ..models.enums import OdStatus
 from .attachment import AttachmentCreate, AttachmentResponse
 from .timeline import TimelineEventResponse, CommentResponse
@@ -20,6 +20,15 @@ class OdRequestCreate(BaseModel):
     residence_type: Optional[str] = "Day Scholar"
     parent_consent_url: Optional[str] = None
     attachments: Optional[List[AttachmentCreate]] = []
+
+    @model_validator(mode="after")
+    def validate_dates_and_duration(self):
+        if self.end_date < self.start_date:
+            raise ValueError("End date cannot be prior to start date.")
+        expected_duration = (self.end_date - self.start_date).days + 1
+        if self.duration_days <= 0 or self.duration_days != expected_duration:
+            self.duration_days = expected_duration
+        return self
 
 class FacultyActionRequest(BaseModel):
     approve: bool

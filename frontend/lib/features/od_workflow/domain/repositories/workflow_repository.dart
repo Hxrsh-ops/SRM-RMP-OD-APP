@@ -26,7 +26,7 @@ abstract class WorkflowRepository {
     List<AttachmentItem>? attachments,
   });
 
-  Future<void> facultyAction({
+  Future<OdRequest> facultyAction({
     required String requestId,
     required String facultyId,
     required String facultyName,
@@ -34,7 +34,7 @@ abstract class WorkflowRepository {
     String? comment,
   });
 
-  Future<void> coordinatorAction({
+  Future<OdRequest> coordinatorAction({
     required String requestId,
     required String coordinatorId,
     required String coordinatorName,

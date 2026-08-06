@@ -10,7 +10,7 @@ class Notification(Base, AuditMixin):
     __tablename__ = "notifications"
 
     id = Column(GUID, primary_key=True, default=uuid.uuid4)
-    recipient_id = Column(GUID, ForeignKey("users.id"), nullable=False)
+    recipient_id = Column(GUID, ForeignKey("users.id"), nullable=False, index=True)
     
     title = Column(String(150), nullable=False)
     message = Column(Text, nullable=False)

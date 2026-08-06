@@ -171,7 +171,7 @@ class MockWorkflowRepository implements WorkflowRepository {
   }
 
   @override
-  Future<void> facultyAction({
+  Future<OdRequest> facultyAction({
     required String requestId,
     required String facultyId,
     required String facultyName,
@@ -180,7 +180,7 @@ class MockWorkflowRepository implements WorkflowRepository {
   }) async {
     await Future.delayed(const Duration(milliseconds: 300));
     final index = _requests.indexWhere((r) => r.id == requestId);
-    if (index == -1) return;
+    if (index == -1) throw Exception('Request not found');
 
     final req = _requests[index];
     final newStatus = req.status == OdStatus.pendingEvidenceFaculty
@@ -189,10 +189,11 @@ class MockWorkflowRepository implements WorkflowRepository {
 
     _requests[index] = req.copyWith(status: newStatus);
     _notifyListeners();
+    return _requests[index];
   }
 
   @override
-  Future<void> coordinatorAction({
+  Future<OdRequest> coordinatorAction({
     required String requestId,
     required String coordinatorId,
     required String coordinatorName,
@@ -202,7 +203,7 @@ class MockWorkflowRepository implements WorkflowRepository {
   }) async {
     await Future.delayed(const Duration(milliseconds: 300));
     final index = _requests.indexWhere((r) => r.id == requestId);
-    if (index == -1) return;
+    if (index == -1) throw Exception('Request not found');
 
     final req = _requests[index];
     final newStatus = req.status == OdStatus.pendingEvidenceCoordinator
@@ -211,6 +212,7 @@ class MockWorkflowRepository implements WorkflowRepository {
 
     _requests[index] = req.copyWith(status: newStatus);
     _notifyListeners();
+    return _requests[index];
   }
 
   @override

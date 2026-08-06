@@ -10,8 +10,8 @@ class OdRequest(Base, AuditMixin, SoftDeleteMixin):
     __tablename__ = "od_requests"
 
     id = Column(String(50), primary_key=True) # e.g. OD-2026-001
-    student_id = Column(GUID, ForeignKey("users.id"), nullable=False)
-    faculty_id = Column(GUID, ForeignKey("users.id"), nullable=False)
+    student_id = Column(GUID, ForeignKey("users.id"), nullable=False, index=True)
+    faculty_id = Column(GUID, ForeignKey("users.id"), nullable=False, index=True)
     
     reason = Column(String(100), nullable=False)
     start_date = Column(Date, nullable=False)
@@ -28,7 +28,7 @@ class OdRequest(Base, AuditMixin, SoftDeleteMixin):
     residence_type = Column(String(20), nullable=False, default="Day Scholar")
     parent_consent_url = Column(Text, nullable=True)
     
-    status = Column(SQLEnum(OdStatus), nullable=False, default=OdStatus.PENDING_FACULTY)
+    status = Column(SQLEnum(OdStatus), nullable=False, default=OdStatus.PENDING_FACULTY, index=True)
 
     # Post-Event Completion Proof Fields
     completion_summary = Column(Text, nullable=True)

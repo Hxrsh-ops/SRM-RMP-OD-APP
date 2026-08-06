@@ -15,8 +15,7 @@ class StudentDashboardView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(authControllerProvider.select((s) => s.session));
-    final workflowState = ref.watch(workflowControllerProvider);
-    final requests = workflowState.requests;
+    final requests = ref.watch(workflowControllerProvider.select((s) => s.requests));
 
     final pendingCount = requests.where((r) =>
         r.status == OdStatus.pendingFaculty ||

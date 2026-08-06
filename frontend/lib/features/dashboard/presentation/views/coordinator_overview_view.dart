@@ -38,8 +38,7 @@ class _CoordinatorOverviewViewState extends ConsumerState<CoordinatorOverviewVie
   @override
   Widget build(BuildContext context) {
     final session = ref.watch(authControllerProvider.select((s) => s.session));
-    final workflowState = ref.watch(workflowControllerProvider);
-    final allRequests = workflowState.requests;
+    final allRequests = ref.watch(workflowControllerProvider.select((s) => s.requests));
 
     final pendingCoordCount = _analytics?['pending_coordinator_count'] ?? allRequests.where((r) => r.status == OdStatus.pendingCoordinator).length;
     final awaitingEvidenceCount = _analytics?['approved_awaiting_evidence_count'] ?? allRequests.where((r) => r.status == OdStatus.approvedAwaitingEvidence).length;
