@@ -222,9 +222,10 @@ class _RequestDetailsModalState extends ConsumerState<RequestDetailsModal> {
                               ),
                             );
                           } else {
+                            final errorMsg = ref.read(workflowControllerProvider).errorMessage;
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Failed to submit completion evidence. Please check event end date.'),
+                              SnackBar(
+                                content: Text(errorMsg ?? 'Failed to submit completion evidence.'),
                                 backgroundColor: AppColors.danger,
                               ),
                             );
