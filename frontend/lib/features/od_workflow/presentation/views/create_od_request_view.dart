@@ -63,12 +63,17 @@ class _CreateOdRequestViewState extends ConsumerState<CreateOdRequestView> {
   }
 
   Future<void> _selectDate(BuildContext context, bool isStart) async {
-    final initial = isStart ? (_startDate ?? DateTime.now()) : (_endDate ?? _startDate ?? DateTime.now());
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final initial = isStart ? (_startDate ?? today) : (_endDate ?? _startDate ?? today);
+    final firstDate = isStart ? today : (_startDate ?? today);
+    final lastDate = today.add(const Duration(days: 90));
+
     final picked = await showDatePicker(
       context: context,
-      initialDate: initial,
-      firstDate: DateTime.now().subtract(const Duration(days: 7)),
-      lastDate: DateTime.now().add(const Duration(days: 90)),
+      initialDate: initial.isBefore(firstDate) ? firstDate : initial,
+      firstDate: firstDate,
+      lastDate: lastDate,
     );
 
     if (picked != null) {
