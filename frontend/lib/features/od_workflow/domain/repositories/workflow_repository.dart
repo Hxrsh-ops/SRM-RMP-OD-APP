@@ -3,10 +3,8 @@ import '../entities/notification_item.dart';
 import '../entities/od_request.dart';
 
 abstract class WorkflowRepository {
-  Future<List<OdRequest>> getAllRequests();
-  Future<List<OdRequest>> getStudentRequests(String studentId);
-  Future<List<OdRequest>> getFacultyPendingRequests(String facultyId);
-  Future<List<OdRequest>> getCoordinatorPendingRequests();
+  Future<List<OdRequest>> getMyRequests({bool includeHistory = false});
+  Future<OdRequest> getRequestById(String id);
   Future<OdRequest> submitOdRequest({
     required String studentId,
     required String studentName,

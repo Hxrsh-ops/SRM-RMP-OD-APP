@@ -49,7 +49,7 @@ class EnvConfig {
     }
 
     final isTest = Platform.environment.containsKey('FLUTTER_TEST') ||
-        bool.fromEnvironment('FLUTTER_TEST');
+        const bool.fromEnvironment('FLUTTER_TEST');
 
     if (defaultTargetPlatform == TargetPlatform.android && !isTest) {
       // Standard Android Emulator loopback IP to host machine

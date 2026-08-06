@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../core/network/api_constants.dart';
 import '../../domain/entities/attachment_item.dart';
 import '../../domain/entities/notification_item.dart';
 import '../../domain/entities/od_request.dart';
@@ -14,34 +15,19 @@ class ApiWorkflowRepository implements WorkflowRepository {
   ApiWorkflowRepository({required this.apiClient});
 
   @override
-  Future<List<OdRequest>> getAllRequests() async {
-    final response = await apiClient.get('/od-requests');
+  Future<List<OdRequest>> getMyRequests({bool includeHistory = false}) async {
+    final response = await apiClient.get(
+      ApiConstants.odRequests,
+      queryParameters: includeHistory ? {'include_history': 'true'} : null,
+    );
     final list = response as List;
     return list.map((item) => _mapJsonToOdRequest(item as Map<String, dynamic>)).toList();
   }
 
   @override
-  Future<List<OdRequest>> getStudentRequests(String studentId) async {
-    final response = await apiClient.get('/od-requests');
-    final list = response as List;
-    return list
-        .map((item) => _mapJsonToOdRequest(item as Map<String, dynamic>))
-        .where((r) => r.studentId == studentId || r.registerNumber == studentId)
-        .toList();
-  }
-
-  @override
-  Future<List<OdRequest>> getFacultyPendingRequests(String facultyId) async {
-    final response = await apiClient.get('/od-requests');
-    final list = response as List;
-    return list.map((item) => _mapJsonToOdRequest(item as Map<String, dynamic>)).toList();
-  }
-
-  @override
-  Future<List<OdRequest>> getCoordinatorPendingRequests() async {
-    final response = await apiClient.get('/od-requests');
-    final list = response as List;
-    return list.map((item) => _mapJsonToOdRequest(item as Map<String, dynamic>)).toList();
+  Future<OdRequest> getRequestById(String id) async {
+    final response = await apiClient.get(ApiConstants.odRequestById(id));
+    return _mapJsonToOdRequest(response as Map<String, dynamic>);
   }
 
   @override
@@ -72,8 +58,8 @@ class ApiWorkflowRepository implements WorkflowRepository {
       'venue': venue,
       'organizer': organizer,
       'additional_notes': additionalNotes,
-      'cgpa': cgpa ?? 8.5,
-      'attendance_percentage': attendancePercentage ?? 88.0,
+      'cgpa': cgpa,
+      'attendance_percentage': attendancePercentage,
       'residence_type': residenceType ?? 'Day Scholar',
       'parent_consent_url': parentConsentUrl,
       'attachments': (attachments ?? []).map((a) => {
@@ -85,7 +71,7 @@ class ApiWorkflowRepository implements WorkflowRepository {
       }).toList(),
     };
 
-    final response = await apiClient.post('/od-requests', data: body);
+    final response = await apiClient.post(ApiConstants.odRequests, data: body);
     return _mapJsonToOdRequest(response as Map<String, dynamic>);
   }
 
@@ -98,7 +84,7 @@ class ApiWorkflowRepository implements WorkflowRepository {
     String? comment,
   }) async {
     final response = await apiClient.post(
-      '/od-requests/$requestId/faculty-action',
+      ApiConstants.facultyAction(requestId),
       data: {
         'approve': approve,
         'comment': comment,
@@ -117,7 +103,7 @@ class ApiWorkflowRepository implements WorkflowRepository {
     String? comment,
   }) async {
     final response = await apiClient.post(
-      '/od-requests/$requestId/coordinator-action',
+      ApiConstants.coordinatorAction(requestId),
       data: {
         'approve': approve,
         'return_for_correction': returnForCorrection,
@@ -142,13 +128,13 @@ class ApiWorkflowRepository implements WorkflowRepository {
         MultipartFile.fromBytes(filesBytes[i], filename: fileNames[i]),
       ));
     }
-    final response = await apiClient.post('/od-requests/$requestId/completion-evidence', data: formData);
+    final response = await apiClient.post(ApiConstants.completionEvidence(requestId), data: formData);
     return _mapJsonToOdRequest(response as Map<String, dynamic>);
   }
 
   @override
   Future<Map<String, int>> getCoordinatorAnalytics() async {
-    final response = await apiClient.get('/od-requests/analytics/coordinator');
+    final response = await apiClient.get(ApiConstants.coordinatorAnalytics);
     final map = response as Map<String, dynamic>;
     return {
       'pending_coordinator_count': map['pending_coordinator_count'] as int? ?? 0,
@@ -161,7 +147,7 @@ class ApiWorkflowRepository implements WorkflowRepository {
 
   @override
   Future<List<NotificationItem>> getNotifications(String recipientId) async {
-    final response = await apiClient.get('/notifications');
+    final response = await apiClient.get(ApiConstants.notifications);
     final list = response as List;
     return list.map((item) {
       final json = item as Map<String, dynamic>;
@@ -179,7 +165,7 @@ class ApiWorkflowRepository implements WorkflowRepository {
 
   @override
   Future<void> markNotificationsRead(String recipientId) async {
-    await apiClient.post('/notifications/mark-read');
+    await apiClient.post(ApiConstants.markNotificationsRead);
   }
 
   @override
@@ -193,7 +179,7 @@ class ApiWorkflowRepository implements WorkflowRepository {
       'document_category': documentCategory,
     });
 
-    final response = await apiClient.post('/attachments/upload', data: formData);
+    final response = await apiClient.post(ApiConstants.uploadAttachment, data: formData);
     final json = response as Map<String, dynamic>;
     return AttachmentItem(
       id: json['id']?.toString() ?? '',
@@ -208,26 +194,8 @@ class ApiWorkflowRepository implements WorkflowRepository {
   }
 
   OdRequest _mapJsonToOdRequest(Map<String, dynamic> json) {
-    final statusStr = json['status'].toString().toUpperCase();
-    OdStatus status = OdStatus.pendingFaculty;
-
-    if (statusStr == 'PENDING_COORDINATOR' || statusStr == 'FACULTY_APPROVED') {
-      status = OdStatus.pendingCoordinator;
-    } else if (statusStr == 'APPROVED_AWAITING_EVIDENCE') {
-      status = OdStatus.approvedAwaitingEvidence;
-    } else if (statusStr == 'PENDING_EVIDENCE_FACULTY') {
-      status = OdStatus.pendingEvidenceFaculty;
-    } else if (statusStr == 'PENDING_EVIDENCE_COORDINATOR') {
-      status = OdStatus.pendingEvidenceCoordinator;
-    } else if (statusStr == 'EVIDENCE_REVISION_REQUESTED') {
-      status = OdStatus.evidenceRevisionRequested;
-    } else if (statusStr == 'COMPLETED') {
-      status = OdStatus.completed;
-    } else if (statusStr == 'REJECTED' || statusStr == 'FACULTY_REJECTED') {
-      status = OdStatus.rejected;
-    } else if (statusStr == 'REVISION_REQUESTED') {
-      status = OdStatus.revisionRequested;
-    }
+    final statusStr = json['status'].toString();
+    final status = OdStatus.fromApiString(statusStr);
 
     final attachmentsList = (json['attachments'] as List? ?? []).map((att) {
       return AttachmentItem(
@@ -267,11 +235,11 @@ class ApiWorkflowRepository implements WorkflowRepository {
     return OdRequest(
       id: json['id'].toString(),
       studentId: json['student_id'].toString(),
-      studentName: json['student_name']?.toString() ?? 'K.M. Harshanth',
-      registerNumber: json['register_number']?.toString() ?? 'RA2511026020400',
-      program: json['program']?.toString() ?? 'B.Tech CSE (AI & ML)',
-      yearSection: json['year_section']?.toString() ?? '2nd Year - Sec G',
-      studentEmail: json['student_email']?.toString() ?? 'hk7793@srmist.edu.in',
+      studentName: json['student_name']?.toString() ?? '',
+      registerNumber: json['register_number']?.toString() ?? '',
+      program: json['program']?.toString(),
+      yearSection: json['year_section']?.toString(),
+      studentEmail: json['student_email']?.toString(),
       reason: json['reason'].toString(),
       startDate: DateTime.parse(json['start_date'].toString()),
       endDate: DateTime.parse(json['end_date'].toString()),
@@ -280,12 +248,12 @@ class ApiWorkflowRepository implements WorkflowRepository {
       venue: json['venue'].toString(),
       organizer: json['organizer'].toString(),
       additionalNotes: json['additional_notes']?.toString(),
-      cgpa: (json['cgpa'] as num?)?.toDouble() ?? 8.5,
-      attendancePercentage: (json['attendance_percentage'] as num?)?.toDouble() ?? 88.0,
-      residenceType: json['residence_type']?.toString() ?? 'Day Scholar',
+      cgpa: (json['cgpa'] as num?)?.toDouble(),
+      attendancePercentage: (json['attendance_percentage'] as num?)?.toDouble(),
+      residenceType: json['residence_type']?.toString(),
       parentConsentUrl: json['parent_consent_url']?.toString(),
       facultyAdvisorId: json['faculty_id']?.toString() ?? '',
-      facultyAdvisorName: json['faculty_advisor_name']?.toString() ?? 'Dr. Karthik B',
+      facultyAdvisorName: json['faculty_advisor_name']?.toString() ?? '',
       facultyApprovalTime: json['faculty_approval_time'] != null
           ? DateTime.parse(json['faculty_approval_time'].toString())
           : null,

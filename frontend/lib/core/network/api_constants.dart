@@ -15,8 +15,11 @@ class ApiConstants {
 
   // Workflow Endpoints
   static const String odRequests = '/od-requests';
+  static String odRequestById(String id) => '/od-requests/$id';
   static String facultyAction(String id) => '/od-requests/$id/faculty-action';
   static String coordinatorAction(String id) => '/od-requests/$id/coordinator-action';
+  static String completionEvidence(String id) => '/od-requests/$id/completion-evidence';
+  static const String coordinatorAnalytics = '/od-requests/analytics/coordinator';
 
   // Attachment Endpoints
   static const String uploadAttachment = '/attachments/upload';

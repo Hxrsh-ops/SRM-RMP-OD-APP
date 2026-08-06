@@ -63,4 +63,36 @@ enum OdStatus {
         return AppStatusType.error;
     }
   }
+
+  static OdStatus fromApiString(String raw) {
+    final s = raw.toUpperCase().trim();
+    switch (s) {
+      case 'SUBMITTED':
+        return OdStatus.submitted;
+      case 'PENDING_FACULTY':
+        return OdStatus.pendingFaculty;
+      case 'FACULTY_APPROVED':
+        return OdStatus.facultyApproved;
+      case 'FACULTY_REJECTED':
+        return OdStatus.facultyRejected;
+      case 'PENDING_COORDINATOR':
+        return OdStatus.pendingCoordinator;
+      case 'APPROVED_AWAITING_EVIDENCE':
+        return OdStatus.approvedAwaitingEvidence;
+      case 'PENDING_EVIDENCE_FACULTY':
+        return OdStatus.pendingEvidenceFaculty;
+      case 'PENDING_EVIDENCE_COORDINATOR':
+        return OdStatus.pendingEvidenceCoordinator;
+      case 'EVIDENCE_REVISION_REQUESTED':
+        return OdStatus.evidenceRevisionRequested;
+      case 'COMPLETED':
+        return OdStatus.completed;
+      case 'REJECTED':
+        return OdStatus.rejected;
+      case 'REVISION_REQUESTED':
+        return OdStatus.revisionRequested;
+      default:
+        return OdStatus.pendingFaculty;
+    }
+  }
 }

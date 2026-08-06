@@ -276,7 +276,7 @@ class _RequestDetailsModalState extends ConsumerState<RequestDetailsModal> {
             Container(
               width: 40,
               height: 4,
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: AppColors.border,
                 borderRadius: AppRadius.borderFull,
               ),
@@ -348,11 +348,11 @@ class _RequestDetailsModalState extends ConsumerState<RequestDetailsModal> {
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
-                                  req.residenceType,
+                                  req.displayResidenceType,
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
-                                    color: req.residenceType == 'Hosteller' ? AppColors.warning : AppColors.primaryBlue,
+                                    color: req.displayResidenceType == 'Hosteller' ? AppColors.warning : AppColors.primaryBlue,
                                   ),
                                 ),
                               ),
@@ -522,7 +522,7 @@ class _RequestDetailsModalState extends ConsumerState<RequestDetailsModal> {
                     if (preApprovalDocs.isEmpty)
                       Container(
                         padding: const EdgeInsets.all(AppSpacing.md),
-                        decoration: BoxDecoration(color: AppColors.surfaceVariant, borderRadius: AppRadius.borderMd),
+                        decoration: const BoxDecoration(color: AppColors.surfaceVariant, borderRadius: AppRadius.borderMd),
                         child: const Row(
                           children: [
                             Icon(Icons.attachment_outlined, color: AppColors.textSecondary, size: 20),
@@ -576,7 +576,7 @@ class _RequestDetailsModalState extends ConsumerState<RequestDetailsModal> {
                     if (completionDocs.isEmpty)
                       Container(
                         padding: const EdgeInsets.all(AppSpacing.md),
-                        decoration: BoxDecoration(color: AppColors.surfaceVariant, borderRadius: AppRadius.borderMd),
+                        decoration: const BoxDecoration(color: AppColors.surfaceVariant, borderRadius: AppRadius.borderMd),
                         child: const Row(
                           children: [
                             Icon(Icons.fact_check_outlined, color: AppColors.textSecondary, size: 20),

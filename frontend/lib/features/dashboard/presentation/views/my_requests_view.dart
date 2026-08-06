@@ -74,12 +74,12 @@ class _MyRequestsViewState extends ConsumerState<MyRequestsView> {
                     child: TextField(
                       controller: _searchController,
                       onChanged: (val) => setState(() => _searchQuery = val.trim()),
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         hintText: 'Search by ID, reason...',
-                        prefixIcon: const Icon(Icons.search_rounded, size: 18),
+                        prefixIcon: Icon(Icons.search_rounded, size: 18),
                         filled: true,
                         fillColor: AppColors.surfaceVariant,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: AppSpacing.md),
+                        contentPadding: EdgeInsets.symmetric(vertical: 0, horizontal: AppSpacing.md),
                         border: OutlineInputBorder(borderRadius: AppRadius.borderMd, borderSide: BorderSide.none),
                       ),
                     ),

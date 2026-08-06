@@ -83,27 +83,15 @@ class MockWorkflowRepository implements WorkflowRepository {
   }
 
   @override
-  Future<List<OdRequest>> getAllRequests() async {
+  Future<List<OdRequest>> getMyRequests({bool includeHistory = false}) async {
     await Future.delayed(const Duration(milliseconds: 150));
     return List.unmodifiable(_requests);
   }
 
   @override
-  Future<List<OdRequest>> getStudentRequests(String studentId) async {
-    await Future.delayed(const Duration(milliseconds: 150));
-    return _requests.where((r) => r.studentId == studentId || r.registerNumber == studentId).toList();
-  }
-
-  @override
-  Future<List<OdRequest>> getFacultyPendingRequests(String facultyId) async {
-    await Future.delayed(const Duration(milliseconds: 150));
-    return _requests.where((r) => r.status == OdStatus.pendingFaculty || r.status == OdStatus.submitted || r.status == OdStatus.pendingEvidenceFaculty).toList();
-  }
-
-  @override
-  Future<List<OdRequest>> getCoordinatorPendingRequests() async {
-    await Future.delayed(const Duration(milliseconds: 150));
-    return _requests.where((r) => r.status == OdStatus.pendingCoordinator || r.status == OdStatus.facultyApproved || r.status == OdStatus.pendingEvidenceCoordinator).toList();
+  Future<OdRequest> getRequestById(String id) async {
+    await Future.delayed(const Duration(milliseconds: 100));
+    return _requests.firstWhere((r) => r.id == id);
   }
 
   @override
@@ -142,8 +130,8 @@ class MockWorkflowRepository implements WorkflowRepository {
       venue: venue,
       organizer: organizer,
       additionalNotes: additionalNotes,
-      cgpa: cgpa ?? 8.5,
-      attendancePercentage: attendancePercentage ?? 88.0,
+      cgpa: cgpa,
+      attendancePercentage: attendancePercentage,
       residenceType: residenceType ?? 'Day Scholar',
       parentConsentUrl: parentConsentUrl,
       facultyAdvisorId: 'FA1001',

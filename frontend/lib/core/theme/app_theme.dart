@@ -6,7 +6,7 @@ import 'typography_tokens.dart';
 
 abstract class AppTheme {
   static ThemeData get lightTheme {
-    final ColorScheme colorScheme = const ColorScheme.light(
+    const ColorScheme colorScheme = ColorScheme.light(
       primary: AppColors.primaryBlue,
       onPrimary: AppColors.onPrimary,
       primaryContainer: AppColors.primaryContainer,

@@ -98,8 +98,8 @@ class StudentDashboardView extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             AppWelcomeHeader(
-              userName: session?.name ?? 'K.M. Harshanth',
-              subtitle: session?.program ?? 'B.Tech CSE (AI & ML) • 2nd Year - Sec G',
+              userName: session?.name ?? 'Student',
+              subtitle: session?.program ?? (session?.username ?? 'SRM Ramapuram'),
             ),
             const SizedBox(height: AppSpacing.lg),
 
@@ -111,7 +111,7 @@ class StudentDashboardView extends ConsumerWidget {
             // Assigned Advisor Banner
             AppInfoCard(
               title: 'Assigned Faculty Advisor',
-              description: '${session?.assignedFacultyName ?? "Dr. Karthik B"} — Class Counselor',
+              description: '${session?.assignedFacultyName ?? "Faculty Advisor"} — Class Counselor',
               icon: Icons.person_search_outlined,
             ),
 

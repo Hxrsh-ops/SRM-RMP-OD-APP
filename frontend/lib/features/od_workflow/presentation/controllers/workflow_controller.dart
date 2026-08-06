@@ -48,10 +48,10 @@ class WorkflowController extends StateNotifier<WorkflowState> {
     loadAllData();
   }
 
-  Future<void> loadAllData() async {
+  Future<void> loadAllData({bool includeHistory = false}) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
-      final requests = await _repository.getAllRequests();
+      final requests = await _repository.getMyRequests(includeHistory: includeHistory);
       final notifications = await _repository.getNotifications(_currentUserId);
       state = state.copyWith(
         requests: requests,
@@ -61,6 +61,14 @@ class WorkflowController extends StateNotifier<WorkflowState> {
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());
     }
+  }
+
+  Future<void> refreshSingleRequest(String requestId) async {
+    try {
+      final updated = await _repository.getRequestById(requestId);
+      final updatedRequests = state.requests.map((r) => r.id == requestId ? updated : r).toList();
+      state = state.copyWith(requests: updatedRequests);
+    } catch (_) {}
   }
 
   Future<bool> submitRequest({
@@ -83,7 +91,7 @@ class WorkflowController extends StateNotifier<WorkflowState> {
   }) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
-      await _repository.submitOdRequest(
+      final newReq = await _repository.submitOdRequest(
         studentId: studentId,
         studentName: studentName,
         registerNumber: registerNumber,
@@ -101,7 +109,10 @@ class WorkflowController extends StateNotifier<WorkflowState> {
         parentConsentUrl: parentConsentUrl,
         attachments: attachments,
       );
-      await loadAllData();
+      state = state.copyWith(
+        requests: [newReq, ...state.requests],
+        isLoading: false,
+      );
       return true;
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());
@@ -117,13 +128,14 @@ class WorkflowController extends StateNotifier<WorkflowState> {
   }) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
-      await _repository.submitCompletionEvidence(
+      final updated = await _repository.submitCompletionEvidence(
         requestId: requestId,
         completionSummary: completionSummary,
         filesBytes: filesBytes,
         fileNames: fileNames,
       );
-      await loadAllData();
+      final updatedRequests = state.requests.map((r) => r.id == requestId ? updated : r).toList();
+      state = state.copyWith(requests: updatedRequests, isLoading: false);
       return true;
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());
@@ -169,7 +181,6 @@ class WorkflowController extends StateNotifier<WorkflowState> {
       );
       final updatedRequests = state.requests.map((r) => r.id == requestId ? updated : r).toList();
       state = state.copyWith(requests: updatedRequests, isLoading: false);
-      await loadAllData();
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());
     }
@@ -195,20 +206,17 @@ class WorkflowController extends StateNotifier<WorkflowState> {
       );
       final updatedRequests = state.requests.map((r) => r.id == requestId ? updated : r).toList();
       state = state.copyWith(requests: updatedRequests, isLoading: false);
-      await loadAllData();
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());
     }
   }
 
   Future<void> markNotificationsRead() async {
-    state = state.copyWith(isLoading: true);
+    final updatedNotifications = state.notifications.map((n) => n.copyWith(isRead: true)).toList();
+    state = state.copyWith(notifications: updatedNotifications);
     try {
       await _repository.markNotificationsRead(_currentUserId);
-      await loadAllData();
-    } catch (e) {
-      state = state.copyWith(isLoading: false, errorMessage: e.toString());
-    }
+    } catch (_) {}
   }
 }
 

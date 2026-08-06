@@ -41,6 +41,12 @@ class OdRequestRepository:
             OdRequest.is_deleted == False
         ).order_by(OdRequest.created_at.desc()).all()
 
+    def list_faculty_all(self, faculty_id: UUID) -> List[OdRequest]:
+        return self._base_query().filter(
+            OdRequest.faculty_id == faculty_id,
+            OdRequest.is_deleted == False
+        ).order_by(OdRequest.created_at.desc()).all()
+
     def list_coordinator_pending(self) -> List[OdRequest]:
         return self._base_query().filter(
             OdRequest.status.in_([
@@ -48,6 +54,11 @@ class OdRequestRepository:
                 OdStatus.FACULTY_APPROVED,
                 OdStatus.PENDING_EVIDENCE_COORDINATOR
             ]),
+            OdRequest.is_deleted == False
+        ).order_by(OdRequest.created_at.desc()).all()
+
+    def list_coordinator_all(self) -> List[OdRequest]:
+        return self._base_query().filter(
             OdRequest.is_deleted == False
         ).order_by(OdRequest.created_at.desc()).all()
 
@@ -75,10 +86,18 @@ class OdRequestRepository:
         }
 
     def create(self, request: OdRequest) -> OdRequest:
-        self.db.add(request)
-        self.db.commit()
-        return self.get_by_id(request.id) or request
+        try:
+            self.db.add(request)
+            self.db.commit()
+            return self.get_by_id(request.id) or request
+        except Exception:
+            self.db.rollback()
+            raise
 
     def update(self, request: OdRequest) -> OdRequest:
-        self.db.commit()
-        return self.get_by_id(request.id) or request
+        try:
+            self.db.commit()
+            return self.get_by_id(request.id) or request
+        except Exception:
+            self.db.rollback()
+            raise

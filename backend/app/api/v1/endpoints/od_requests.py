@@ -1,5 +1,5 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, status, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, Depends, status, UploadFile, File, Form, HTTPException, Query
 from sqlalchemy.orm import Session
 from ....core.database import get_db
 from ....core.exceptions import NotFoundException, PermissionDeniedException, BadRequestException
@@ -58,15 +58,16 @@ def _build_od_response(req: OdRequest, user_repo: UserRepository) -> OdRequestRe
 
 @router.get("", response_model=List[OdRequestResponse])
 def list_od_requests(
+    include_history: bool = Query(False),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     od_repo = OdRequestRepository(db)
     user_repo = UserRepository(db)
     if current_user.role == UserRole.FACULTY_ADVISOR:
-        requests = od_repo.list_faculty_pending(current_user.id)
+        requests = od_repo.list_faculty_all(current_user.id) if include_history else od_repo.list_faculty_pending(current_user.id)
     elif current_user.role == UserRole.COORDINATOR:
-        requests = od_repo.list_coordinator_pending()
+        requests = od_repo.list_coordinator_all() if include_history else od_repo.list_coordinator_pending()
     elif current_user.role == UserRole.STUDENT:
         requests = od_repo.list_by_student(current_user.id)
     else:

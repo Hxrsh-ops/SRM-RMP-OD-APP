@@ -66,7 +66,7 @@ void main() {
       dio.options.headers['Authorization'] = 'Bearer ${facultySession.token.accessToken}';
 
       // 4. Faculty Views Pending Queue from PostgreSQL
-      final facultyPending = await workflowRepo.getFacultyPendingRequests(facultySession.userId);
+      final facultyPending = await workflowRepo.getMyRequests();
       final facultyTargetReq = facultyPending.firstWhere((r) => r.id == createdOd.id);
       expect(facultyTargetReq, isNotNull);
 
@@ -85,7 +85,7 @@ void main() {
       dio.options.headers['Authorization'] = 'Bearer ${coordSession.token.accessToken}';
 
       // 7. Coordinator Views Approval Queue from PostgreSQL
-      final coordPending = await workflowRepo.getCoordinatorPendingRequests();
+      final coordPending = await workflowRepo.getMyRequests();
       final coordTargetReq = coordPending.firstWhere((r) => r.id == createdOd.id);
       expect(coordTargetReq, isNotNull);
 
@@ -100,7 +100,7 @@ void main() {
 
       // 9. Student Logs In & Checks Updated Status
       dio.options.headers['Authorization'] = 'Bearer ${studentSession.token.accessToken}';
-      final studentRequests = await workflowRepo.getStudentRequests(studentSession.userId);
+      final studentRequests = await workflowRepo.getMyRequests();
       final finalStudentReq = studentRequests.firstWhere((r) => r.id == createdOd.id);
 
       expect(finalStudentReq.status, OdStatus.completed);

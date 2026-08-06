@@ -487,7 +487,7 @@ class _CreateOdRequestViewState extends ConsumerState<CreateOdRequestView> {
                           padding: const EdgeInsets.only(bottom: AppSpacing.xs),
                           child: Container(
                             padding: const EdgeInsets.all(AppSpacing.sm),
-                            decoration: BoxDecoration(
+                            decoration: const BoxDecoration(
                               color: AppColors.surfaceVariant,
                               borderRadius: AppRadius.borderSm,
                             ),
@@ -534,7 +534,7 @@ class _CreateOdRequestViewState extends ConsumerState<CreateOdRequestView> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primaryBlue,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: AppRadius.borderMd),
+                  shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderMd),
                 ),
                 onPressed: isSubmitting ? null : _submitForm,
                 icon: isSubmitting

@@ -34,7 +34,7 @@ class AppOutlineButton extends StatelessWidget {
           disabledForegroundColor: AppColors.textDisabled,
           side: const BorderSide(color: AppColors.primaryBlue, width: 1.5),
           padding: size.padding,
-          shape: RoundedRectangleBorder(
+          shape: const RoundedRectangleBorder(
             borderRadius: AppRadius.borderMd,
           ),
           textStyle: size.textStyle(theme),
