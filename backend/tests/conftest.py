@@ -62,6 +62,20 @@ def setup_db():
         db.add(coord)
         db.commit()
 
+    # Seed Master Admin
+    admin = db.query(User).filter(User.username == "ADMIN1001").first()
+    if not admin:
+        admin = User(
+            username="ADMIN1001",
+            email="admin@srmist.edu.in",
+            full_name="Enterprise Master Admin",
+            hashed_password=get_password_hash("Admin@123456"),
+            role=UserRole.MASTER_ADMIN,
+            department_id=dept.id,
+        )
+        db.add(admin)
+        db.commit()
+
     # Seed Student
     student = db.query(User).filter(User.username == "RA2511026020400").first()
     if not student:

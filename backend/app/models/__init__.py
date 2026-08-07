@@ -9,6 +9,8 @@ from .timeline import TimelineEvent
 from .comment import Comment
 from .notification import Notification
 from .audit_log import AuditLog
+from .system_setting import SystemSetting
+from .security_event import SecurityEvent
 
 __all__ = [
     "UserRole",
@@ -24,4 +26,6 @@ __all__ = [
     "Comment",
     "Notification",
     "AuditLog",
+    "SystemSetting",
+    "SecurityEvent",
 ]

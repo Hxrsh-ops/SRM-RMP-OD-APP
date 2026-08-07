@@ -15,6 +15,8 @@ import '../views/notifications_view.dart';
 import '../views/profile_view.dart';
 import '../views/student_dashboard_view.dart';
 
+import '../../../admin/presentation/views/admin_control_center_shell.dart';
+
 class MainShellDashboardScreen extends ConsumerStatefulWidget {
   const MainShellDashboardScreen({super.key});
 
@@ -32,6 +34,10 @@ class _MainShellDashboardScreenState extends ConsumerState<MainShellDashboardScr
     final workflowState = ref.watch(workflowControllerProvider);
 
     final role = session?.role ?? 'STUDENT';
+
+    if (role == 'MASTER_ADMIN') {
+      return const AdminControlCenterShell();
+    }
     final isStudent = role == 'STUDENT';
     final userName = session?.name ?? 'User';
     final userSubtext = session?.program ?? session?.role ?? 'SRM Ramapuram';

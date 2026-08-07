@@ -16,8 +16,42 @@ class AuthService:
         user = self.user_repo.get_by_username(username.strip())
         if not user or not user.is_active:
             raise CredentialsException("Invalid Register Number / Employee ID or password")
+        
+        if getattr(user, "is_locked", False):
+            from ..models.security_event import SecurityEvent
+            sec_event = SecurityEvent(
+                event_type="ACCOUNT_LOCKED_ATTEMPT",
+                severity="WARNING",
+                username=username,
+                user_id=user.id,
+                details={"reason": "User attempted login while account was locked"}
+            )
+            self.user_repo.db.add(sec_event)
+            self.user_repo.db.commit()
+            raise CredentialsException("Account is locked due to security policy. Contact administrator.")
+
         if not verify_password(password.strip(), user.hashed_password):
+            user.failed_login_attempts = getattr(user, "failed_login_attempts", 0) + 1
+            if user.failed_login_attempts >= 5:
+                user.is_locked = True
+
+            from ..models.security_event import SecurityEvent
+            sec_event = SecurityEvent(
+                event_type="FAILED_LOGIN",
+                severity="WARNING",
+                username=username,
+                user_id=user.id,
+                details={"attempts": user.failed_login_attempts}
+            )
+            self.user_repo.db.add(sec_event)
+            self.user_repo.db.commit()
             raise CredentialsException("Invalid Register Number / Employee ID or password")
+
+        # Reset failed attempts on success
+        user.failed_login_attempts = 0
+        import datetime
+        user.last_login_at = datetime.datetime.now(datetime.timezone.utc)
+        self.user_repo.db.commit()
         return user
 
     def login(self, login_data: LoginRequest) -> Tuple[Token, User]:

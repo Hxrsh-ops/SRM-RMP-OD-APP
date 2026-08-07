@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from .endpoints import auth, users, od_requests, attachments, notifications
+from .endpoints import auth, users, od_requests, attachments, notifications, admin
 
 api_router = APIRouter()
 
@@ -8,3 +8,4 @@ api_router.include_router(users.router, prefix="/users", tags=["Users"])
 api_router.include_router(od_requests.router, prefix="/od-requests", tags=["OD Requests"])
 api_router.include_router(attachments.router, prefix="/attachments", tags=["Attachments"])
 api_router.include_router(notifications.router, prefix="/notifications", tags=["Notifications"])
+api_router.include_router(admin.router, prefix="/admin", tags=["Super Admin"])

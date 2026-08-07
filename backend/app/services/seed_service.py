@@ -63,6 +63,24 @@ def seed_production_ready_dataset():
             coord.full_name = "Prof. Ramesh Kumar"
             db.commit()
 
+        # 3b. Master Admin (Enterprise System Authority)
+        master_admin = db.query(User).filter(User.username == "ADMIN1001").first()
+        if not master_admin:
+            master_admin = User(
+                username="ADMIN1001",
+                email="admin@srmist.edu.in",
+                full_name="Enterprise Master Admin",
+                hashed_password=get_password_hash("Admin@123456"),
+                role=UserRole.MASTER_ADMIN,
+                department_id=dept.id,
+            )
+            db.add(master_admin)
+            db.commit()
+            db.refresh(master_admin)
+        else:
+            master_admin.full_name = "Enterprise Master Admin"
+            db.commit()
+
         # 4. Primary Student (K.M. Harshanth)
         student = db.query(User).filter(User.username == "RA2511026020400").first()
         if not student:
