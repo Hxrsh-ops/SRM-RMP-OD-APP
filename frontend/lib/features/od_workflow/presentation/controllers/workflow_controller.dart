@@ -15,12 +15,14 @@ final workflowRepositoryProvider = Provider<WorkflowRepository>((ref) {
 class WorkflowState {
   final List<OdRequest> requests;
   final List<NotificationItem> notifications;
+  final Map<String, int>? analytics;
   final bool isLoading;
   final String? errorMessage;
 
   const WorkflowState({
     this.requests = const [],
     this.notifications = const [],
+    this.analytics,
     this.isLoading = false,
     this.errorMessage,
   });
@@ -28,12 +30,14 @@ class WorkflowState {
   WorkflowState copyWith({
     List<OdRequest>? requests,
     List<NotificationItem>? notifications,
+    Map<String, int>? analytics,
     bool? isLoading,
     String? errorMessage,
   }) {
     return WorkflowState(
       requests: requests ?? this.requests,
       notifications: notifications ?? this.notifications,
+      analytics: analytics ?? this.analytics,
       isLoading: isLoading ?? this.isLoading,
       errorMessage: errorMessage,
     );
@@ -53,9 +57,14 @@ class WorkflowController extends StateNotifier<WorkflowState> {
     try {
       final requests = await _repository.getMyRequests(includeHistory: includeHistory);
       final notifications = await _repository.getNotifications(_currentUserId);
+      Map<String, int>? analytics;
+      try {
+        analytics = await _repository.getCoordinatorAnalytics();
+      } catch (_) {}
       state = state.copyWith(
         requests: requests,
         notifications: notifications,
+        analytics: analytics,
         isLoading: false,
       );
     } catch (e) {
@@ -180,7 +189,11 @@ class WorkflowController extends StateNotifier<WorkflowState> {
         comment: comment,
       );
       final updatedRequests = state.requests.map((r) => r.id == requestId ? updated : r).toList();
-      state = state.copyWith(requests: updatedRequests, isLoading: false);
+      Map<String, int>? analytics;
+      try {
+        analytics = await _repository.getCoordinatorAnalytics();
+      } catch (_) {}
+      state = state.copyWith(requests: updatedRequests, analytics: analytics, isLoading: false);
       return true;
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());
@@ -207,7 +220,11 @@ class WorkflowController extends StateNotifier<WorkflowState> {
         comment: comment,
       );
       final updatedRequests = state.requests.map((r) => r.id == requestId ? updated : r).toList();
-      state = state.copyWith(requests: updatedRequests, isLoading: false);
+      Map<String, int>? analytics;
+      try {
+        analytics = await _repository.getCoordinatorAnalytics();
+      } catch (_) {}
+      state = state.copyWith(requests: updatedRequests, analytics: analytics, isLoading: false);
       return true;
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());

@@ -29,8 +29,13 @@ class AppMetricCard extends StatelessWidget {
       case AppStatusType.error:
       case AppStatusType.rejected:
         return AppColors.danger;
+      case AppStatusType.revisionRequested:
+        return AppColors.warning;
+      case AppStatusType.awaitingEvidence:
       case AppStatusType.info:
         return AppColors.primaryBlue;
+      case AppStatusType.evidenceReview:
+        return const Color(0xFF7C3AED);
     }
   }
 

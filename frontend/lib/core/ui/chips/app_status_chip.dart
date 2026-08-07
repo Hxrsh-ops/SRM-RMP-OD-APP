@@ -10,6 +10,9 @@ enum AppStatusType {
   pending,
   approved,
   rejected,
+  revisionRequested,
+  awaitingEvidence,
+  evidenceReview,
 }
 
 class AppStatusChip extends StatelessWidget {
@@ -34,32 +37,32 @@ class AppStatusChip extends StatelessWidget {
 
     switch (statusType) {
       case AppStatusType.success:
-        baseColor = const Color(0xFF16A34A);
+      case AppStatusType.approved:
+        baseColor = statusExtension?.approved ?? const Color(0xFF16A34A);
         defaultIcon = Icons.check_circle_outline_rounded;
-        break;
-      case AppStatusType.warning:
-        baseColor = const Color(0xFFEA580C);
-        defaultIcon = Icons.warning_amber_rounded;
-        break;
-      case AppStatusType.error:
-        baseColor = theme.colorScheme.error;
-        defaultIcon = Icons.error_outline_rounded;
-        break;
-      case AppStatusType.info:
-        baseColor = const Color(0xFF0284C7);
-        defaultIcon = Icons.info_outline_rounded;
         break;
       case AppStatusType.pending:
         baseColor = statusExtension?.pending ?? const Color(0xFFD97706);
         defaultIcon = Icons.hourglass_empty_rounded;
         break;
-      case AppStatusType.approved:
-        baseColor = statusExtension?.approved ?? const Color(0xFF16A34A);
-        defaultIcon = Icons.verified_outlined;
+      case AppStatusType.warning:
+      case AppStatusType.revisionRequested:
+        baseColor = const Color(0xFFF59E0B);
+        defaultIcon = Icons.published_with_changes_rounded;
         break;
+      case AppStatusType.error:
       case AppStatusType.rejected:
         baseColor = statusExtension?.rejected ?? const Color(0xFFDC2626);
         defaultIcon = Icons.cancel_outlined;
+        break;
+      case AppStatusType.awaitingEvidence:
+      case AppStatusType.info:
+        baseColor = const Color(0xFF0284C7);
+        defaultIcon = Icons.assignment_late_outlined;
+        break;
+      case AppStatusType.evidenceReview:
+        baseColor = const Color(0xFF7C3AED);
+        defaultIcon = Icons.fact_check_outlined;
         break;
     }
 

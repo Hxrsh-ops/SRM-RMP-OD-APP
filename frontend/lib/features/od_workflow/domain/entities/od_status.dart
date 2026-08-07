@@ -27,19 +27,19 @@ enum OdStatus {
       case OdStatus.pendingCoordinator:
         return 'Pending Coordinator';
       case OdStatus.approvedAwaitingEvidence:
-        return 'Approved - Awaiting Proof';
+        return 'Awaiting Evidence';
       case OdStatus.pendingEvidenceFaculty:
-        return 'Proof - Pending Faculty';
+        return 'Proof Review (Faculty)';
       case OdStatus.pendingEvidenceCoordinator:
-        return 'Proof - Pending Coordinator';
+        return 'Proof Review (Coord)';
       case OdStatus.evidenceRevisionRequested:
-        return 'Proof Revision Requested';
+        return 'Revision Requested';
       case OdStatus.completed:
-        return 'Completed & Granted';
+        return 'Completed';
       case OdStatus.rejected:
         return 'Rejected';
       case OdStatus.revisionRequested:
-        return 'Needs Revision';
+        return 'Revision Requested';
     }
   }
 
@@ -52,10 +52,10 @@ enum OdStatus {
       case OdStatus.facultyApproved:
         return AppStatusType.approved;
       case OdStatus.approvedAwaitingEvidence:
-        return AppStatusType.info;
+        return AppStatusType.awaitingEvidence;
       case OdStatus.pendingEvidenceFaculty:
       case OdStatus.pendingEvidenceCoordinator:
-        return AppStatusType.warning;
+        return AppStatusType.evidenceReview;
       case OdStatus.completed:
         return AppStatusType.approved;
       case OdStatus.facultyRejected:
@@ -63,7 +63,7 @@ enum OdStatus {
         return AppStatusType.rejected;
       case OdStatus.evidenceRevisionRequested:
       case OdStatus.revisionRequested:
-        return AppStatusType.warning;
+        return AppStatusType.revisionRequested;
     }
   }
 

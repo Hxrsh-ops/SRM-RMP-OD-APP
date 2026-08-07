@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:srm_rmp_od_frontend/core/security/memory_secure_storage.dart';
 import 'package:srm_rmp_od_frontend/features/authentication/data/datasources/auth_local_datasource.dart';
-import 'package:srm_rmp_od_frontend/features/authentication/data/repositories/mock_authentication_repository.dart';
+import '../../mocks/mock_authentication_repository.dart';
 import 'package:srm_rmp_od_frontend/features/authentication/domain/entities/auth_status.dart';
 import 'package:srm_rmp_od_frontend/features/authentication/domain/usecases/login_usecase.dart';
 import 'package:srm_rmp_od_frontend/features/authentication/domain/usecases/logout_usecase.dart';

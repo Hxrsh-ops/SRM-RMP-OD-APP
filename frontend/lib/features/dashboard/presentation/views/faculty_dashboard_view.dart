@@ -84,14 +84,17 @@ class _FacultyDashboardViewState extends ConsumerState<FacultyDashboardView> {
                   );
               if (context.mounted) {
                 final errorMsg = ref.read(workflowControllerProvider).errorMessage;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(success
-                        ? (isEvidenceMode ? 'Evidence verified & passed to coordinator.' : 'Request ${request.id} approved.')
-                        : (errorMsg ?? 'Failed to process action.')),
-                    backgroundColor: success ? AppColors.success : AppColors.danger,
-                  ),
-                );
+                if (success) {
+                  AppSnackbar.showSuccess(
+                    context,
+                    isEvidenceMode ? 'Completion evidence verified & passed to coordinator.' : 'Faculty approval submitted successfully for ${request.id}.',
+                  );
+                } else {
+                  AppSnackbar.showError(
+                    context,
+                    errorMsg ?? 'Failed to process faculty action.',
+                  );
+                }
               }
             },
             child: Text(isEvidenceMode ? 'Verify Evidence' : 'Approve & Forward'),
@@ -143,9 +146,7 @@ class _FacultyDashboardViewState extends ConsumerState<FacultyDashboardView> {
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger, foregroundColor: Colors.white),
             onPressed: () async {
               if (remarksController.text.trim().isEmpty) {
-                ScaffoldMessenger.of(dialogCtx).showSnackBar(
-                  const SnackBar(content: Text('Please specify a valid explanation reason.'), backgroundColor: AppColors.danger),
-                );
+                AppSnackbar.showError(dialogCtx, 'Please specify a valid explanation reason.');
                 return;
               }
               Navigator.pop(dialogCtx);
@@ -158,14 +159,17 @@ class _FacultyDashboardViewState extends ConsumerState<FacultyDashboardView> {
                   );
               if (context.mounted) {
                 final errorMsg = ref.read(workflowControllerProvider).errorMessage;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(success
-                        ? (isEvidenceMode ? 'Evidence revision requested.' : 'Request ${request.id} rejected.')
-                        : (errorMsg ?? 'Failed to update request ${request.id}')),
-                    backgroundColor: success ? AppColors.warning : AppColors.danger,
-                  ),
-                );
+                if (success) {
+                  AppSnackbar.showWarning(
+                    context,
+                    isEvidenceMode ? 'Evidence revision requested for ${request.id}.' : 'Request ${request.id} rejected.',
+                  );
+                } else {
+                  AppSnackbar.showError(
+                    context,
+                    errorMsg ?? 'Failed to update request ${request.id}',
+                  );
+                }
               }
             },
             child: Text(isEvidenceMode ? 'Request Revision' : 'Confirm Rejection'),
@@ -287,23 +291,39 @@ class _FacultyDashboardViewState extends ConsumerState<FacultyDashboardView> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // Header Row: Student Name, Register Number, Status Chip
                           Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              CircleAvatar(
+                                radius: 20,
+                                backgroundColor: AppColors.primaryContainer,
+                                child: Text(
+                                  req.studentName.isNotEmpty ? req.studentName[0].toUpperCase() : 'S',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primaryBlue),
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      '${req.studentName} (${req.registerNumber})',
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                      req.studentName,
+                                      style: theme.textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        height: 1.2,
+                                      ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
+                                    const SizedBox(height: 2),
                                     Text(
-                                      'Event: ${req.reason} • ${req.durationDays} Days',
-                                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
+                                      req.registerNumber,
+                                      style: theme.textTheme.bodySmall?.copyWith(
+                                        color: AppColors.textSecondary,
+                                        fontWeight: FontWeight.w500,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -312,24 +332,73 @@ class _FacultyDashboardViewState extends ConsumerState<FacultyDashboardView> {
                               AppStatusChip(label: req.status.displayName, statusType: req.status.statusType),
                             ],
                           ),
+                          const SizedBox(height: AppSpacing.md),
+
+                          // Event Name & Duration Badge Container
+                          Container(
+                            padding: const EdgeInsets.all(AppSpacing.md),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceVariant.withValues(alpha: 0.5),
+                              borderRadius: AppRadius.borderMd,
+                              border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.event_available_rounded, size: 18, color: AppColors.primaryBlue),
+                                const SizedBox(width: AppSpacing.sm),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        req.reason,
+                                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Duration: ${req.durationDays} ${req.durationDays == 1 ? "Day" : "Days"} (${req.startDate.toString().split(" ")[0]})',
+                                        style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                           const AppDivider(),
+
+                          // Uniform Equal Height & Width Action Buttons
                           if (isMobile)
                             Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                TextButton.icon(
-                                  icon: const Icon(Icons.visibility_outlined, size: 16),
-                                  label: const Text('View Full Details'),
-                                  onPressed: () => RequestDetailsModal.show(context, req),
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: 44,
+                                  child: OutlinedButton.icon(
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: AppColors.primaryBlue,
+                                      side: const BorderSide(color: AppColors.primaryBlue),
+                                      shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderMd),
+                                    ),
+                                    icon: const Icon(Icons.visibility_outlined, size: 16),
+                                    label: const Text('View Details'),
+                                    onPressed: () => RequestDetailsModal.show(context, req),
+                                  ),
                                 ),
-                                const SizedBox(height: AppSpacing.xs),
+                                const SizedBox(height: AppSpacing.sm),
                                 Row(
                                   children: [
                                     Expanded(
                                       child: SizedBox(
-                                        height: 48,
+                                        height: 44,
                                         child: OutlinedButton.icon(
-                                          style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger),
+                                          style: OutlinedButton.styleFrom(
+                                            foregroundColor: AppColors.danger,
+                                            side: const BorderSide(color: AppColors.danger),
+                                            shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderMd),
+                                          ),
                                           icon: const Icon(Icons.close_rounded, size: 16),
                                           label: Text(_activeTab == 1 ? 'Revise' : 'Reject'),
                                           onPressed: () => _showFacultyRejectDialog(context, req),
@@ -339,9 +408,13 @@ class _FacultyDashboardViewState extends ConsumerState<FacultyDashboardView> {
                                     const SizedBox(width: AppSpacing.sm),
                                     Expanded(
                                       child: SizedBox(
-                                        height: 48,
+                                        height: 44,
                                         child: ElevatedButton.icon(
-                                          style: ElevatedButton.styleFrom(backgroundColor: AppColors.success, foregroundColor: Colors.white),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: AppColors.success,
+                                            foregroundColor: Colors.white,
+                                            shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderMd),
+                                          ),
                                           icon: const Icon(Icons.check_rounded, size: 16),
                                           label: Text(_activeTab == 1 ? 'Verify' : 'Approve'),
                                           onPressed: () => _showFacultyApproveDialog(context, req),
@@ -354,42 +427,53 @@ class _FacultyDashboardViewState extends ConsumerState<FacultyDashboardView> {
                             )
                           else
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                TextButton.icon(
-                                  icon: const Icon(Icons.visibility_outlined, size: 16),
-                                  label: const Text('View Full Details'),
-                                  onPressed: () => RequestDetailsModal.show(context, req),
+                                Expanded(
+                                  child: SizedBox(
+                                    height: 44,
+                                    child: OutlinedButton.icon(
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: AppColors.primaryBlue,
+                                        side: const BorderSide(color: AppColors.primaryBlue),
+                                        shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderMd),
+                                      ),
+                                      icon: const Icon(Icons.visibility_outlined, size: 16),
+                                      label: const Text('View Details'),
+                                      onPressed: () => RequestDetailsModal.show(context, req),
+                                    ),
+                                  ),
                                 ),
-                                Row(
-                                  children: [
-                                    SizedBox(
-                                      height: 44,
-                                      child: OutlinedButton.icon(
-                                        style: OutlinedButton.styleFrom(
-                                          foregroundColor: AppColors.danger,
-                                          minimumSize: const Size(120, 44),
-                                        ),
-                                        icon: const Icon(Icons.close_rounded, size: 16),
-                                        label: Text(_activeTab == 1 ? 'Revise' : 'Reject'),
-                                        onPressed: () => _showFacultyRejectDialog(context, req),
+                                const SizedBox(width: AppSpacing.sm),
+                                Expanded(
+                                  child: SizedBox(
+                                    height: 44,
+                                    child: OutlinedButton.icon(
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: AppColors.danger,
+                                        side: const BorderSide(color: AppColors.danger),
+                                        shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderMd),
                                       ),
+                                      icon: const Icon(Icons.close_rounded, size: 16),
+                                      label: Text(_activeTab == 1 ? 'Revise' : 'Reject'),
+                                      onPressed: () => _showFacultyRejectDialog(context, req),
                                     ),
-                                    const SizedBox(width: AppSpacing.sm),
-                                    SizedBox(
-                                      height: 44,
-                                      child: ElevatedButton.icon(
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: AppColors.success,
-                                          foregroundColor: Colors.white,
-                                          minimumSize: const Size(120, 44),
-                                        ),
-                                        icon: const Icon(Icons.check_rounded, size: 16),
-                                        label: Text(_activeTab == 1 ? 'Verify' : 'Approve'),
-                                        onPressed: () => _showFacultyApproveDialog(context, req),
+                                  ),
+                                ),
+                                const SizedBox(width: AppSpacing.sm),
+                                Expanded(
+                                  child: SizedBox(
+                                    height: 44,
+                                    child: ElevatedButton.icon(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppColors.success,
+                                        foregroundColor: Colors.white,
+                                        shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderMd),
                                       ),
+                                      icon: const Icon(Icons.check_rounded, size: 16),
+                                      label: Text(_activeTab == 1 ? 'Verify' : 'Approve'),
+                                      onPressed: () => _showFacultyApproveDialog(context, req),
                                     ),
-                                  ],
+                                  ),
                                 ),
                               ],
                             ),

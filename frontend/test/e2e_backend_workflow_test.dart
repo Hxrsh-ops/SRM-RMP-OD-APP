@@ -103,7 +103,7 @@ void main() {
       final studentRequests = await workflowRepo.getMyRequests();
       final finalStudentReq = studentRequests.firstWhere((r) => r.id == createdOd.id);
 
-      expect(finalStudentReq.status, OdStatus.completed);
+      expect(finalStudentReq.status, OdStatus.approvedAwaitingEvidence);
       expect(finalStudentReq.timeline.length, greaterThanOrEqualTo(3));
     });
   });

@@ -1,8 +1,8 @@
-import '../../domain/entities/user_session.dart';
-import '../../domain/repositories/authentication_repository.dart';
-import '../datasources/auth_local_datasource.dart';
-import '../models/auth_token_model.dart';
-import '../models/user_session_model.dart';
+import 'package:srm_rmp_od_frontend/features/authentication/data/datasources/auth_local_datasource.dart';
+import 'package:srm_rmp_od_frontend/features/authentication/data/models/auth_token_model.dart';
+import 'package:srm_rmp_od_frontend/features/authentication/data/models/user_session_model.dart';
+import 'package:srm_rmp_od_frontend/features/authentication/domain/entities/user_session.dart';
+import 'package:srm_rmp_od_frontend/features/authentication/domain/repositories/authentication_repository.dart';
 
 class MockAuthenticationRepository implements AuthenticationRepository {
   final AuthLocalDataSource localDataSource;
@@ -15,7 +15,7 @@ class MockAuthenticationRepository implements AuthenticationRepository {
     required String password,
     bool rememberMe = true,
   }) async {
-    await Future.delayed(const Duration(milliseconds: 300));
+    await Future.delayed(const Duration(milliseconds: 10));
 
     final trimmedUsername = username.trim();
     final trimmedPassword = password.trim();
@@ -30,7 +30,7 @@ class MockAuthenticationRepository implements AuthenticationRepository {
       email = 'hk7793@srmist.edu.in';
     } else if (trimmedUsername == 'FA1001' && trimmedPassword == 'faculty123') {
       role = 'FACULTY_ADVISOR';
-      name = 'Dr. Karthik B (Faculty Advisor)';
+      name = 'Dr. Karthik B (Mock)';
       email = 'karthikb@srmist.edu.in';
     } else if (trimmedUsername == 'CO1001' && trimmedPassword == 'coord123') {
       role = 'COORDINATOR';

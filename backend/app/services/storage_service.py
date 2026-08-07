@@ -6,7 +6,8 @@ from fastapi import UploadFile, HTTPException, status
 from ..core.config import settings
 
 ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg"}
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB limit
+ALLOWED_MIME_TYPES = {"application/pdf", "image/png", "image/jpeg", "image/jpg", "application/octet-stream"}
+MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB limit
 
 class StorageProvider(ABC):
     @abstractmethod
@@ -29,13 +30,19 @@ class LocalStorageProvider(StorageProvider):
                 detail=f"Unsupported file format '{ext}'. Allowed formats: PDF, PNG, JPEG."
             )
 
+        if file.content_type and file.content_type.lower() not in ALLOWED_MIME_TYPES:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Unsupported file MIME type '{file.content_type}'."
+            )
+
         contents = await file.read()
         size_bytes = len(contents)
 
         if size_bytes > MAX_FILE_SIZE:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"File size exceeds maximum allowed limit of 10 MB."
+                detail=f"File size exceeds maximum allowed limit of 5 MB."
             )
 
         unique_name = f"{uuid.uuid4()}{ext}"

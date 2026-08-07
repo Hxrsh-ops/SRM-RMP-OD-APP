@@ -17,92 +17,11 @@ from .models.enums import UserRole
 # Initialize Logging
 setup_logging()
 
+from .services.seed_service import seed_production_ready_dataset
+
 def seed_demo_users():
-    """Seed default development accounts if environment is development."""
-    if settings.ENVIRONMENT.lower() not in ("development", "dev"):
-        logger.info("Non-development environment detected; skipping demo seeding.")
-        return
-
-    try:
-        with engine.connect() as conn:
-            conn.execute(text("SELECT 1"))
-    except Exception as e:
-        logger.critical(f"Database connection failed during startup: {e}")
-        raise RuntimeError(f"Database connection failed: {e}") from e
-
-    db: Session = SessionLocal()
-    try:
-        # Seed Department
-        dept = db.query(Department).filter(Department.code == "CSE").first()
-        if not dept:
-            dept = Department(name="Computer Science & Engineering", code="CSE")
-            db.add(dept)
-            db.commit()
-            db.refresh(dept)
-
-        # Faculty Advisor (Dr. Karthik B)
-        faculty = db.query(User).filter(User.username == "FA1001").first()
-        if not faculty:
-            faculty = User(
-                username="FA1001",
-                email="karthikb@srmist.edu.in",
-                full_name="Dr. Karthik B",
-                hashed_password=get_password_hash("faculty123"),
-                role=UserRole.FACULTY_ADVISOR,
-                department_id=dept.id,
-            )
-            db.add(faculty)
-            db.commit()
-            db.refresh(faculty)
-        elif "Mock" in faculty.full_name:
-            faculty.full_name = "Dr. Karthik B"
-            db.commit()
-
-        # Coordinator (Prof. Ramesh Kumar)
-        coord = db.query(User).filter(User.username == "CO1001").first()
-        if not coord:
-            coord = User(
-                username="CO1001",
-                email="rameshk@srmist.edu.in",
-                full_name="Prof. Ramesh Kumar",
-                hashed_password=get_password_hash("coord123"),
-                role=UserRole.COORDINATOR,
-                department_id=dept.id,
-            )
-            db.add(coord)
-            db.commit()
-        elif "Coordinator" in coord.full_name:
-            coord.full_name = "Prof. Ramesh Kumar"
-            db.commit()
-
-        # Student (K.M. Harshanth) - RA2511026020400
-        student = db.query(User).filter(User.username == "RA2511026020400").first()
-        if not student:
-            old_student = db.query(User).filter(User.username == "RA2510026020400").first()
-            if old_student:
-                old_student.username = "RA2511026020400"
-                db.commit()
-            else:
-                student = User(
-                    username="RA2511026020400",
-                    email="hk7793@srmist.edu.in",
-                    full_name="K.M. Harshanth",
-                    hashed_password=get_password_hash("student123"),
-                    role=UserRole.STUDENT,
-                    department_id=dept.id,
-                    program="B.Tech CSE (AI & ML)",
-                    year_section="2nd Year - Sec G",
-                    assigned_faculty_id=faculty.id if faculty else None,
-                )
-                db.add(student)
-                db.commit()
-
-        logger.info("Development seed data successfully initialized.")
-    except Exception as e:
-        logger.critical(f"Error seeding database: {e}")
-        raise RuntimeError(f"Database seeding failed: {e}") from e
-    finally:
-        db.close()
+    """Seed default development accounts & production-ready demo dataset."""
+    seed_production_ready_dataset()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

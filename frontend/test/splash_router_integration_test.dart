@@ -7,12 +7,12 @@ import 'package:srm_rmp_od_frontend/core/routing/app_router.dart';
 import 'package:srm_rmp_od_frontend/core/security/memory_secure_storage.dart';
 import 'package:srm_rmp_od_frontend/core/network/providers/dio_provider.dart';
 import 'package:srm_rmp_od_frontend/features/authentication/data/datasources/auth_local_datasource.dart';
-import 'package:srm_rmp_od_frontend/features/authentication/data/repositories/mock_authentication_repository.dart';
+import 'mocks/mock_authentication_repository.dart';
 import 'package:srm_rmp_od_frontend/features/authentication/domain/repositories/authentication_repository.dart';
 import 'package:srm_rmp_od_frontend/features/authentication/domain/entities/auth_status.dart';
 import 'package:srm_rmp_od_frontend/features/authentication/domain/entities/user_session.dart';
 import 'package:srm_rmp_od_frontend/features/authentication/presentation/controllers/auth_controller.dart';
-import 'package:srm_rmp_od_frontend/features/od_workflow/data/repositories/mock_workflow_repository.dart';
+import 'mocks/mock_workflow_repository.dart';
 import 'package:srm_rmp_od_frontend/features/od_workflow/presentation/controllers/workflow_controller.dart';
 
 class FailingAuthRepository implements AuthenticationRepository {
@@ -126,7 +126,10 @@ void main() {
       final mockRepo = MockAuthenticationRepository(localDataSource: localDataSource);
       final mockWorkflow = MockWorkflowRepository();
 
-      await mockRepo.login(username: 'RA2511026020400', password: 'student123');
+      // Start login future and advance widget timers to resolve Future.delayed inside mockRepo
+      final loginFuture = mockRepo.login(username: 'RA2511026020400', password: 'student123');
+      await tester.pump(const Duration(milliseconds: 300));
+      await loginFuture;
 
       final container = ProviderContainer(
         overrides: [
@@ -152,6 +155,9 @@ void main() {
 
       expect(container.read(authControllerProvider).status, AuthStatus.authenticated);
       expect(router.routerDelegate.currentConfiguration.matches.last.matchedLocation, '/dashboard');
+      
+      // Settle all outstanding async layout operations and delays from MockWorkflowRepository
+      await tester.pumpAndSettle();
     });
 
     testWidgets('4. Expired or invalid token clears storage and routes to Login', (WidgetTester tester) async {
