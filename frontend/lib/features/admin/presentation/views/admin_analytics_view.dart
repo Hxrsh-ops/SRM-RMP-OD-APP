@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../controllers/admin_controller.dart';
 
 class AdminAnalyticsView extends ConsumerWidget {
   const AdminAnalyticsView({super.key});
@@ -109,7 +108,7 @@ class AdminAnalyticsView extends ConsumerWidget {
             child: LinearProgressIndicator(
               value: pct,
               minHeight: 8,
-              backgroundColor: color.withOpacity(0.1),
+              backgroundColor: color.withValues(alpha: 0.1),
               valueColor: AlwaysStoppedAnimation<Color>(color),
             ),
           ),

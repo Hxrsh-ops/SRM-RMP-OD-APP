@@ -25,14 +25,8 @@ def seed_demo_users():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Auto-migrate schema changes on existing tables
-    with engine.begin() as conn:
-        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_locked BOOLEAN DEFAULT FALSE NOT NULL;"))
-        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_login_attempts INTEGER DEFAULT 0 NOT NULL;"))
-        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMP WITH TIME ZONE;"))
-
+    # Ensure database tables exist (migrations handle schema updates)
     Base.metadata.create_all(bind=engine)
-    seed_demo_users()
     yield
 
 app = FastAPI(

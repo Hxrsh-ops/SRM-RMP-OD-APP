@@ -104,7 +104,7 @@ class _UserFormDialogState extends State<UserFormDialog> {
                 ],
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: _role,
+                  initialValue: _role,
                   decoration: const InputDecoration(
                     labelText: 'Role & Privilege Tier',
                     border: OutlineInputBorder(),
@@ -123,7 +123,7 @@ class _UserFormDialogState extends State<UserFormDialog> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: _departmentId,
+                  initialValue: _departmentId,
                   decoration: const InputDecoration(
                     labelText: 'Assigned Department',
                     border: OutlineInputBorder(),

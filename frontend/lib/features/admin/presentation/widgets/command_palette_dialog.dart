@@ -74,7 +74,7 @@ class _CommandPaletteDialogState extends State<CommandPaletteDialog> {
                         return ListTile(
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           leading: CircleAvatar(
-                            backgroundColor: Colors.blue.withOpacity(0.1),
+                            backgroundColor: Colors.blue.withValues(alpha: 0.1),
                             child: Icon(cmd['icon'] as IconData, color: Colors.blue[800]),
                           ),
                           title: Text(cmd['title'] as String, style: const TextStyle(fontWeight: FontWeight.bold)),

@@ -106,7 +106,7 @@ class FacultyManagementView extends ConsumerWidget {
                 Text('Currently assigned: ${source.assignedStudentsCount} students'),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  value: targetId,
+                  initialValue: targetId,
                   decoration: const InputDecoration(labelText: 'Target Faculty Member', border: OutlineInputBorder()),
                   items: all.where((f) => f.facultyId != source.facultyId).map((f) {
                     return DropdownMenuItem(value: f.facultyId, child: Text('${f.facultyName} (${f.departmentName})'));
@@ -122,9 +122,11 @@ class FacultyManagementView extends ConsumerWidget {
                   if (targetId != null) {
                     final repo = ref.read(adminRepositoryProvider);
                     await repo.transferFacultyStudents(source.facultyId, targetId!, null);
-                    ref.refresh(adminFacultyWorkloadProvider);
-                    Navigator.pop(ctx);
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Students transferred successfully')));
+                    ref.invalidate(adminFacultyWorkloadProvider);
+                    if (ctx.mounted) {
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Students transferred successfully')));
+                    }
                   }
                 },
                 child: const Text('Transfer'),

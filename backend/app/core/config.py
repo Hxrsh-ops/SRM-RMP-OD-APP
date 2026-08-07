@@ -32,6 +32,9 @@ class Settings(BaseSettings):
                 raise ValueError("SECRET_KEY must be configured via environment variable in production!")
             if "*" in self.CORS_ORIGINS:
                 raise ValueError("CORS_ORIGINS cannot contain '*' when allow_credentials is True in production!")
+        else:
+            if self.SECRET_KEY == "srm_rmp_od_super_secret_jwt_key_2026_change_in_production":
+                print("WARNING: Using default SECRET_KEY in non-production environment. Do not use this in production!")
 
         if not self.DATABASE_URL:
             user = quote_plus(self.POSTGRES_USER) if self.POSTGRES_USER else ""

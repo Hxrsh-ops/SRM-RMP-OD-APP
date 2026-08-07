@@ -19,15 +19,16 @@ class OdRequest(Base, AuditMixin, SoftDeleteMixin):
     duration_days = Column(Integer, nullable=False)
     
     purpose = Column(Text, nullable=False)
-    venue = Column(String(255), nullable=False)
-    organizer = Column(String(255), nullable=False)
+    venue = Column(String(255), nullable=True)
+    organizer = Column(String(255), nullable=True)
     additional_notes = Column(Text, nullable=True)
     
-    cgpa = Column(Float, nullable=True, default=8.5)
-    attendance_percentage = Column(Float, nullable=True, default=88.0)
-    residence_type = Column(String(20), nullable=False, default="Day Scholar")
+    cgpa = Column(Float, nullable=True)
+    attendance_percentage = Column(Float, nullable=True)
+    residence_type = Column(String(50), nullable=True)
     parent_consent_url = Column(Text, nullable=True)
     
+    faculty_approval_time = Column(DateTime(timezone=True), nullable=True)
     status = Column(SQLEnum(OdStatus), nullable=False, default=OdStatus.PENDING_FACULTY, index=True)
 
     # Post-Event Completion Proof Fields

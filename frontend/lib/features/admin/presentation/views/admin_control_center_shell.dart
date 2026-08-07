@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/theme/color_tokens.dart';
 import '../../../authentication/authentication.dart';
 import '../widgets/command_palette_dialog.dart';
 import 'admin_dashboard_view.dart';
@@ -105,7 +104,7 @@ class _AdminControlCenterShellState extends ConsumerState<AdminControlCenterShel
 
                       return ListTile(
                         selected: isSelected,
-                        selectedTileColor: Colors.white.withOpacity(0.15),
+                        selectedTileColor: Colors.white.withValues(alpha: 0.15),
                         leading: Icon(
                           isSelected ? item['activeIcon'] as IconData : item['icon'] as IconData,
                           color: isSelected ? Colors.amber : Colors.white70,

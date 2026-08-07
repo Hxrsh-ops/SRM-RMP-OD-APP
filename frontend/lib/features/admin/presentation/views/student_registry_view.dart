@@ -8,8 +8,6 @@ class StudentRegistryView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Filter specifically for STUDENTS role
-    final params = UserQueryParams(role: 'STUDENT', page: 1, limit: 50);
     final repo = ref.watch(adminRepositoryProvider);
 
     return Padding(

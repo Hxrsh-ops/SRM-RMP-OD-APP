@@ -205,11 +205,6 @@ def seed_production_ready_dataset():
                 )
                 db.add(t_event)
                 db.commit()
-            else:
-                existing.status = status_val
-                if summary:
-                    existing.completion_summary = summary
-                db.commit()
 
         # Student K.M. Harshanth Requests (1 Pending, 4 Completed, 1 Rejected)
         create_or_update_request(
@@ -296,3 +291,6 @@ def seed_production_ready_dataset():
         raise
     finally:
         db.close()
+
+if __name__ == "__main__":
+    seed_production_ready_dataset()

@@ -251,7 +251,7 @@ class AdminService:
         settings_record = self.db.query(SystemSetting).filter(SystemSetting.key == "org_settings").first()
         if not settings_record:
             default_settings = OrganizationSettingsSchema()
-            new_rec = SystemSetting(key="org_settings", value=default_settings.dict(), description="Global Organization Settings")
+            new_rec = SystemSetting(key="org_settings", value=default_settings.model_dump(), description="Global Organization Settings")
             self.db.add(new_rec)
             self.db.commit()
             return default_settings
@@ -261,14 +261,14 @@ class AdminService:
     def update_organization_settings(self, new_settings: OrganizationSettingsSchema, actor_id: uuid.UUID) -> OrganizationSettingsSchema:
         record = self.db.query(SystemSetting).filter(SystemSetting.key == "org_settings").first()
         if not record:
-            record = SystemSetting(key="org_settings", value=new_settings.dict(), description="Global Organization Settings")
+            record = SystemSetting(key="org_settings", value=new_settings.model_dump(), description="Global Organization Settings")
             self.db.add(record)
         else:
-            record.value = new_settings.dict()
+            record.value = new_settings.model_dump()
             record.updated_by_id = actor_id
 
         self.db.commit()
-        self._log_audit(actor_id, "UPDATE_ORGANIZATION_SETTINGS", "system_settings", "org_settings", new_settings.dict())
+        self._log_audit(actor_id, "UPDATE_ORGANIZATION_SETTINGS", "system_settings", "org_settings", new_settings.model_dump())
         return new_settings
 
     # -------------------------------------------------------------------------

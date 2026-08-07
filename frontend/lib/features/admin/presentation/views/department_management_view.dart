@@ -124,8 +124,10 @@ class DepartmentManagementView extends ConsumerWidget {
               } else {
                 await repo.updateDepartment(department.id, {'name': nameCtrl.text.trim(), 'code': codeCtrl.text.trim()});
               }
-              ref.refresh(adminDepartmentsProvider);
-              Navigator.pop(ctx);
+              ref.invalidate(adminDepartmentsProvider);
+              if (ctx.mounted) {
+                Navigator.pop(ctx);
+              }
             },
             child: const Text('Save'),
           ),

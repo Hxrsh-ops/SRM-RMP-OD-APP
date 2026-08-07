@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../lib/features/admin/presentation/views/admin_dashboard_view.dart';
-import '../../../lib/features/admin/domain/models/admin_models.dart';
-import '../../../lib/features/admin/presentation/controllers/admin_controller.dart';
+import 'package:srm_rmp_od_frontend/features/admin/presentation/views/admin_dashboard_view.dart';
+import 'package:srm_rmp_od_frontend/features/admin/domain/models/admin_models.dart';
+import 'package:srm_rmp_od_frontend/features/admin/presentation/controllers/admin_controller.dart';
 
 void main() {
   testWidgets('AdminDashboardView renders executive metrics correctly', (WidgetTester tester) async {

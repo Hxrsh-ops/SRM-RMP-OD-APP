@@ -47,7 +47,7 @@ class AdminDashboardView extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -66,7 +66,7 @@ class AdminDashboardView extends ConsumerWidget {
                           const SizedBox(height: 6),
                           Text(
                             'SRM Institute of Science and Technology, Ramapuram — System Authority Dashboard',
-                            style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.85)),
+                            style: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.85)),
                           ),
                         ],
                       ),
@@ -231,7 +231,7 @@ class AdminDashboardView extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
+                color: color.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: color, size: 28),
@@ -268,7 +268,7 @@ class AdminDashboardView extends ConsumerWidget {
           const SizedBox(width: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
             child: Text(value, style: TextStyle(fontWeight: FontWeight.bold, color: color)),
           ),
         ],

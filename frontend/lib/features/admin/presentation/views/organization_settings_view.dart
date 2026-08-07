@@ -144,7 +144,7 @@ class _OrganizationSettingsViewState extends ConsumerState<OrganizationSettingsV
                           title: const Text('Maintenance Mode'),
                           subtitle: const Text('Restricts platform access strictly to Master Administrators'),
                           value: _maintenanceMode,
-                          activeColor: Colors.red,
+                          activeThumbColor: Colors.red,
                           onChanged: (val) => setState(() => _maintenanceMode = val),
                         ),
                       ],
@@ -176,7 +176,7 @@ class _OrganizationSettingsViewState extends ConsumerState<OrganizationSettingsV
         environmentInfo: 'Production-Ready Enterprise',
       );
       await repo.updateOrganizationSettings(updated);
-      ref.refresh(adminSettingsProvider);
+      ref.invalidate(adminSettingsProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Settings updated successfully')));
       }

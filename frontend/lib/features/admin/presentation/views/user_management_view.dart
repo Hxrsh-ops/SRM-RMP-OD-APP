@@ -71,12 +71,12 @@ class _UserManagementViewState extends ConsumerState<UserManagementView> {
                             try {
                               final repo = ref.read(adminRepositoryProvider);
                               await repo.createUser(formData);
-                              ref.refresh(adminUsersProvider);
-                              if (mounted) {
+                              ref.invalidate(adminUsersProvider);
+                              if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('User account created successfully')));
                               }
                             } catch (e) {
-                              if (mounted) {
+                              if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
                               }
                             }
@@ -209,7 +209,7 @@ class _UserManagementViewState extends ConsumerState<UserManagementView> {
                                                 onSubmit: (formData) async {
                                                   final repo = ref.read(adminRepositoryProvider);
                                                   await repo.updateUser(u.id, formData);
-                                                  ref.refresh(adminUsersProvider);
+                                                  ref.invalidate(adminUsersProvider);
                                                 },
                                               ),
                                             );
@@ -220,7 +220,7 @@ class _UserManagementViewState extends ConsumerState<UserManagementView> {
                                           onPressed: () async {
                                             final repo = ref.read(adminRepositoryProvider);
                                             await repo.updateUserStatus(u.id, isActive: !u.isActive);
-                                            ref.refresh(adminUsersProvider);
+                                            ref.invalidate(adminUsersProvider);
                                           },
                                         ),
                                         IconButton(
@@ -310,7 +310,7 @@ class _UserManagementViewState extends ConsumerState<UserManagementView> {
       final repo = ref.read(adminRepositoryProvider);
       await repo.bulkUserAction(_selectedUserIds.toList(), action);
       setState(() => _selectedUserIds.clear());
-      ref.refresh(adminUsersProvider);
+      ref.invalidate(adminUsersProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Bulk $action completed')));
       }
@@ -339,9 +339,10 @@ class _UserManagementViewState extends ConsumerState<UserManagementView> {
               if (pwdController.text.length >= 6) {
                 final repo = ref.read(adminRepositoryProvider);
                 await repo.resetPassword(u.id, pwdController.text);
-                Navigator.pop(ctx);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password reset successfully')));
+                ref.invalidate(adminUsersProvider);
+                if (ctx.mounted) {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Password reset successfully')));
                 }
               }
             },
