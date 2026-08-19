@@ -40,24 +40,15 @@ class EnvConfig {
       return 'http://$overrideLanIp:8000/api/v1';
     }
 
-    const envStr = String.fromEnvironment('ENVIRONMENT', defaultValue: '');
-    if (envStr.toLowerCase() == 'prod') {
-      return 'https://srm-od.ramapuram.srmist.edu.in/api/v1';
-    }
-
-    if (kIsWeb) {
-      return 'http://127.0.0.1:8000/api/v1';
-    }
-
     final isTest = Platform.environment.containsKey('FLUTTER_TEST') ||
         const bool.fromEnvironment('FLUTTER_TEST');
 
-    if (defaultTargetPlatform == TargetPlatform.android && !isTest) {
-      // Default to host machine LAN IP for real mobile device testing
-      return 'http://192.168.1.14:8000/api/v1';
+    if (isTest) {
+      return 'http://127.0.0.1:8000/api/v1';
     }
 
-    return 'http://127.0.0.1:8000/api/v1';
+    // Default to live production cloud backend on Render
+    return 'https://srm-rmp-od-app.onrender.com/api/v1';
   }
 
   /// Returns the root server URL (without /api/v1 suffix) for static file attachments
