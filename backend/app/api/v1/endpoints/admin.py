@@ -362,17 +362,48 @@ def admin_delete_od_request(
         raise HTTPException(status_code=500, detail="Failed to delete OD request")
 
     audit_repo = AuditLogRepository(db)
-    audit_repo.log_action(
+    audit_repo.log(
         actor_id=current_user.id,
-        actor_name=current_user.full_name,
-        actor_role="MASTER_ADMIN",
         action="OD_REQUEST_DELETED",
         resource_type="OD_REQUEST",
         resource_id=request_id,
         request_id=request_id,
-        changes={"deleted_request_id": request_id}
+        details={
+            "deleted_request_id": request_id,
+            "actor_name": current_user.full_name,
+            "actor_role": "MASTER_ADMIN"
+        }
     )
     return {"message": f"OD Request {request_id} deleted permanently by Master Admin"}
+
+@router.delete("/users/{user_id}/od-requests", status_code=status.HTTP_200_OK, dependencies=[Depends(admin_only)])
+def admin_delete_all_user_od_requests(
+    user_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    user_repo = UserRepository(db)
+    user = user_repo.get_by_id(user_id)
+    if not user:
+        raise NotFoundException("User not found")
+
+    od_repo = OdRequestRepository(db)
+    deleted_count = od_repo.hard_delete_all_by_user(user.id, user.role)
+
+    audit_repo = AuditLogRepository(db)
+    audit_repo.log(
+        actor_id=current_user.id,
+        action="ALL_USER_OD_REQUESTS_DELETED",
+        resource_type="USER",
+        resource_id=str(user_id),
+        details={
+            "user_username": user.username,
+            "deleted_count": deleted_count,
+            "actor_name": current_user.full_name,
+            "actor_role": "MASTER_ADMIN"
+        }
+    )
+    return {"message": f"Successfully deleted {deleted_count} OD request(s) for user {user.username}", "deleted_count": deleted_count}
 
 # -----------------------------------------------------------------------------
 # 12. Security Center Event Purge

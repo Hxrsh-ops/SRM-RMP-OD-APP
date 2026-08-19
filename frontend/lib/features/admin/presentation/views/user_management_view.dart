@@ -775,6 +775,39 @@ class _UserRecordsDialogState extends ConsumerState<UserRecordsDialog> {
     }
   }
 
+  Future<void> _deleteAllRecords() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete All OD Records?'),
+        content: Text('Are you sure you want to permanently delete ALL ${_records.length} OD records for ${widget.user.fullName}? This action cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete All Permanently'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        final repo = ref.read(adminRepositoryProvider);
+        await repo.deleteAllUserOdRequests(widget.user.id);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('All OD records for ${widget.user.fullName} deleted successfully')));
+          _fetchRecords();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error deleting records: $e'), backgroundColor: Colors.red));
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Dialog(
@@ -834,7 +867,18 @@ class _UserRecordsDialogState extends ConsumerState<UserRecordsDialog> {
                   'Associated OD Submissions (${_records.length})',
                   style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                 ),
-                const Text('Master Admin Record Control', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                if (_records.isNotEmpty)
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red.shade700,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    icon: const Icon(Icons.delete_sweep, size: 16),
+                    label: Text('Delete All (${_records.length})'),
+                    onPressed: _deleteAllRecords,
+                  ),
               ],
             ),
             const SizedBox(height: 12),

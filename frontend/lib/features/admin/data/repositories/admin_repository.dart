@@ -188,6 +188,10 @@ class AdminRepository {
     await apiClient.delete('/admin/od-requests/$requestId');
   }
 
+  Future<void> deleteAllUserOdRequests(String userId) async {
+    await apiClient.delete('/admin/users/$userId/od-requests');
+  }
+
   Future<void> deleteSecurityEvent(String eventId) async {
     await apiClient.delete('/admin/security/events/$eventId');
   }

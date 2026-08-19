@@ -3,7 +3,7 @@ from uuid import UUID
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload, selectinload
 from ..models.od_request import OdRequest
-from ..models.enums import OdStatus, WorkflowStatusGroups
+from ..models.enums import OdStatus, WorkflowStatusGroups, UserRole
 
 class OdRequestRepository:
     def __init__(self, db: Session):
@@ -67,6 +67,22 @@ class OdRequestRepository:
         self.db.delete(req)
         self.db.commit()
         return True
+
+    def hard_delete_all_by_user(self, user_id: UUID, user_role: Optional[UserRole] = None) -> int:
+        if user_role == UserRole.STUDENT:
+            reqs = self.db.query(OdRequest).filter(OdRequest.student_id == user_id).all()
+        elif user_role == UserRole.FACULTY_ADVISOR:
+            reqs = self.db.query(OdRequest).filter(OdRequest.faculty_id == user_id).all()
+        else:
+            reqs = self.db.query(OdRequest).filter(
+                (OdRequest.student_id == user_id) | (OdRequest.faculty_id == user_id)
+            ).all()
+
+        count = len(reqs)
+        for r in reqs:
+            self.db.delete(r)
+        self.db.commit()
+        return count
 
     def count_by_status(self) -> Dict[str, int]:
         results = self.db.query(

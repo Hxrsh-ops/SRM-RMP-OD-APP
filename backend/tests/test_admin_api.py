@@ -84,3 +84,8 @@ def test_admin_user_records_and_delete(client: TestClient):
     assert "user" in data
     assert "records" in data
     assert "total_records" in data
+
+    # Test Bulk Delete for User
+    del_all_res = client.delete(f"/api/v1/admin/users/{user_id}/od-requests", headers=headers)
+    assert del_all_res.status_code == 200
+    assert "deleted_count" in del_all_res.json()
