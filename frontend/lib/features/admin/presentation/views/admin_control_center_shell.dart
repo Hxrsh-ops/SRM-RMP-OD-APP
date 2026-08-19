@@ -195,79 +195,84 @@ class _AdminControlCenterShellState extends ConsumerState<AdminControlCenterShel
 
     return Container(
       color: const Color(0xFF1A365D),
-      child: Column(
-        children: [
-          // Header Branding
-          Container(
-            height: 64,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            alignment: Alignment.centerLeft,
-            child: Row(
-              children: [
-                const Icon(Icons.shield, color: Colors.amber, size: 28),
-                if (!collapsed) ...[
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text(
-                      'SRM ADMIN',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 1),
-                      overflow: TextOverflow.ellipsis,
+      child: SafeArea(
+        top: isDrawer,
+        bottom: true,
+        child: Column(
+          children: [
+            // Header Branding
+            Container(
+              height: 64,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              alignment: Alignment.centerLeft,
+              child: Row(
+                children: [
+                  const Icon(Icons.shield, color: Colors.amber, size: 28),
+                  if (!collapsed) ...[
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        'SRM ADMIN',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 1),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
+                  ],
+                  if (!isDrawer)
+                    IconButton(
+                      icon: Icon(_isSidebarCollapsed ? Icons.chevron_right : Icons.chevron_left, color: Colors.white70),
+                      onPressed: () => setState(() => _isSidebarCollapsed = !_isSidebarCollapsed),
+                    ),
                 ],
-                if (!isDrawer)
-                  IconButton(
-                    icon: Icon(_isSidebarCollapsed ? Icons.chevron_right : Icons.chevron_left, color: Colors.white70),
-                    onPressed: () => setState(() => _isSidebarCollapsed = !_isSidebarCollapsed),
-                  ),
-              ],
+              ),
             ),
-          ),
-          const Divider(color: Colors.white24, height: 1),
-          const SizedBox(height: 8),
+            const Divider(color: Colors.white24, height: 1),
+            const SizedBox(height: 8),
 
-          // Navigation Items
-          Expanded(
-            child: ListView.builder(
-              itemCount: _sidebarNavItems.length,
-              itemBuilder: (context, index) {
-                final item = _sidebarNavItems[index];
-                final isSelected = index == _activeModuleIndex;
+            // Navigation Items
+            Expanded(
+              child: ListView.builder(
+                padding: EdgeInsets.zero,
+                itemCount: _sidebarNavItems.length,
+                itemBuilder: (context, index) {
+                  final item = _sidebarNavItems[index];
+                  final isSelected = index == _activeModuleIndex;
 
-                return ListTile(
-                  selected: isSelected,
-                  selectedTileColor: Colors.white.withValues(alpha: 0.15),
-                  leading: Icon(
-                    isSelected ? item['activeIcon'] as IconData : item['icon'] as IconData,
-                    color: isSelected ? Colors.amber : Colors.white70,
-                  ),
-                  title: collapsed
-                      ? null
-                      : Text(
-                          item['title'] as String,
-                          style: TextStyle(
-                            color: isSelected ? Colors.white : Colors.white70,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  return ListTile(
+                    selected: isSelected,
+                    selectedTileColor: Colors.white.withValues(alpha: 0.15),
+                    leading: Icon(
+                      isSelected ? item['activeIcon'] as IconData : item['icon'] as IconData,
+                      color: isSelected ? Colors.amber : Colors.white70,
+                    ),
+                    title: collapsed
+                        ? null
+                        : Text(
+                            item['title'] as String,
+                            style: TextStyle(
+                              color: isSelected ? Colors.white : Colors.white70,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            ),
                           ),
-                        ),
-                  onTap: () {
-                    setState(() => _activeModuleIndex = index);
-                    if (isDrawer) {
-                      Navigator.pop(context);
-                    }
-                  },
-                );
-              },
+                    onTap: () {
+                      setState(() => _activeModuleIndex = index);
+                      if (isDrawer) {
+                        Navigator.pop(context);
+                      }
+                    },
+                  );
+                },
+              ),
             ),
-          ),
 
-          const Divider(color: Colors.white24, height: 1),
-          ListTile(
-            leading: const Icon(Icons.logout, color: Colors.redAccent),
-            title: collapsed ? null : const Text('Sign Out', style: TextStyle(color: Colors.redAccent)),
-            onTap: () => ref.read(authControllerProvider.notifier).logout(),
-          ),
-        ],
+            const Divider(color: Colors.white24, height: 1),
+            ListTile(
+              leading: const Icon(Icons.logout, color: Colors.redAccent),
+              title: collapsed ? null : const Text('Sign Out', style: TextStyle(color: Colors.redAccent)),
+              onTap: () => ref.read(authControllerProvider.notifier).logout(),
+            ),
+          ],
+        ),
       ),
     );
   }

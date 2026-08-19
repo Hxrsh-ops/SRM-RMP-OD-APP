@@ -93,7 +93,9 @@ class _OrganizationSettingsViewState extends ConsumerState<OrganizationSettingsV
                           children: [
                             Icon(Icons.account_tree_rounded, color: Color(0xFF1A365D), size: 22),
                             SizedBox(width: 8),
-                            Text('Initial Application Workflow Policy', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            Expanded(
+                              child: Text('Initial Application Workflow Policy', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 6),
@@ -112,6 +114,13 @@ class _OrganizationSettingsViewState extends ConsumerState<OrganizationSettingsV
                             border: OutlineInputBorder(),
                             helperText: 'Select how OD requests flow through student, faculty, coordinator, and HOD stages.',
                           ),
+                          selectedItemBuilder: (context) {
+                            return const [
+                              Text('Standard (Student → FA → Coordinator)', overflow: TextOverflow.ellipsis),
+                              Text('3-Tier (Student → FA → Coord → HOD)', overflow: TextOverflow.ellipsis),
+                              Text('Direct HOD (Student → FA → HOD)', overflow: TextOverflow.ellipsis),
+                            ];
+                          },
                           items: const [
                             DropdownMenuItem(
                               value: 'STANDARD',
@@ -203,7 +212,9 @@ class _OrganizationSettingsViewState extends ConsumerState<OrganizationSettingsV
                           children: [
                             Icon(Icons.fact_check_outlined, color: Colors.teal, size: 22),
                             SizedBox(width: 8),
-                            Text('Post-Event Evidence Verification Workflow', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            Expanded(
+                              child: Text('Post-Event Evidence Verification Workflow', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 6),
@@ -222,6 +233,14 @@ class _OrganizationSettingsViewState extends ConsumerState<OrganizationSettingsV
                             border: OutlineInputBorder(),
                             helperText: 'Dean verification applies only to requests that were escalated to & approved by the Dean.',
                           ),
+                          selectedItemBuilder: (context) {
+                            return const [
+                              Text('Standard (Student submits → FA verifies)', overflow: TextOverflow.ellipsis),
+                              Text('2-Tier (Student submits → FA → Coordinator)', overflow: TextOverflow.ellipsis),
+                              Text('3-Tier (Student submits → FA → Coord → HOD)', overflow: TextOverflow.ellipsis),
+                              Text('Direct HOD (Student submits → FA → HOD)', overflow: TextOverflow.ellipsis),
+                            ];
+                          },
                           items: const [
                             DropdownMenuItem(
                               value: 'FA_ONLY',
