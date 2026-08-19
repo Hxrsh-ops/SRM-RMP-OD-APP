@@ -211,7 +211,44 @@ class _UserManagementViewState extends ConsumerState<UserManagementView> {
                                     DataCell(Text(u.departmentName ?? 'Unassigned')),
                                     DataCell(Text(u.program != null ? '${u.program} (${u.yearSection ?? ''})' : '-')),
                                     DataCell(_buildStatusChip(u.isActive)),
-                                    DataCell(Text(u.isLocked ? 'Locked' : 'Normal', style: TextStyle(color: u.isLocked ? Colors.red : Colors.green, fontWeight: FontWeight.bold))),
+                                    DataCell(
+                                      u.isLocked
+                                          ? InkWell(
+                                              onTap: () => _promptUnlockUser(u),
+                                              borderRadius: BorderRadius.circular(6),
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.red.withValues(alpha: 0.1),
+                                                  borderRadius: BorderRadius.circular(6),
+                                                  border: Border.all(color: Colors.red),
+                                                ),
+                                                child: const Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    Icon(Icons.lock, size: 13, color: Colors.red),
+                                                    SizedBox(width: 4),
+                                                    Text('Locked (Unlock)', style: TextStyle(color: Colors.red, fontSize: 11, fontWeight: FontWeight.bold)),
+                                                  ],
+                                                ),
+                                              ),
+                                            )
+                                          : Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: Colors.green.withValues(alpha: 0.1),
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: const Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(Icons.check_circle_outline, size: 13, color: Colors.green),
+                                                  SizedBox(width: 4),
+                                                  Text('Normal', style: TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold)),
+                                                ],
+                                              ),
+                                            ),
+                                    ),
                                     DataCell(Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
@@ -262,6 +299,12 @@ class _UserManagementViewState extends ConsumerState<UserManagementView> {
                                                 }
                                               }
                                             },
+                                          ),
+                                        if (u.isLocked)
+                                          IconButton(
+                                            icon: const Icon(Icons.lock_open, size: 18, color: Colors.orange),
+                                            tooltip: 'Unlock Account',
+                                            onPressed: () => _promptUnlockUser(u),
                                           ),
                                         if (u.role == 'STUDENT')
                                           IconButton(
@@ -397,6 +440,44 @@ class _UserManagementViewState extends ConsumerState<UserManagementView> {
               _performBulkAction('delete');
             },
             child: const Text('Delete Selected'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _promptUnlockUser(AdminUser u) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Unlock Account: ${u.fullName}'),
+        content: Text('Do you want to unlock user ${u.username} (${u.email})? This will reset failed login attempts to 0 and restore full account access immediately.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+            icon: const Icon(Icons.lock_open, size: 16),
+            label: const Text('Unlock Account'),
+            onPressed: () async {
+              try {
+                final repo = ref.read(adminRepositoryProvider);
+                await repo.updateUserStatus(u.id, isLocked: false);
+                ref.invalidate(adminUsersProvider);
+                if (ctx.mounted) {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    SnackBar(content: Text('Account for ${u.fullName} unlocked successfully.'), backgroundColor: Colors.green),
+                  );
+                }
+              } catch (e) {
+                if (ctx.mounted) {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    SnackBar(content: Text('Failed to unlock user: $e'), backgroundColor: Colors.red),
+                  );
+                }
+              }
+            },
           ),
         ],
       ),
