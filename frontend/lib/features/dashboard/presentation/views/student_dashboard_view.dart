@@ -171,16 +171,33 @@ class StudentDashboardView extends ConsumerWidget {
                           Text(requests.first.purpose, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                           const AppDivider(),
                           ...requests.first.timeline.map((step) {
+                            final showActor = step.actorName.isNotEmpty &&
+                                step.actorName != 'System' &&
+                                !step.title.toLowerCase().contains(step.actorName.toLowerCase());
                             return Padding(
                               padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                               child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 18),
+                                  const Padding(
+                                    padding: EdgeInsets.only(top: 2),
+                                    child: Icon(Icons.check_circle_rounded, color: AppColors.success, size: 16),
+                                  ),
                                   const SizedBox(width: AppSpacing.xs),
                                   Expanded(
-                                    child: Text(
-                                      '${step.title} by ${step.actorRole}',
-                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          step.title,
+                                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                        ),
+                                        if (showActor)
+                                          Text(
+                                            '${step.actorName} (${step.actorRole})',
+                                            style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                                          ),
+                                      ],
                                     ),
                                   ),
                                 ],

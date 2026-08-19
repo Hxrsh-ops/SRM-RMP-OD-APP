@@ -67,6 +67,8 @@ class ApiWorkflowRepository implements WorkflowRepository {
         'file_type': a.fileType,
         'size_bytes': a.sizeBytes,
         'file_url': a.fileUrl,
+        'uploaded_by': a.uploadedBy.isNotEmpty ? a.uploadedBy : studentName,
+        'uploaded_at': a.uploadedAt.toIso8601String(),
         'document_category': a.fileName.toLowerCase().contains('consent') || a.fileName.toLowerCase().contains('parent') ? 'parent_consent' : 'pre_approval_support',
       }).toList(),
     };
@@ -184,13 +186,15 @@ class ApiWorkflowRepository implements WorkflowRepository {
     final response = await apiClient.post(ApiConstants.uploadAttachment, data: formData);
     final json = response as Map<String, dynamic>;
     return AttachmentItem(
-      id: json['id']?.toString() ?? '',
+      id: (json['id'] != null && json['id'].toString().isNotEmpty)
+          ? json['id'].toString()
+          : 'att_${DateTime.now().microsecondsSinceEpoch}',
       fileName: json['file_name'].toString(),
       fileType: json['file_type'].toString(),
       sizeBytes: json['size_bytes'] as int,
       fileUrl: json['file_url'].toString(),
       uploadedBy: json['uploaded_by']?.toString() ?? 'Student',
-      uploadedAt: DateTime.parse(json['uploaded_at'].toString()),
+      uploadedAt: json['uploaded_at'] != null ? DateTime.parse(json['uploaded_at'].toString()) : DateTime.now(),
       documentCategory: json['document_category']?.toString() ?? documentCategory,
     );
   }

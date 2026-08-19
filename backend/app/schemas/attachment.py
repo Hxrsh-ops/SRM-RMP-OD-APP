@@ -8,12 +8,12 @@ class AttachmentBase(BaseModel):
     file_type: str
     size_bytes: int
     file_url: str
-    uploaded_by: str
-    uploaded_at: datetime
+    uploaded_by: Optional[str] = None
+    uploaded_at: Optional[datetime] = None
     document_category: Optional[str] = "supporting_document"
 
 class AttachmentCreate(AttachmentBase):
-    pass
+    id: Optional[str] = None
 
 class AttachmentResponse(AttachmentBase):
     id: UUID

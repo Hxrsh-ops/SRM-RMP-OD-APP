@@ -92,6 +92,16 @@ class _CreateOdRequestViewState extends ConsumerState<CreateOdRequestView> {
   }
 
   Future<void> _pickAndUploadFile({bool isParentConsent = false}) async {
+    if (!isParentConsent && _uploadedAttachments.length >= 5) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Maximum 5 supporting attachments allowed per OD request to conserve storage quota.'),
+          backgroundColor: AppColors.warning,
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isUploadingFile = true;
       _uploadError = null;
@@ -113,6 +123,10 @@ class _CreateOdRequestViewState extends ConsumerState<CreateOdRequestView> {
           throw Exception('Failed to read file bytes.');
         }
 
+        if (bytes.length > 10 * 1024 * 1024) {
+          throw Exception('File exceeds 10 MB maximum upload limit.');
+        }
+
         final uploadedItem = await ref.read(workflowControllerProvider.notifier).uploadAttachment(
               fileBytes: bytes,
               fileName: name,
@@ -123,6 +137,8 @@ class _CreateOdRequestViewState extends ConsumerState<CreateOdRequestView> {
           setState(() {
             if (isParentConsent) {
               _parentConsentUrl = uploadedItem.fileUrl;
+              // Replace old parent consent if already in list
+              _uploadedAttachments.removeWhere((a) => a.documentCategory == 'parent_consent');
             }
             _uploadedAttachments.add(uploadedItem);
           });
@@ -545,7 +561,10 @@ class _CreateOdRequestViewState extends ConsumerState<CreateOdRequestView> {
                                   icon: const Icon(Icons.delete_outline_rounded, color: AppColors.danger, size: 18),
                                   onPressed: () {
                                     setState(() {
-                                      _uploadedAttachments.removeWhere((a) => a.id == att.id);
+                                      _uploadedAttachments.remove(att);
+                                      if (_parentConsentUrl == att.fileUrl) {
+                                        _parentConsentUrl = null;
+                                      }
                                     });
                                   },
                                 ),
