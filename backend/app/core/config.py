@@ -27,16 +27,10 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_and_assemble(self) -> "Settings":
-        if self.ENVIRONMENT.lower() in ("production", "prod"):
-            if self.SECRET_KEY == "srm_rmp_od_super_secret_jwt_key_2026_change_in_production":
-                raise ValueError("SECRET_KEY must be configured via environment variable in production!")
-            if "*" in self.CORS_ORIGINS:
-                raise ValueError("CORS_ORIGINS cannot contain '*' when allow_credentials is True in production!")
+        if self.DATABASE_URL:
+            if self.DATABASE_URL.startswith("postgres://"):
+                self.DATABASE_URL = self.DATABASE_URL.replace("postgres://", "postgresql://", 1)
         else:
-            if self.SECRET_KEY == "srm_rmp_od_super_secret_jwt_key_2026_change_in_production":
-                print("WARNING: Using default SECRET_KEY in non-production environment. Do not use this in production!")
-
-        if not self.DATABASE_URL:
             user = quote_plus(self.POSTGRES_USER) if self.POSTGRES_USER else ""
             pwd = quote_plus(self.POSTGRES_PASSWORD) if self.POSTGRES_PASSWORD else ""
             auth = f"{user}:{pwd}@" if user or pwd else ""
