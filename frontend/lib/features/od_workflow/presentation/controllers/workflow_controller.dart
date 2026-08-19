@@ -241,6 +241,32 @@ class WorkflowController extends StateNotifier<WorkflowState> {
       await _repository.markNotificationsRead(_currentUserId);
     } catch (_) {}
   }
+
+  Future<bool> deleteNotification(String notificationId) async {
+    final updatedNotifications = state.notifications.where((n) => n.id != notificationId).toList();
+    state = state.copyWith(notifications: updatedNotifications);
+    try {
+      await _repository.deleteNotification(notificationId);
+      return true;
+    } catch (e) {
+      state = state.copyWith(errorMessage: e.toString());
+      return false;
+    }
+  }
+
+  Future<bool> deleteNotificationsBulk({List<String>? ids}) async {
+    final updatedNotifications = ids != null
+        ? state.notifications.where((n) => !ids.contains(n.id)).toList()
+        : <NotificationItem>[];
+    state = state.copyWith(notifications: updatedNotifications);
+    try {
+      await _repository.deleteNotificationsBulk(ids: ids);
+      return true;
+    } catch (e) {
+      state = state.copyWith(errorMessage: e.toString());
+      return false;
+    }
+  }
 }
 
 final workflowControllerProvider = StateNotifierProvider<WorkflowController, WorkflowState>((ref) {

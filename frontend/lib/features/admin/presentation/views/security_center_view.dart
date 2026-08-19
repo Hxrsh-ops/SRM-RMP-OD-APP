@@ -36,10 +36,23 @@ class SecurityCenterView extends ConsumerWidget {
                         Text('Monitor authentication failures, locked accounts, role violations & security event timeline', style: TextStyle(color: Colors.grey, fontSize: 12)),
                       ],
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.refresh),
-                      tooltip: 'Refresh Security',
-                      onPressed: () => ref.refresh(adminSecuritySummaryProvider),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (events.isNotEmpty)
+                          TextButton.icon(
+                            style: TextButton.styleFrom(foregroundColor: Colors.red.shade700),
+                            icon: const Icon(Icons.delete_sweep_outlined, size: 16),
+                            label: const Text('Clear All Logs'),
+                            onPressed: () => _confirmClearAllSecurity(context, ref),
+                          ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.refresh),
+                          tooltip: 'Refresh Security',
+                          onPressed: () => ref.refresh(adminSecuritySummaryProvider),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -96,9 +109,23 @@ class SecurityCenterView extends ConsumerWidget {
                                 ),
                                 title: Text(evt.eventType, style: const TextStyle(fontWeight: FontWeight.bold)),
                                 subtitle: Text('User: ${evt.username ?? "Unknown"} • IP: ${evt.ipAddress ?? "127.0.0.1"} • ${evt.timestamp}'),
-                                trailing: Chip(
-                                  label: Text(evt.severity, style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold)),
-                                  backgroundColor: evt.severity == 'WARNING' ? Colors.orange : Colors.blue,
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Chip(
+                                      label: Text(evt.severity, style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold)),
+                                      backgroundColor: evt.severity == 'WARNING' ? Colors.orange : Colors.blue,
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete_outline, size: 18, color: Colors.grey),
+                                      tooltip: 'Delete security event',
+                                      onPressed: () async {
+                                        final repo = ref.read(adminRepositoryProvider);
+                                        await repo.deleteSecurityEvent(evt.id);
+                                        ref.refresh(adminSecuritySummaryProvider);
+                                      },
+                                    ),
+                                  ],
                                 ),
                               );
                             },
@@ -111,6 +138,29 @@ class SecurityCenterView extends ConsumerWidget {
             ),
           );
         },
+      ),
+    );
+  }
+
+  void _confirmClearAllSecurity(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Clear Security Logs?'),
+        content: const Text('Are you sure you want to clear all security event records?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final repo = ref.read(adminRepositoryProvider);
+              await repo.clearAllSecurityEvents();
+              ref.refresh(adminSecuritySummaryProvider);
+            },
+            child: const Text('Clear All'),
+          ),
+        ],
       ),
     );
   }

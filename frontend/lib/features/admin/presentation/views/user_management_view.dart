@@ -253,6 +253,16 @@ class _UserManagementViewState extends ConsumerState<UserManagementView> {
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         IconButton(
+                                          icon: const Icon(Icons.folder_shared_outlined, size: 18, color: Color(0xFF1A365D)),
+                                          tooltip: 'View Profile & OD Records',
+                                          onPressed: () {
+                                            showDialog(
+                                              context: context,
+                                              builder: (_) => UserRecordsDialog(user: u),
+                                            );
+                                          },
+                                        ),
+                                        IconButton(
                                           icon: const Icon(Icons.edit, size: 18),
                                           tooltip: 'Edit User',
                                           onPressed: () {
@@ -678,6 +688,240 @@ class _AssignAdvisorDialogState extends State<_AssignAdvisorDialog> {
                   child: _isSubmitting ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Text('Assign Advisor'),
                 ),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// -----------------------------------------------------------------------------
+// USER RECORDS & OD REQUEST INSPECTION DIALOG (WITH PERMANENT DELETION)
+// -----------------------------------------------------------------------------
+class UserRecordsDialog extends ConsumerStatefulWidget {
+  final AdminUser user;
+  const UserRecordsDialog({super.key, required this.user});
+
+  @override
+  ConsumerState<UserRecordsDialog> createState() => _UserRecordsDialogState();
+}
+
+class _UserRecordsDialogState extends ConsumerState<UserRecordsDialog> {
+  bool _isLoading = true;
+  String? _error;
+  List<dynamic> _records = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchRecords();
+  }
+
+  Future<void> _fetchRecords() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      final repo = ref.read(adminRepositoryProvider);
+      final data = await repo.getUserProfileAndRecords(widget.user.id);
+      if (mounted) {
+        setState(() {
+          _records = data['records'] as List? ?? [];
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _deleteRecord(String requestId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete OD Record?'),
+        content: Text('Are you sure you want to permanently delete OD record $requestId? This action cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete Permanently'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        final repo = ref.read(adminRepositoryProvider);
+        await repo.deleteOdRequest(requestId);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Record $requestId deleted successfully')));
+          _fetchRecords();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error deleting record: $e'), backgroundColor: Colors.red));
+        }
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        width: 750,
+        constraints: const BoxConstraints(maxHeight: 650),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: const Color(0xFF1A365D).withValues(alpha: 0.1),
+                  child: const Icon(Icons.person, color: Color(0xFF1A365D)),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(widget.user.fullName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1A365D).withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(widget.user.role, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF1A365D))),
+                          ),
+                        ],
+                      ),
+                      Text('${widget.user.username} • ${widget.user.email} • ${widget.user.departmentName ?? "No Dept"}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.refresh),
+                  tooltip: 'Refresh Records',
+                  onPressed: _fetchRecords,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const Divider(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Associated OD Submissions (${_records.length})',
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                ),
+                const Text('Master Admin Record Control', style: TextStyle(fontSize: 11, color: Colors.grey)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _error != null
+                      ? Center(child: Text('Error loading records: $_error', style: const TextStyle(color: Colors.red)))
+                      : _records.isEmpty
+                          ? const Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.folder_open_outlined, size: 48, color: Colors.grey),
+                                  SizedBox(height: 8),
+                                  Text('No OD records found for this user', style: TextStyle(color: Colors.grey)),
+                                ],
+                              ),
+                            )
+                          : ListView.builder(
+                              itemCount: _records.length,
+                              itemBuilder: (context, idx) {
+                                final r = _records[idx] as Map<String, dynamic>;
+                                final reqId = r['id']?.toString() ?? '';
+                                final reason = r['reason']?.toString() ?? 'OD Event';
+                                final statusStr = r['status']?.toString() ?? '';
+                                final duration = r['duration_days'] ?? 1;
+                                final startDate = r['start_date']?.toString() ?? '';
+                                final endDate = r['end_date']?.toString() ?? '';
+                                final purpose = r['purpose']?.toString() ?? '';
+
+                                return Card(
+                                  margin: const EdgeInsets.only(bottom: 10),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  elevation: 0.8,
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(14),
+                                    child: Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  Text(reqId, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1A365D))),
+                                                  const SizedBox(width: 8),
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.blue.withValues(alpha: 0.1),
+                                                      borderRadius: BorderRadius.circular(4),
+                                                    ),
+                                                    child: Text('$duration Day(s)', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.blue)),
+                                                  ),
+                                                  const SizedBox(width: 6),
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.grey.withValues(alpha: 0.15),
+                                                      borderRadius: BorderRadius.circular(4),
+                                                    ),
+                                                    child: Text(statusStr, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 6),
+                                              Text('Event: $reason ($startDate to $endDate)', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+                                              if (purpose.isNotEmpty) ...[
+                                                const SizedBox(height: 2),
+                                                Text('Purpose: $purpose', style: const TextStyle(fontSize: 11, color: Colors.black54), maxLines: 2, overflow: TextOverflow.ellipsis),
+                                              ],
+                                            ],
+                                          ),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.delete_forever, color: Colors.red, size: 20),
+                                          tooltip: 'Delete this OD Record',
+                                          onPressed: () => _deleteRecord(reqId),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
             ),
           ],
         ),

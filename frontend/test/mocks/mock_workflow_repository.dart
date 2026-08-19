@@ -281,6 +281,20 @@ class MockWorkflowRepository implements WorkflowRepository {
   }
 
   @override
+  Future<void> deleteNotification(String notificationId) async {
+    _notifications.removeWhere((n) => n.id == notificationId);
+  }
+
+  @override
+  Future<void> deleteNotificationsBulk({List<String>? ids}) async {
+    if (ids != null) {
+      _notifications.removeWhere((n) => ids.contains(n.id));
+    } else {
+      _notifications.clear();
+    }
+  }
+
+  @override
   Future<Map<String, int>> getCoordinatorAnalytics() async {
     final pendingCoord = _requests.where((r) => r.status == OdStatus.pendingCoordinator || r.status == OdStatus.facultyApproved).length;
     final awaitingProof = _requests.where((r) => r.status == OdStatus.approvedAwaitingEvidence).length;

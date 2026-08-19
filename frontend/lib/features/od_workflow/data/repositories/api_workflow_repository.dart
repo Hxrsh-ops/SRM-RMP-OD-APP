@@ -173,6 +173,18 @@ class ApiWorkflowRepository implements WorkflowRepository {
   }
 
   @override
+  Future<void> deleteNotification(String notificationId) async {
+    await apiClient.delete('/notifications/$notificationId');
+  }
+
+  @override
+  Future<void> deleteNotificationsBulk({List<String>? ids}) async {
+    await apiClient.post('/notifications/bulk-delete', data: {
+      if (ids != null) 'ids': ids,
+    });
+  }
+
+  @override
   Future<AttachmentItem> uploadAttachment({
     required List<int> fileBytes,
     required String fileName,

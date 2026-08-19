@@ -56,22 +56,120 @@ def _build_od_response(req: OdRequest, user_repo: UserRepository) -> OdRequestRe
 
     return resp
 
+def _is_escalated_to_dean(req: OdRequest) -> bool:
+    for event in (req.timeline or []):
+        t_low = (event.title or "").lower()
+        n_low = (event.note or "").lower()
+        if "escalated to dean" in t_low or "[escalated to dean]" in n_low:
+            return True
+    return False
+
+def _is_escalated_to_hod(req: OdRequest) -> bool:
+    for event in (req.timeline or []):
+        t_low = (event.title or "").lower()
+        n_low = (event.note or "").lower()
+        if "escalated to head of department" in t_low or "escalated to hod" in t_low or "[escalated to hod]" in n_low:
+            return True
+    return False
+
 @router.get("", response_model=List[OdRequestResponse])
 def list_od_requests(
     include_history: bool = Query(False),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    from ....models.system_setting import SystemSetting
     od_repo = OdRequestRepository(db)
     user_repo = UserRepository(db)
-    if current_user.role == UserRole.FACULTY_ADVISOR:
-        requests = od_repo.list_faculty_all(current_user.id) if include_history else od_repo.list_faculty_pending(current_user.id)
-    elif current_user.role == UserRole.COORDINATOR:
-        requests = od_repo.list_coordinator_all() if include_history else od_repo.list_coordinator_pending()
-    elif current_user.role == UserRole.STUDENT:
+
+    setting = db.query(SystemSetting).filter(SystemSetting.key == "org_settings").first()
+    policy = setting.value if (setting and setting.value) else {}
+    workflow_mode = policy.get("workflow_mode", "STANDARD")
+    evidence_mode = policy.get("evidence_workflow_mode", "FA_ONLY")
+
+    if current_user.role == UserRole.STUDENT:
         requests = od_repo.list_by_student(current_user.id)
-    else:
-        requests = od_repo.list_all()
+
+    elif current_user.role == UserRole.FACULTY_ADVISOR:
+        requests = od_repo.list_faculty_all(current_user.id) if include_history else od_repo.list_faculty_pending(current_user.id)
+
+    elif current_user.role == UserRole.COORDINATOR:
+        all_reqs = od_repo.list_all()
+        if current_user.department_id:
+            all_reqs = [r for r in all_reqs if r.student and r.student.department_id == current_user.department_id]
+
+        if include_history:
+            requests = all_reqs
+        else:
+            filtered = []
+            for r in all_reqs:
+                if r.status in [OdStatus.PENDING_COORDINATOR, OdStatus.FACULTY_APPROVED]:
+                    if workflow_mode == "DIRECT_HOD":
+                        # In Direct HOD mode, Coordinator is bypassed for initial approvals
+                        continue
+                    elif workflow_mode == "COMPREHENSIVE":
+                        if not _is_escalated_to_hod(r) and not _is_escalated_to_dean(r):
+                            filtered.append(r)
+                    else: # STANDARD
+                        if not _is_escalated_to_hod(r) and not _is_escalated_to_dean(r):
+                            filtered.append(r)
+                elif r.status == OdStatus.PENDING_EVIDENCE_COORDINATOR:
+                    if evidence_mode in ["FA_COORDINATOR", "FA_COORDINATOR_HOD"] and not _is_escalated_to_dean(r):
+                        filtered.append(r)
+            requests = filtered
+
+    elif current_user.role == UserRole.HOD:
+        all_reqs = od_repo.list_all()
+        if current_user.department_id:
+            all_reqs = [r for r in all_reqs if r.student and r.student.department_id == current_user.department_id]
+
+        if include_history:
+            requests = all_reqs
+        else:
+            filtered = []
+            for r in all_reqs:
+                if r.status in [OdStatus.PENDING_COORDINATOR, OdStatus.FACULTY_APPROVED]:
+                    if _is_escalated_to_dean(r):
+                        continue
+                    if workflow_mode == "DIRECT_HOD":
+                        filtered.append(r)
+                    elif workflow_mode in ["COMPREHENSIVE", "STANDARD"]:
+                        if _is_escalated_to_hod(r):
+                            filtered.append(r)
+                elif r.status == OdStatus.PENDING_EVIDENCE_COORDINATOR:
+                    if _is_escalated_to_dean(r):
+                        continue
+                    if evidence_mode in ["FA_HOD", "FA_COORDINATOR_HOD"] or _is_escalated_to_hod(r):
+                        filtered.append(r)
+            requests = filtered
+
+    elif current_user.role == UserRole.DEAN:
+        all_reqs = od_repo.list_all()
+        if include_history:
+            requests = all_reqs
+        else:
+            filtered = []
+            for r in all_reqs:
+                if _is_escalated_to_dean(r):
+                    if r.status in [OdStatus.PENDING_COORDINATOR, OdStatus.FACULTY_APPROVED, OdStatus.PENDING_EVIDENCE_COORDINATOR]:
+                        filtered.append(r)
+            requests = filtered
+
+    else: # MASTER_ADMIN
+        if include_history:
+            requests = od_repo.list_all()
+        else:
+            requests = [
+                r for r in od_repo.list_all()
+                if r.status in [
+                    OdStatus.PENDING_FACULTY,
+                    OdStatus.SUBMITTED,
+                    OdStatus.PENDING_COORDINATOR,
+                    OdStatus.FACULTY_APPROVED,
+                    OdStatus.PENDING_EVIDENCE_FACULTY,
+                    OdStatus.PENDING_EVIDENCE_COORDINATOR
+                ]
+            ]
 
     return [_build_od_response(req, user_repo) for req in requests]
 

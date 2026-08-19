@@ -98,10 +98,14 @@ class _FacultyDashboardViewState extends ConsumerState<FacultyDashboardView> {
               if (context.mounted) {
                 final errorMsg = ref.read(workflowControllerProvider).errorMessage;
                 if (success) {
-                  AppSnackbar.showSuccess(
-                    context,
-                    isEvidenceMode ? 'Completion evidence verified & passed to coordinator.' : 'Faculty approval submitted successfully for ${request.id}.',
-                  );
+                  final updatedReq = ref.read(workflowControllerProvider).requests.where((r) => r.id == request.id).firstOrNull;
+                  final isCompleted = updatedReq?.status == OdStatus.completed;
+                  final successMsg = isEvidenceMode
+                      ? (isCompleted
+                          ? 'Completion evidence verified & Final OD granted for ${request.id}!'
+                          : 'Completion evidence verified & passed for department review.')
+                      : 'Faculty approval submitted successfully for ${request.id}.';
+                  AppSnackbar.showSuccess(context, successMsg);
                 } else {
                   AppSnackbar.showError(
                     context,

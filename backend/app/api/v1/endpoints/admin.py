@@ -307,3 +307,92 @@ def get_students_for_faculty(
     service = AdminService(db)
     students = service.get_students_for_faculty(faculty_id)
     return [_build_admin_user_response(s, db) for s in students]
+
+# -----------------------------------------------------------------------------
+# 11. User Profile & Associated Records Inspection / Record Deletion
+# -----------------------------------------------------------------------------
+@router.get("/users/{user_id}/records", dependencies=[Depends(admin_only)])
+def get_user_profile_and_records(
+    user_id: uuid.UUID,
+    db: Session = Depends(get_db)
+):
+    user_repo = UserRepository(db)
+    od_repo = OdRequestRepository(db)
+    user = user_repo.get_by_id(user_id)
+    if not user:
+        raise NotFoundException("User not found")
+
+    user_info = _build_admin_user_response(user, db)
+    if user.role == UserRole.STUDENT:
+        requests = od_repo.list_by_student(user.id)
+    elif user.role == UserRole.FACULTY_ADVISOR:
+        requests = od_repo.list_by_faculty_assigned(user.id)
+    elif user.role in (UserRole.COORDINATOR, UserRole.HOD):
+        all_reqs = od_repo.list_all()
+        requests = [r for r in all_reqs if r.student and r.student.department_id == user.department_id] if user.department_id else all_reqs
+    else:
+        requests = od_repo.list_all()
+
+    from .od_requests import _build_od_response
+    serialized_reqs = [_build_od_response(r, user_repo).model_dump(mode="json") for r in requests]
+
+    return {
+        "user": user_info,
+        "records": serialized_reqs,
+        "total_records": len(serialized_reqs),
+    }
+
+@router.delete("/od-requests/{request_id}", status_code=status.HTTP_200_OK, dependencies=[Depends(admin_only)])
+def admin_delete_od_request(
+    request_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    od_repo = OdRequestRepository(db)
+    req = od_repo.get_by_id(request_id)
+    if not req:
+        raise NotFoundException(f"OD Request {request_id} not found")
+
+    success = od_repo.hard_delete(request_id)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to delete OD request")
+
+    audit_repo = AuditLogRepository(db)
+    audit_repo.log_action(
+        actor_id=current_user.id,
+        actor_name=current_user.full_name,
+        actor_role="MASTER_ADMIN",
+        action="OD_REQUEST_DELETED",
+        resource_type="OD_REQUEST",
+        resource_id=request_id,
+        request_id=request_id,
+        changes={"deleted_request_id": request_id}
+    )
+    return {"message": f"OD Request {request_id} deleted permanently by Master Admin"}
+
+# -----------------------------------------------------------------------------
+# 12. Security Center Event Purge
+# -----------------------------------------------------------------------------
+@router.delete("/security/events/{event_id}", status_code=status.HTTP_200_OK, dependencies=[Depends(admin_only)])
+def delete_security_event(
+    event_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    from ....models.security_event import SecurityEvent
+    evt = db.query(SecurityEvent).filter(SecurityEvent.id == event_id).first()
+    if not evt:
+        raise NotFoundException("Security event not found")
+    db.delete(evt)
+    db.commit()
+    return {"message": "Security event deleted"}
+
+@router.delete("/security/events", status_code=status.HTTP_200_OK, dependencies=[Depends(admin_only)])
+def clear_all_security_events(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    from ....models.security_event import SecurityEvent
+    deleted_count = db.query(SecurityEvent).delete()
+    db.commit()
+    return {"message": f"Cleared {deleted_count} security event log(s)"}

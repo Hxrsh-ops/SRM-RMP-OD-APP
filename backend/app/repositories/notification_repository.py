@@ -24,3 +24,22 @@ class NotificationRepository:
             Notification.is_read == False
         ).update({"is_read": True})
         self.db.commit()
+
+    def delete_by_id(self, notification_id: UUID, recipient_id: UUID) -> bool:
+        noti = self.db.query(Notification).filter(
+            Notification.id == notification_id,
+            Notification.recipient_id == recipient_id
+        ).first()
+        if not noti:
+            return False
+        self.db.delete(noti)
+        self.db.commit()
+        return True
+
+    def delete_bulk(self, recipient_id: UUID, notification_ids: List[UUID] = None) -> int:
+        query = self.db.query(Notification).filter(Notification.recipient_id == recipient_id)
+        if notification_ids:
+            query = query.filter(Notification.id.in_(notification_ids))
+        deleted_count = query.delete(synchronize_session=False)
+        self.db.commit()
+        return deleted_count

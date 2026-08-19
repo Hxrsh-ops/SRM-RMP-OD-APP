@@ -27,3 +27,9 @@ class NotificationService:
 
     def mark_all_as_read(self, recipient_id: UUID):
         self.notification_repo.mark_all_read(recipient_id)
+
+    def delete_notification(self, notification_id: UUID, recipient_id: UUID) -> bool:
+        return self.notification_repo.delete_by_id(notification_id, recipient_id)
+
+    def delete_notifications_bulk(self, recipient_id: UUID, notification_ids: Optional[List[UUID]] = None) -> int:
+        return self.notification_repo.delete_bulk(recipient_id, notification_ids)

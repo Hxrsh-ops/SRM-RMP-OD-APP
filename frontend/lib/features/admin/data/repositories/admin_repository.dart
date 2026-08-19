@@ -178,4 +178,21 @@ class AdminRepository {
     final list = response as List;
     return list.map((json) => AdminUser.fromJson(json)).toList();
   }
+
+  Future<Map<String, dynamic>> getUserProfileAndRecords(String userId) async {
+    final response = await apiClient.get('/admin/users/$userId/records');
+    return response as Map<String, dynamic>;
+  }
+
+  Future<void> deleteOdRequest(String requestId) async {
+    await apiClient.delete('/admin/od-requests/$requestId');
+  }
+
+  Future<void> deleteSecurityEvent(String eventId) async {
+    await apiClient.delete('/admin/security/events/$eventId');
+  }
+
+  Future<void> clearAllSecurityEvents() async {
+    await apiClient.delete('/admin/security/events');
+  }
 }

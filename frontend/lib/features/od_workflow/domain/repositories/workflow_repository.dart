@@ -53,6 +53,8 @@ abstract class WorkflowRepository {
 
   Future<List<NotificationItem>> getNotifications(String recipientId);
   Future<void> markNotificationsRead(String recipientId);
+  Future<void> deleteNotification(String notificationId);
+  Future<void> deleteNotificationsBulk({List<String>? ids});
   Future<AttachmentItem> uploadAttachment({
     required List<int> fileBytes,
     required String fileName,

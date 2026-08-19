@@ -30,6 +30,12 @@ class OdRequestRepository:
             OdRequest.is_deleted == False
         ).order_by(OdRequest.created_at.desc()).all()
 
+    def list_by_faculty_assigned(self, faculty_id: UUID) -> List[OdRequest]:
+        return self._base_query().filter(
+            OdRequest.faculty_id == faculty_id,
+            OdRequest.is_deleted == False
+        ).order_by(OdRequest.created_at.desc()).all()
+
     def list_faculty_pending(self, faculty_id: UUID) -> List[OdRequest]:
         return self._base_query().filter(
             OdRequest.faculty_id == faculty_id,
@@ -53,6 +59,14 @@ class OdRequestRepository:
         return self._base_query().filter(
             OdRequest.is_deleted == False
         ).order_by(OdRequest.created_at.desc()).all()
+
+    def hard_delete(self, request_id: str) -> bool:
+        req = self.db.query(OdRequest).filter(OdRequest.id == request_id).first()
+        if not req:
+            return False
+        self.db.delete(req)
+        self.db.commit()
+        return True
 
     def count_by_status(self) -> Dict[str, int]:
         results = self.db.query(
