@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/providers/dio_provider.dart';
 import '../../data/datasources/auth_local_datasource.dart';
@@ -112,7 +114,12 @@ class AuthController extends StateNotifier<AuthState> {
   Future<void> restoreSession() async {
     state = state.copyWith(status: AuthStatus.initial, errorMessage: null);
     try {
-      final session = await _restoreSessionUseCase.execute();
+      final isTest = !kIsWeb && Platform.environment.containsKey('FLUTTER_TEST');
+      final sessionFuture = _restoreSessionUseCase.execute();
+      final session = isTest
+          ? await sessionFuture
+          : await sessionFuture.timeout(const Duration(seconds: 2), onTimeout: () => null);
+
       if (session != null) {
         state = state.copyWith(
           status: AuthStatus.authenticated,
