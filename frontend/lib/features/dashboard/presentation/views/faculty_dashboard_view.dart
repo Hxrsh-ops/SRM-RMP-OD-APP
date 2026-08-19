@@ -36,11 +36,20 @@ class _FacultyDashboardViewState extends ConsumerState<FacultyDashboardView> {
     showDialog(
       context: context,
       builder: (dialogCtx) => AlertDialog(
+        shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderLg),
+        titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        actionsPadding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
         title: Row(
           children: [
-            const Icon(Icons.check_circle_outline_rounded, color: AppColors.success, size: 24),
-            const SizedBox(width: AppSpacing.xs),
-            Text(isEvidenceMode ? 'Verify Completion Evidence' : 'Faculty Advisor Approval'),
+            const Icon(Icons.check_circle_outline_rounded, color: AppColors.success, size: 22),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(
+                isEvidenceMode ? 'Verify Completion Evidence' : 'Faculty Advisor Approval',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
           ],
         ),
         content: Column(
@@ -72,7 +81,11 @@ class _FacultyDashboardViewState extends ConsumerState<FacultyDashboardView> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.success, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.success,
+              foregroundColor: Colors.white,
+              shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderMd),
+            ),
             onPressed: () async {
               Navigator.pop(dialogCtx);
               final success = await ref.read(workflowControllerProvider.notifier).processFacultyAction(
@@ -112,11 +125,20 @@ class _FacultyDashboardViewState extends ConsumerState<FacultyDashboardView> {
     showDialog(
       context: context,
       builder: (dialogCtx) => AlertDialog(
+        shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderLg),
+        titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        actionsPadding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
         title: Row(
           children: [
-            const Icon(Icons.cancel_outlined, color: AppColors.danger, size: 24),
-            const SizedBox(width: AppSpacing.xs),
-            Text(isEvidenceMode ? 'Request Evidence Revision' : 'Reject OD Request'),
+            const Icon(Icons.cancel_outlined, color: AppColors.danger, size: 22),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(
+                isEvidenceMode ? 'Request Evidence Revision' : 'Reject OD Request',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
           ],
         ),
         content: Column(
@@ -143,10 +165,14 @@ class _FacultyDashboardViewState extends ConsumerState<FacultyDashboardView> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.danger,
+              foregroundColor: Colors.white,
+              shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderMd),
+            ),
             onPressed: () async {
               if (remarksController.text.trim().isEmpty) {
-                AppSnackbar.showError(dialogCtx, 'Please specify a valid explanation reason.');
+                AppSnackbar.showError(dialogCtx, 'Please specify a rejection/revision reason.');
                 return;
               }
               Navigator.pop(dialogCtx);
@@ -160,15 +186,9 @@ class _FacultyDashboardViewState extends ConsumerState<FacultyDashboardView> {
               if (context.mounted) {
                 final errorMsg = ref.read(workflowControllerProvider).errorMessage;
                 if (success) {
-                  AppSnackbar.showWarning(
-                    context,
-                    isEvidenceMode ? 'Evidence revision requested for ${request.id}.' : 'Request ${request.id} rejected.',
-                  );
+                  AppSnackbar.showWarning(context, 'Request ${request.id} updated.');
                 } else {
-                  AppSnackbar.showError(
-                    context,
-                    errorMsg ?? 'Failed to update request ${request.id}',
-                  );
+                  AppSnackbar.showError(context, errorMsg ?? 'Failed to process faculty action.');
                 }
               }
             },
