@@ -19,7 +19,7 @@ def test_login_faculty_success(client):
 def test_login_invalid_password(client):
     response = client.post(
         "/api/v1/auth/login",
-        data={"username": "RA2511026020400", "password": "wrongpassword"}
+        data={"username": "INVALID_TEST_USER_99", "password": "wrongpassword"}
     )
     assert response.status_code == 401
 

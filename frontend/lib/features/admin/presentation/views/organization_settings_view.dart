@@ -17,6 +17,7 @@ class _OrganizationSettingsViewState extends ConsumerState<OrganizationSettingsV
   late TextEditingController _titleCtrl;
   late TextEditingController _hodAutoDaysCtrl;
   String _workflowMode = 'STANDARD';
+  String _evidenceWorkflowMode = 'FA_ONLY';
   bool _allowCoordToHod = true;
   bool _allowHodToDean = true;
   bool _requireEvidence = true;
@@ -31,6 +32,7 @@ class _OrganizationSettingsViewState extends ConsumerState<OrganizationSettingsV
     _titleCtrl = TextEditingController(text: s.systemBrandingTitle);
     _hodAutoDaysCtrl = TextEditingController(text: s.hodAutoEscalationDays.toString());
     _workflowMode = s.workflowMode;
+    _evidenceWorkflowMode = s.evidenceWorkflowMode;
     _allowCoordToHod = s.allowCoordinatorEscalationToHod;
     _allowHodToDean = s.allowHodEscalationToDean;
     _requireEvidence = s.requireEvidence;
@@ -65,7 +67,7 @@ class _OrganizationSettingsViewState extends ConsumerState<OrganizationSettingsV
                       children: [
                         Text('Organization Control & System Settings', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                         SizedBox(height: 4),
-                        Text('Configure approval workflow rules, upload quotas, security session limits, and branding', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                        Text('Configure approval workflow rules, evidence verification policies, upload quotas, and security', style: TextStyle(color: Colors.grey, fontSize: 12)),
                       ],
                     ),
                     ElevatedButton.icon(
@@ -91,12 +93,12 @@ class _OrganizationSettingsViewState extends ConsumerState<OrganizationSettingsV
                           children: [
                             Icon(Icons.account_tree_rounded, color: Color(0xFF1A365D), size: 22),
                             SizedBox(width: 8),
-                            Text('Dynamic Approval Workflow Policy Manager', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            Text('Initial Application Workflow Policy', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                           ],
                         ),
                         const SizedBox(height: 6),
                         const Text(
-                          'Control and change the institutional approval hierarchy across departments without modifying code.',
+                          'Configure the approval path for initial On Duty permission before an event occurs.',
                           style: TextStyle(color: Colors.black54, fontSize: 13),
                         ),
                         const SizedBox(height: 16),
@@ -104,8 +106,9 @@ class _OrganizationSettingsViewState extends ConsumerState<OrganizationSettingsV
                         // Workflow Mode Dropdown
                         DropdownButtonFormField<String>(
                           value: _workflowMode,
+                          isExpanded: true,
                           decoration: const InputDecoration(
-                            labelText: 'Institutional Approval Workflow Mode',
+                            labelText: 'Initial Approval Workflow Mode',
                             border: OutlineInputBorder(),
                             helperText: 'Select how OD requests flow through student, faculty, coordinator, and HOD stages.',
                           ),
@@ -129,17 +132,19 @@ class _OrganizationSettingsViewState extends ConsumerState<OrganizationSettingsV
                         ),
                         const SizedBox(height: 16),
 
-                        // Auto-Escalate Threshold
-                        TextField(
-                          controller: _hodAutoDaysCtrl,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            labelText: 'Auto-Escalate to HOD for Multi-Day ODs (Days)',
-                            border: OutlineInputBorder(),
-                            helperText: 'Set day threshold (e.g. 3). Requests with duration >= this value route to HOD. Set to 0 to disable.',
+                        // Auto-Escalate Threshold (Only in Standard mode)
+                        if (_workflowMode == 'STANDARD') ...[
+                          TextField(
+                            controller: _hodAutoDaysCtrl,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: 'Auto-Escalate to HOD for Multi-Day ODs (Days)',
+                              border: OutlineInputBorder(),
+                              helperText: 'Set day threshold (e.g. 3). Requests with duration >= this value automatically route to HOD in Standard mode. Set 0 to disable.',
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 16),
+                          const SizedBox(height: 16),
+                        ],
 
                         // Escalation Rules Callout
                         Container(
@@ -185,7 +190,76 @@ class _OrganizationSettingsViewState extends ConsumerState<OrganizationSettingsV
                 ),
                 const SizedBox(height: 16),
 
-                // 2. Academic & Upload Rules Card
+                // 2. POST-EVENT EVIDENCE VERIFICATION WORKFLOW POLICY CARD
+                Card(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 1.5,
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.fact_check_outlined, color: Colors.teal, size: 22),
+                            SizedBox(width: 8),
+                            Text('Post-Event Evidence Verification Workflow', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'Configure who verifies completion proof (certificates, photos) before final OD is officially granted.',
+                          style: TextStyle(color: Colors.black54, fontSize: 13),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Evidence Workflow Mode Dropdown
+                        DropdownButtonFormField<String>(
+                          value: _evidenceWorkflowMode,
+                          isExpanded: true,
+                          decoration: const InputDecoration(
+                            labelText: 'Evidence Verification Workflow Mode',
+                            border: OutlineInputBorder(),
+                            helperText: 'Dean verification applies only to requests that were escalated to & approved by the Dean.',
+                          ),
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'FA_ONLY',
+                              child: Text('Standard (Student submits Evidence → FA verifies → OD Granted)'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'FA_COORDINATOR',
+                              child: Text('2-Tier (Student submits Evidence → FA → Coordinator → OD Granted)'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'FA_COORDINATOR_HOD',
+                              child: Text('3-Tier (Student submits Evidence → FA → Coordinator → HOD → OD Granted)'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'FA_HOD',
+                              child: Text('Direct HOD (Student submits Evidence → FA → HOD → OD Granted)'),
+                            ),
+                          ],
+                          onChanged: (val) {
+                            if (val != null) setState(() => _evidenceWorkflowMode = val);
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('Require Post-Event Proof Evidence'),
+                          subtitle: const Text('Enforce mandatory certificate / proof upload before completing any OD request'),
+                          value: _requireEvidence,
+                          onChanged: (val) => setState(() => _requireEvidence = val),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // 3. Academic & Upload Rules Card
                 Card(
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   child: Padding(
@@ -193,17 +267,25 @@ class _OrganizationSettingsViewState extends ConsumerState<OrganizationSettingsV
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Academic & Upload Rules', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        const Text('Academic Session & Upload Quotas', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                         const SizedBox(height: 16),
                         LayoutBuilder(
                           builder: (context, constraints) {
                             final acadField = TextField(
                               controller: _acadYearCtrl,
-                              decoration: const InputDecoration(labelText: 'Academic Year', border: OutlineInputBorder()),
+                              decoration: const InputDecoration(
+                                labelText: 'Current Academic Session (e.g. 2025-2026)',
+                                border: OutlineInputBorder(),
+                                helperText: 'Active academic cycle for OD semester records and archiving (all student years/batches use the platform)',
+                              ),
                             );
                             final sizeField = TextField(
                               controller: _maxSizeCtrl,
-                              decoration: const InputDecoration(labelText: 'Max Attachment File Size (MB)', border: OutlineInputBorder()),
+                              decoration: const InputDecoration(
+                                labelText: 'Max Attachment File Size (MB)',
+                                border: OutlineInputBorder(),
+                                helperText: 'Per-file upload quota limit for student documents',
+                              ),
                             );
 
                             if (constraints.maxWidth >= 600) {
@@ -224,20 +306,13 @@ class _OrganizationSettingsViewState extends ConsumerState<OrganizationSettingsV
                             );
                           },
                         ),
-                        const SizedBox(height: 16),
-                        SwitchListTile(
-                          title: const Text('Require Post-Event Proof Evidence'),
-                          subtitle: const Text('Enforce evidence document submission before completing OD requests'),
-                          value: _requireEvidence,
-                          onChanged: (val) => setState(() => _requireEvidence = val),
-                        ),
                       ],
                     ),
                   ),
                 ),
                 const SizedBox(height: 16),
 
-                // 3. Security Card
+                // 4. Security Card
                 Card(
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   child: Padding(
@@ -249,7 +324,11 @@ class _OrganizationSettingsViewState extends ConsumerState<OrganizationSettingsV
                         const SizedBox(height: 16),
                         TextField(
                           controller: _jwtExprCtrl,
-                          decoration: const InputDecoration(labelText: 'JWT Access Token Expiration (Minutes)', border: OutlineInputBorder()),
+                          decoration: const InputDecoration(
+                            labelText: 'JWT Access Token Expiration (Minutes)',
+                            border: OutlineInputBorder(),
+                            helperText: 'Duration before inactive user sessions require re-authentication (default 1440 min = 24 hrs)',
+                          ),
                         ),
                       ],
                     ),
@@ -257,7 +336,7 @@ class _OrganizationSettingsViewState extends ConsumerState<OrganizationSettingsV
                 ),
                 const SizedBox(height: 16),
 
-                // 4. Branding & Maintenance Card
+                // 5. Branding & Maintenance Card
                 Card(
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   child: Padding(
@@ -307,6 +386,7 @@ class _OrganizationSettingsViewState extends ConsumerState<OrganizationSettingsV
         maintenanceMode: _maintenanceMode,
         environmentInfo: 'Production-Ready Enterprise',
         workflowMode: _workflowMode,
+        evidenceWorkflowMode: _evidenceWorkflowMode,
         hodAutoEscalationDays: int.tryParse(_hodAutoDaysCtrl.text) ?? 0,
         allowCoordinatorEscalationToHod: _allowCoordToHod,
         allowHodEscalationToDean: _allowHodToDean,

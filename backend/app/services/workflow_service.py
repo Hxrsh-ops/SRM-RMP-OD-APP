@@ -135,6 +135,22 @@ class WorkflowService:
 
         return saved_request
 
+    def _get_workflow_policy(self) -> Dict[str, Any]:
+        try:
+            from ..models.system_setting import SystemSetting
+            setting = self.od_repo.db.query(SystemSetting).filter(SystemSetting.key == "org_settings").first()
+            if setting and setting.value:
+                return setting.value
+        except Exception:
+            pass
+        return {
+            "workflow_mode": "STANDARD",
+            "evidence_workflow_mode": "FA_ONLY",
+            "hod_auto_escalation_days": 0,
+            "allow_coordinator_escalation_to_hod": True,
+            "allow_hod_escalation_to_dean": True,
+        }
+
     def process_faculty_action(
         self,
         request_id: str,
@@ -156,14 +172,33 @@ class WorkflowService:
         faculty_user = self.user_repo.get_by_id(faculty_user_id)
         faculty_name = faculty_user.full_name if faculty_user else "Faculty Advisor"
         now = datetime.now(timezone.utc)
+        policy = self._get_workflow_policy()
 
         # Process depending on current state
         if req.status in WorkflowTransitions.VALID_FACULTY_INITIAL:
             new_status = OdStatus.PENDING_COORDINATOR if action.approve else OdStatus.FACULTY_REJECTED
             step_title = "Faculty Advisor Approved" if action.approve else "Faculty Advisor Rejected"
         elif req.status in WorkflowTransitions.VALID_FACULTY_EVIDENCE:
-            new_status = OdStatus.PENDING_EVIDENCE_COORDINATOR if action.approve else OdStatus.EVIDENCE_REVISION_REQUESTED
-            step_title = "Faculty Verified Evidence" if action.approve else "Faculty Requested Evidence Revision"
+            evidence_mode = policy.get("evidence_workflow_mode", "FA_ONLY")
+            was_escalated_to_dean = any(
+                "dean" in (event.title or "").lower() or "dean" in (event.note or "").lower()
+                for event in (req.timeline or [])
+            )
+
+            if not action.approve:
+                new_status = OdStatus.EVIDENCE_REVISION_REQUESTED
+                step_title = "Faculty Requested Evidence Revision"
+            else:
+                if was_escalated_to_dean:
+                    new_status = OdStatus.PENDING_EVIDENCE_COORDINATOR
+                    step_title = "Faculty Verified Evidence (Forwarded for Executive Dean Sign-off)"
+                elif evidence_mode == "FA_ONLY":
+                    new_status = OdStatus.COMPLETED
+                    step_title = "Completion Evidence Verified & OD Granted by Faculty Advisor"
+                    req.completion_verified_at = now
+                else:
+                    new_status = OdStatus.PENDING_EVIDENCE_COORDINATOR
+                    step_title = "Faculty Verified Evidence (Forwarded for Department Review)"
         else:
             raise BadRequestException(f"Cannot perform faculty action on request in status {req.status.value}")
 
@@ -198,11 +233,11 @@ class WorkflowService:
         self.notification_service.send_notification(
             recipient_id=req.student_id,
             title=step_title,
-            message=f"Faculty Advisor {faculty_name} updated request {request_id}.",
+            message=f"Faculty Advisor {faculty_name}: {action.comment or step_title}",
             request_id=request_id
         )
 
-        if action.approve:
+        if action.approve and new_status != OdStatus.COMPLETED:
             student = self.user_repo.get_by_id(req.student_id)
             dept_id = student.department_id if student else None
             coord = self.user_repo.get_by_role(UserRole.COORDINATOR, department_id=dept_id)
@@ -211,8 +246,8 @@ class WorkflowService:
             if coord:
                 self.notification_service.send_notification(
                     recipient_id=coord.id,
-                    title=f"Request {request_id} Ready for Coordinator",
-                    message=f"Faculty {faculty_name} approved request {request_id}. Pending your review.",
+                    title=f"Request {request_id} Pending Review",
+                    message=f"Faculty {faculty_name} verified request {request_id}. Pending department action.",
                     request_id=request_id
                 )
 
@@ -251,10 +286,13 @@ class WorkflowService:
 
         # Require non-empty comment on rejection or return for correction
         if (not action.approve or action.return_for_correction) and (not action.comment or not action.comment.strip()):
-            raise BadRequestException("Coordinator rejection or return for correction requires a valid reason note.")
+            raise BadRequestException("Rejection or return for correction requires a valid reason note.")
 
         coordinator_name = coordinator_user.full_name if coordinator_user else "Coordinator"
         now = datetime.now(timezone.utc)
+        policy = self._get_workflow_policy()
+        workflow_mode = policy.get("workflow_mode", "STANDARD")
+        hod_auto_days = int(policy.get("hod_auto_escalation_days", 0))
 
         actor_role = "Coordinator"
         if coordinator_user.role == UserRole.HOD:
@@ -279,12 +317,25 @@ class WorkflowService:
             if action.return_for_correction:
                 new_status = OdStatus.REVISION_REQUESTED
                 step_title = f"Returned for Correction by {actor_role}"
-            elif action.approve:
-                new_status = OdStatus.APPROVED_AWAITING_EVIDENCE
-                step_title = f"Initial Approval Granted by {actor_role} (Awaiting Event Proof)"
-            else:
+            elif not action.approve:
                 new_status = OdStatus.REJECTED
                 step_title = f"Rejected by {actor_role}"
+            else:
+                # Check if this requires HOD escalation
+                needs_hod = (
+                    coordinator_user.role == UserRole.COORDINATOR and (
+                        workflow_mode == "COMPREHENSIVE" or (
+                            workflow_mode == "STANDARD" and hod_auto_days > 0 and req.duration_days >= hod_auto_days
+                        )
+                    )
+                )
+                if needs_hod:
+                    action.escalate_to = "HOD"
+                    new_status = req.status
+                    step_title = f"Coordinator Recommended (Escalated to HOD for {req.duration_days}-Day Concurrence)"
+                else:
+                    new_status = OdStatus.APPROVED_AWAITING_EVIDENCE
+                    step_title = f"Initial Approval Granted by {actor_role} (Awaiting Event Proof)"
         elif req.status in WorkflowTransitions.VALID_COORDINATOR_EVIDENCE:
             if action.return_for_correction or not action.approve:
                 new_status = OdStatus.EVIDENCE_REVISION_REQUESTED

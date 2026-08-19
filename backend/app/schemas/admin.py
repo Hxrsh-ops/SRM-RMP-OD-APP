@@ -148,7 +148,7 @@ class FacultyTransferSchema(BaseModel):
 # ORGANIZATION SETTINGS SCHEMAS
 # -----------------------------------------------------------------------------
 class OrganizationSettingsSchema(BaseModel):
-    academic_year: str = "2025-2026"
+    academic_year: str = "2025-2026"  # Current academic session cycle
     current_semester: str = "Even Semester"
     max_file_size_mb: int = 10
     allowed_file_types: List[str] = ["pdf", "jpg", "jpeg", "png", "docx"]
@@ -159,11 +159,13 @@ class OrganizationSettingsSchema(BaseModel):
     primary_color_hex: str = "#1A365D"
     maintenance_mode: bool = False
     environment_info: str = "Production-Ready Enterprise"
-    # Dynamic Workflow Policy Controls
+    # Dynamic Initial Application Workflow Policy Controls
     workflow_mode: str = "STANDARD"  # "STANDARD", "COMPREHENSIVE", "DIRECT_HOD"
-    hod_auto_escalation_days: int = 0  # 0 = disabled. If > 0, requests with duration >= N days require HOD concurrence
+    hod_auto_escalation_days: int = 0  # 0 = disabled. Only active in STANDARD mode for multi-day ODs
     allow_coordinator_escalation_to_hod: bool = True
     allow_hod_escalation_to_dean: bool = True
+    # Dynamic Completion Evidence Verification Workflow Policy Controls
+    evidence_workflow_mode: str = "FA_ONLY"  # "FA_ONLY", "FA_COORDINATOR", "FA_COORDINATOR_HOD", "FA_HOD"
 
 # -----------------------------------------------------------------------------
 # AUDIT LOG SCHEMAS

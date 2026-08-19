@@ -65,23 +65,14 @@ def test_full_multi_role_approval_and_completion_proof_workflow(client):
     assert proof_data["status"] == "PENDING_EVIDENCE_FACULTY"
     assert proof_data["completion_summary"] == "Successfully secured 1st prize in National Hackathon."
 
-    # 5. Faculty Advisor verifies proof -> PENDING_EVIDENCE_COORDINATOR
+    # 5. Faculty Advisor verifies proof -> COMPLETED in Standard FA_ONLY mode
     fac_verify_res = client.post(
         f"/api/v1/od-requests/{req_id}/faculty-action",
         json={"approve": True, "comment": "Verified certificate and prize evidence."},
         headers={"Authorization": f"Bearer {faculty_token}"}
     )
     assert fac_verify_res.status_code == 200
-    assert fac_verify_res.json()["status"] == "PENDING_EVIDENCE_COORDINATOR"
-
-    # 6. Coordinator final verifies proof -> COMPLETED
-    coord_final_res = client.post(
-        f"/api/v1/od-requests/{req_id}/coordinator-action",
-        json={"approve": True, "comment": "Final sign-off recorded. OD granted."},
-        headers={"Authorization": f"Bearer {coordinator_token}"}
-    )
-    assert coord_final_res.status_code == 200
-    assert coord_final_res.json()["status"] == "COMPLETED"
+    assert fac_verify_res.json()["status"] == "COMPLETED"
 
 def test_evidence_submission_before_end_date_fails(client):
     student_token = get_auth_token(client, "RA2511026020400", "student123")

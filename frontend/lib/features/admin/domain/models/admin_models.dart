@@ -245,6 +245,7 @@ class OrganizationSettings {
   final String environmentInfo;
 
   final String workflowMode;
+  final String evidenceWorkflowMode;
   final int hodAutoEscalationDays;
   final bool allowCoordinatorEscalationToHod;
   final bool allowHodEscalationToDean;
@@ -262,6 +263,7 @@ class OrganizationSettings {
     required this.maintenanceMode,
     required this.environmentInfo,
     this.workflowMode = 'STANDARD',
+    this.evidenceWorkflowMode = 'FA_ONLY',
     this.hodAutoEscalationDays = 0,
     this.allowCoordinatorEscalationToHod = true,
     this.allowHodEscalationToDean = true,
@@ -281,6 +283,7 @@ class OrganizationSettings {
       maintenanceMode: json['maintenance_mode'] ?? false,
       environmentInfo: json['environment_info'] ?? 'Production-Ready Enterprise',
       workflowMode: json['workflow_mode'] ?? 'STANDARD',
+      evidenceWorkflowMode: json['evidence_workflow_mode'] ?? 'FA_ONLY',
       hodAutoEscalationDays: json['hod_auto_escalation_days'] ?? 0,
       allowCoordinatorEscalationToHod: json['allow_coordinator_escalation_to_hod'] ?? true,
       allowHodEscalationToDean: json['allow_hod_escalation_to_dean'] ?? true,
@@ -300,6 +303,7 @@ class OrganizationSettings {
     'maintenance_mode': maintenanceMode,
     'environment_info': environmentInfo,
     'workflow_mode': workflowMode,
+    'evidence_workflow_mode': evidenceWorkflowMode,
     'hod_auto_escalation_days': hodAutoEscalationDays,
     'allow_coordinator_escalation_to_hod': allowCoordinatorEscalationToHod,
     'allow_hod_escalation_to_dean': allowHodEscalationToDean,
