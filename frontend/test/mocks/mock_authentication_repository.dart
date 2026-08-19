@@ -77,6 +77,14 @@ class MockAuthenticationRepository implements AuthenticationRepository {
   }
 
   @override
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 10));
+  }
+
+  @override
   Future<bool> isAuthenticated() async {
     final session = await restoreSession();
     return session != null && !session.token.isExpired;

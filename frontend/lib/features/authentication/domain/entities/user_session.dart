@@ -26,6 +26,32 @@ class UserSession extends Equatable {
     required this.token,
   });
 
+  UserSession copyWith({
+    String? userId,
+    String? username,
+    String? name,
+    String? email,
+    String? role,
+    String? program,
+    String? yearSection,
+    String? assignedFacultyName,
+    bool? forcePasswordChange,
+    AuthToken? token,
+  }) {
+    return UserSession(
+      userId: userId ?? this.userId,
+      username: username ?? this.username,
+      name: name ?? this.name,
+      email: email ?? this.email,
+      role: role ?? this.role,
+      program: program ?? this.program,
+      yearSection: yearSection ?? this.yearSection,
+      assignedFacultyName: assignedFacultyName ?? this.assignedFacultyName,
+      forcePasswordChange: forcePasswordChange ?? this.forcePasswordChange,
+      token: token ?? this.token,
+    );
+  }
+
   @override
   List<Object?> get props => [
         userId,

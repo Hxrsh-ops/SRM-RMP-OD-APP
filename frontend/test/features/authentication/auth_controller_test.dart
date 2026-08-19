@@ -29,6 +29,7 @@ void main() {
         loginUseCase: loginUseCase,
         logoutUseCase: logoutUseCase,
         restoreSessionUseCase: restoreSessionUseCase,
+        authRepository: repository,
       );
     });
 

@@ -10,5 +10,10 @@ abstract class AuthenticationRepository {
 
   Future<UserSession?> restoreSession();
 
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  });
+
   Future<bool> isAuthenticated();
 }

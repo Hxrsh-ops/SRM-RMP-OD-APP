@@ -12,6 +12,7 @@ class ApiConstants {
   static const String me = '/auth/me';
   static const String refresh = '/auth/refresh';
   static const String logout = '/auth/logout';
+  static const String changePassword = '/auth/change-password';
 
   // Workflow Endpoints
   static const String odRequests = '/od-requests';

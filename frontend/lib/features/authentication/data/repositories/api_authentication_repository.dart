@@ -95,6 +95,20 @@ class ApiAuthenticationRepository implements AuthenticationRepository {
   }
 
   @override
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    await apiClient.post(
+      ApiConstants.changePassword,
+      data: {
+        'current_password': currentPassword,
+        'new_password': newPassword,
+      },
+    );
+  }
+
+  @override
   Future<void> logout() async {
     try {
       await apiClient.post(ApiConstants.logout);

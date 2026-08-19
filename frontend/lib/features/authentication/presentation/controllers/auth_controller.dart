@@ -40,6 +40,7 @@ final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
     loginUseCase: ref.watch(loginUseCaseProvider),
     logoutUseCase: ref.watch(logoutUseCaseProvider),
     restoreSessionUseCase: ref.watch(restoreSessionUseCaseProvider),
+    authRepository: ref.watch(authenticationRepositoryProvider),
   );
 });
 
@@ -48,17 +49,41 @@ class AuthController extends StateNotifier<AuthState> {
   final LogoutUseCase _logoutUseCase;
   final RestoreSessionUseCase _restoreSessionUseCase;
 
+  final AuthenticationRepository _authRepository;
+
   AuthController({
     required LoginUseCase loginUseCase,
     required LogoutUseCase logoutUseCase,
     required RestoreSessionUseCase restoreSessionUseCase,
+    required AuthenticationRepository authRepository,
   })  : _loginUseCase = loginUseCase,
         _logoutUseCase = logoutUseCase,
         _restoreSessionUseCase = restoreSessionUseCase,
+        _authRepository = authRepository,
         super(const AuthState(status: AuthStatus.initial));
 
   void toggleRememberMe(bool value) {
     state = state.copyWith(rememberMe: value);
+  }
+
+  Future<bool> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      await _authRepository.changePassword(
+        currentPassword: currentPassword,
+        newPassword: newPassword,
+      );
+      if (state.session != null) {
+        state = state.copyWith(
+          session: state.session!.copyWith(forcePasswordChange: false),
+        );
+      }
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 
   Future<void> login({

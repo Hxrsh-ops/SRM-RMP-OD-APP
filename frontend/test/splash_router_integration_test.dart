@@ -30,6 +30,9 @@ class FailingAuthRepository implements AuthenticationRepository {
   Future<bool> isAuthenticated() async => false;
 
   @override
+  Future<void> changePassword({required String currentPassword, required String newPassword}) async {}
+
+  @override
   Future<void> logout() async {}
 }
 
@@ -46,6 +49,9 @@ class PendingAuthRepository implements AuthenticationRepository {
   Future<UserSession?> restoreSession() async {
     return completer.future;
   }
+
+  @override
+  Future<void> changePassword({required String currentPassword, required String newPassword}) async {}
 
   @override
   Future<bool> isAuthenticated() async => false;
