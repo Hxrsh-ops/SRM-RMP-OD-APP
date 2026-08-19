@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../controllers/admin_controller.dart';
 import '../../domain/models/admin_models.dart';
+import 'user_management_view.dart';
 
 class StudentRegistryView extends ConsumerWidget {
   const StudentRegistryView({super.key});
@@ -82,28 +83,11 @@ class StudentRegistryView extends ConsumerWidget {
                               DataCell(Text(s.assignedFacultyName ?? 'Unassigned')),
                               DataCell(IconButton(
                                 icon: const Icon(Icons.history_edu, color: Colors.blue),
+                                tooltip: 'View OD Application History',
                                 onPressed: () {
-                                  showModalBottomSheet(
+                                  showDialog(
                                     context: context,
-                                    isScrollControlled: true,
-                                    builder: (_) => Container(
-                                      padding: const EdgeInsets.all(24),
-                                      height: 400,
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text('OD Application History for ${s.fullName}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                                          const SizedBox(height: 12),
-                                          Text('Register Number: ${s.username} | Department: ${s.departmentName ?? "SRM IST"}'),
-                                          const Divider(height: 24),
-                                          Expanded(
-                                            child: Center(
-                                              child: Text('Select or search OD requests for ${s.fullName} in Central OD Management.'),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
+                                    builder: (_) => UserRecordsDialog(user: s),
                                   );
                                 },
                               )),

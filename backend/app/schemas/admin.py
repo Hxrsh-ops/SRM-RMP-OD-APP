@@ -153,7 +153,7 @@ class OrganizationSettingsSchema(BaseModel):
     max_file_size_mb: int = 10
     allowed_file_types: List[str] = ["pdf", "jpg", "jpeg", "png", "docx"]
     require_evidence: bool = True
-    jwt_expiration_minutes: int = 1440
+    jwt_expiration_minutes: int = 43200  # 30 Days (43200 minutes)
     notification_email_enabled: bool = True
     system_branding_title: str = "SRM RMP OD Platform"
     primary_color_hex: str = "#1A365D"

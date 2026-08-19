@@ -147,29 +147,46 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                           child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              Checkbox(
-                                value: isSelected,
-                                onChanged: (val) {
-                                  setState(() {
-                                    if (val == true) {
-                                      _selectedIds.add(n.id);
-                                    } else {
-                                      _selectedIds.remove(n.id);
-                                    }
-                                  });
-                                },
+                              Transform.scale(
+                                scale: 0.9,
+                                child: Checkbox(
+                                  value: isSelected,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  visualDensity: VisualDensity.compact,
+                                  onChanged: (val) {
+                                    setState(() {
+                                      if (val == true) {
+                                        _selectedIds.add(n.id);
+                                      } else {
+                                        _selectedIds.remove(n.id);
+                                      }
+                                    });
+                                  },
+                                ),
                               ),
-                              Icon(
-                                n.isRead ? Icons.notifications_none_rounded : Icons.notifications_active_rounded,
-                                color: n.isRead ? AppColors.textSecondary : AppColors.primaryBlue,
-                                size: 22,
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: n.isRead
+                                      ? Colors.grey.withValues(alpha: 0.1)
+                                      : AppColors.primaryBlue.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(
+                                  n.isRead ? Icons.notifications_none_rounded : Icons.notifications_active_rounded,
+                                  color: n.isRead ? AppColors.textSecondary : AppColors.primaryBlue,
+                                  size: 20,
+                                ),
                               ),
                               const SizedBox(width: AppSpacing.md),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Text(
                                       n.title,

@@ -1,9 +1,13 @@
 import uuid
 from typing import List, Optional, Dict, Any
-from fastapi import APIRouter, Depends, Query, status, Response
+from fastapi import APIRouter, Depends, Query, status, Response, HTTPException
 
 from sqlalchemy.orm import Session
 from ....core.database import get_db
+from ....core.exceptions import NotFoundException, BadRequestException, PermissionDeniedException
+from ....repositories.user_repository import UserRepository
+from ....repositories.od_request_repository import OdRequestRepository
+from ....repositories.audit_log_repository import AuditLogRepository
 from ....models.user import User
 from ....models.department import Department
 from ....models.enums import UserRole
@@ -322,7 +326,7 @@ def get_user_profile_and_records(
     if not user:
         raise NotFoundException("User not found")
 
-    user_info = _build_admin_user_response(user, db)
+    user_info = UserResponseSchema.model_validate(_build_admin_user_response(user, db)).model_dump(mode="json")
     if user.role == UserRole.STUDENT:
         requests = od_repo.list_by_student(user.id)
     elif user.role == UserRole.FACULTY_ADVISOR:

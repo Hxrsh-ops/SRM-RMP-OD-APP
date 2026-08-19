@@ -276,7 +276,7 @@ class OrganizationSettings {
       maxFileSizeMb: json['max_file_size_mb'] ?? 10,
       allowedFileTypes: List<String>.from(json['allowed_file_types'] ?? ['pdf', 'jpg', 'png']),
       requireEvidence: json['require_evidence'] ?? true,
-      jwtExpirationMinutes: json['jwt_expiration_minutes'] ?? 1440,
+      jwtExpirationMinutes: json['jwt_expiration_minutes'] ?? 43200,
       notificationEmailEnabled: json['notification_email_enabled'] ?? true,
       systemBrandingTitle: json['system_branding_title'] ?? 'SRM RMP OD Platform',
       primaryColorHex: json['primary_color_hex'] ?? '#1A365D',

@@ -68,3 +68,19 @@ def test_admin_settings_and_monitoring(client: TestClient):
     res_sec = client.get("/api/v1/admin/security/summary", headers=headers)
     assert res_sec.status_code == 200
     assert "recent_events" in res_sec.json()
+
+def test_admin_user_records_and_delete(client: TestClient):
+    admin_token = get_token(client, "ADMIN1001", "Admin@123456")
+    headers = {"Authorization": f"Bearer {admin_token}"}
+
+    users_res = client.get("/api/v1/admin/users", headers=headers)
+    assert users_res.status_code == 200
+    first_user = users_res.json()["items"][0]
+    user_id = first_user["id"]
+
+    records_res = client.get(f"/api/v1/admin/users/{user_id}/records", headers=headers)
+    assert records_res.status_code == 200
+    data = records_res.json()
+    assert "user" in data
+    assert "records" in data
+    assert "total_records" in data
