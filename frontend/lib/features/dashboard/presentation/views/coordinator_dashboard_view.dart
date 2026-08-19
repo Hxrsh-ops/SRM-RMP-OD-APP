@@ -203,7 +203,7 @@ class _CoordinatorDashboardViewState extends ConsumerState<CoordinatorDashboardV
                 const Text('Select Escalation Target:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                 const SizedBox(height: AppSpacing.xs),
                 DropdownButtonFormField<String>(
-                  value: selectedTarget,
+                  initialValue: selectedTarget,
                   isExpanded: true,
                   decoration: const InputDecoration(border: OutlineInputBorder()),
                   items: const [
