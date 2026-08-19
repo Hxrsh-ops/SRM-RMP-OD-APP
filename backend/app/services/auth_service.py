@@ -32,7 +32,8 @@ class AuthService:
 
         if not verify_password(password.strip(), user.hashed_password):
             user.failed_login_attempts = getattr(user, "failed_login_attempts", 0) + 1
-            if user.failed_login_attempts >= 5:
+            from ..models.enums import UserRole
+            if user.failed_login_attempts >= 5 and user.role != UserRole.MASTER_ADMIN:
                 user.is_locked = True
 
             from ..models.security_event import SecurityEvent
@@ -41,7 +42,7 @@ class AuthService:
                 severity="WARNING",
                 username=username,
                 user_id=user.id,
-                details={"attempts": user.failed_login_attempts}
+                details={"attempts": user.failed_login_attempts, "role": user.role.value if hasattr(user.role, "value") else str(user.role)}
             )
             self.user_repo.db.add(sec_event)
             self.user_repo.db.commit()
