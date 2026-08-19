@@ -10,6 +10,7 @@ class UserSession extends Equatable {
   final String? program;
   final String? yearSection;
   final String? assignedFacultyName;
+  final bool forcePasswordChange;
   final AuthToken token;
 
   const UserSession({
@@ -21,6 +22,7 @@ class UserSession extends Equatable {
     this.program,
     this.yearSection,
     this.assignedFacultyName,
+    this.forcePasswordChange = false,
     required this.token,
   });
 
@@ -34,6 +36,7 @@ class UserSession extends Equatable {
         program,
         yearSection,
         assignedFacultyName,
+        forcePasswordChange,
         token,
       ];
 }

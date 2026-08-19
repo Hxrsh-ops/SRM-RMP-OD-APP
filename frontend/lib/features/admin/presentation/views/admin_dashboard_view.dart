@@ -30,14 +30,14 @@ class AdminDashboardView extends ConsumerWidget {
       ),
       data: (m) {
         return SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Header Banner
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [Color(0xFF1A365D), Color(0xFF2B6CB0)],
@@ -53,20 +53,25 @@ class AdminDashboardView extends ConsumerWidget {
                     ),
                   ],
                 ),
-                child: Row(
+                child: Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 16,
+                  runSpacing: 12,
                   children: [
-                    Expanded(
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 600),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
                             'Executive Control Center',
-                            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
                           ),
                           const SizedBox(height: 6),
                           Text(
                             'SRM Institute of Science and Technology, Ramapuram — System Authority Dashboard',
-                            style: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.85)),
+                            style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.85)),
                           ),
                         ],
                       ),
@@ -84,20 +89,21 @@ class AdminDashboardView extends ConsumerWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
               // Metric Cards Grid
               LayoutBuilder(
                 builder: (context, constraints) {
-                  final isWide = constraints.maxWidth > 900;
-                  final crossAxisCount = isWide ? 4 : 2;
+                  final width = constraints.maxWidth;
+                  final crossAxisCount = width > 1100 ? 4 : (width > 650 ? 2 : 1);
+                  final childAspectRatio = width > 1100 ? 1.5 : (width > 650 ? 2.2 : 3.2);
                   return GridView.count(
                     crossAxisCount: crossAxisCount,
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     crossAxisSpacing: 16,
                     mainAxisSpacing: 16,
-                    childAspectRatio: 1.8,
+                    childAspectRatio: childAspectRatio,
                     children: [
                       _buildMetricCard('Total Registered Users', m.totalUsers.toString(), '${m.studentsCount} Students | ${m.facultyCount} Faculty', Icons.people_alt, Colors.blue),
                       _buildMetricCard('Total OD Requests', m.totalOdRequests.toString(), '${m.pendingRequests} Pending Approvals', Icons.assignment, Colors.indigo),
@@ -107,111 +113,140 @@ class AdminDashboardView extends ConsumerWidget {
                   );
                 },
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
-              // Operational Breakdown Row
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: Card(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      elevation: 2,
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('Request Volume & Processing Metrics', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                            const SizedBox(height: 16),
-                            _buildStatRow('Requests Submitted Today', m.todayRequests.toString(), Colors.blue),
-                            _buildStatRow('Requests This Week', m.requestsThisWeek.toString(), Colors.indigo),
-                            _buildStatRow('Requests This Month', m.requestsThisMonth.toString(), Colors.purple),
-                            _buildStatRow('Evidence Pending Requests', m.evidencePendingRequests.toString(), Colors.amber),
-                            _buildStatRow('Avg Turnaround Time', '${m.avgProcessingTimeHours} Hours', Colors.teal),
-                            const Divider(height: 32),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const Text('Most Active Department', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                                      Text(m.mostActiveDepartment, style: const TextStyle(fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
-                                    ],
-                                  ),
+              // Operational Breakdown
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final isWide = constraints.maxWidth >= 900;
+
+                  final volumeCard = Card(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 2,
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Request Volume & Processing Metrics', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 16),
+                          _buildStatRow('Requests Submitted Today', m.todayRequests.toString(), Colors.blue),
+                          _buildStatRow('Requests This Week', m.requestsThisWeek.toString(), Colors.indigo),
+                          _buildStatRow('Requests This Month', m.requestsThisMonth.toString(), Colors.purple),
+                          _buildStatRow('Evidence Pending Requests', m.evidencePendingRequests.toString(), Colors.amber),
+                          _buildStatRow('Avg Turnaround Time', '${m.avgProcessingTimeHours} Hours', Colors.teal),
+                          const Divider(height: 32),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text('Most Active Department', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                                    Text(m.mostActiveDepartment, style: const TextStyle(fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
+                                  ],
                                 ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const Text('Top Approving Faculty', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                                      Text(m.mostActiveFaculty, style: const TextStyle(fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            )
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    flex: 2,
-                    child: Card(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      elevation: 2,
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Expanded(
-                                  child: Text('Recent Audit Activity', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
-                                ),
-                                TextButton(
-                                  onPressed: () => onNavigateToModule?.call(6),
-                                  child: const Text('View All'),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            if (m.recentActivity.isEmpty)
-                              const Text('No recent logs found', style: TextStyle(color: Colors.grey))
-                            else
-                              ListView.separated(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: m.recentActivity.length > 5 ? 5 : m.recentActivity.length,
-                                separatorBuilder: (_, __) => const Divider(),
-                                itemBuilder: (context, index) {
-                                  final item = m.recentActivity[index];
-                                  return ListTile(
-                                    contentPadding: EdgeInsets.zero,
-                                    dense: true,
-                                    leading: const CircleAvatar(
-                                      radius: 14,
-                                      child: Icon(Icons.history, size: 14),
-                                    ),
-                                    title: Text(item['action'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600)),
-                                    subtitle: Text('${item['actor_name']} • ${item['resource_type']}'),
-                                  );
-                                },
                               ),
-                          ],
-                        ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text('Top Approving Faculty', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                                    Text(m.mostActiveFaculty, style: const TextStyle(fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          )
+                        ],
                       ),
                     ),
-                  ),
-                ],
+                  );
+
+                  final auditCard = Card(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 2,
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Expanded(
+                                child: Text('Recent Audit Activity', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
+                              ),
+                              TextButton(
+                                onPressed: () => onNavigateToModule?.call(6),
+                                child: const Text('View All'),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          if (m.recentActivity.isEmpty)
+                            const Text('No recent system events logged.', style: TextStyle(color: Colors.grey, fontSize: 12))
+                          else
+                            ...m.recentActivity.take(4).map((log) {
+                              final action = log['action']?.toString() ?? 'SYSTEM_EVENT';
+                              final actorName = log['actor_name']?.toString() ?? 'System';
+                              final resType = log['resource_type']?.toString() ?? 'General';
+                              final ts = log['timestamp']?.toString() ?? '';
+                              final timeStr = ts.contains('T') ? ts.split('T').last.split('.').first : ts;
+
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 8,
+                                      height: 8,
+                                      decoration: const BoxDecoration(color: Colors.blue, shape: BoxShape.circle),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(action, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13), overflow: TextOverflow.ellipsis),
+                                          Text('$actorName • $resType', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                                        ],
+                                      ),
+                                    ),
+                                    Text(
+                                      timeStr,
+                                      style: const TextStyle(fontSize: 10, color: Colors.grey),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }),
+                        ],
+                      ),
+                    ),
+                  );
+
+                  if (isWide) {
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(flex: 3, child: volumeCard),
+                        const SizedBox(width: 16),
+                        Expanded(flex: 2, child: auditCard),
+                      ],
+                    );
+                  }
+
+                  return Column(
+                    children: [
+                      volumeCard,
+                      const SizedBox(height: 16),
+                      auditCard,
+                    ],
+                  );
+                },
               ),
             ],
           ),

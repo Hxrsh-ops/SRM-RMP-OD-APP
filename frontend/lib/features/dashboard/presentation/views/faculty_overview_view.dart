@@ -34,7 +34,7 @@ class FacultyOverviewView extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             AppWelcomeHeader(
-              userName: session?.name ?? 'Dr. Karthik B',
+              userName: session?.name ?? 'Faculty Advisor',
               subtitle: 'Faculty Advisor • Class Counselor Overview',
             ),
             const SizedBox(height: AppSpacing.lg),

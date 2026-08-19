@@ -37,7 +37,7 @@ class CoordinatorOverviewView extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             AppWelcomeHeader(
-              userName: session?.name ?? 'Prof. Ramesh Kumar',
+              userName: session?.name ?? 'Department Coordinator',
               subtitle: 'Department Coordinator • Real-time Executive Overview',
             ),
             const SizedBox(height: AppSpacing.lg),

@@ -61,6 +61,7 @@ class AdminService:
                 "assigned_faculty_name": fac_name,
                 "is_active": u.is_active,
                 "is_locked": getattr(u, "is_locked", False),
+                "force_password_change": getattr(u, "force_password_change", False),
                 "failed_login_attempts": getattr(u, "failed_login_attempts", 0),
                 "last_login_at": getattr(u, "last_login_at", None),
                 "created_at": u.created_at,
@@ -87,6 +88,7 @@ class AdminService:
             assigned_faculty_id=data.assigned_faculty_id,
             is_active=True,
             is_locked=False,
+            force_password_change=True,
             failed_login_attempts=0
         )
         self.db.add(user)
@@ -107,8 +109,18 @@ class AdminService:
             if self.user_repo.get_by_email(data.email):
                 raise BadRequestException(f"Email '{data.email}' is already taken.")
             user.email = data.email
-        if data.role is not None:
+        if data.role is not None and user.role == UserRole.MASTER_ADMIN and data.role != UserRole.MASTER_ADMIN:
+            active_admin_count = self.db.query(User).filter(
+                User.role == UserRole.MASTER_ADMIN,
+                User.is_active == True,
+                User.is_deleted == False
+            ).count()
+            if active_admin_count <= 1:
+                raise BadRequestException("Cannot downgrade role of the sole active MASTER_ADMIN account.")
             user.role = data.role
+        elif data.role is not None:
+            user.role = data.role
+
         if data.department_id is not None:
             user.department_id = data.department_id
         if data.program is not None:
@@ -128,6 +140,15 @@ class AdminService:
         user = self.user_repo.get_by_id(user_id)
         if not user:
             raise ResourceNotFoundException(f"User with ID {user_id} not found.")
+
+        if (is_active is False or is_locked is True) and user.role == UserRole.MASTER_ADMIN:
+            active_admin_count = self.db.query(User).filter(
+                User.role == UserRole.MASTER_ADMIN,
+                User.is_active == True,
+                User.is_deleted == False
+            ).count()
+            if active_admin_count <= 1:
+                raise BadRequestException("Cannot deactivate or lock the sole active MASTER_ADMIN account.")
 
         if is_active is not None:
             user.is_active = is_active
@@ -151,9 +172,30 @@ class AdminService:
         user.hashed_password = get_password_hash(new_password)
         user.is_locked = False
         user.failed_login_attempts = 0
+        user.force_password_change = False
         self.db.commit()
+        self.db.refresh(user)
 
         self._log_audit(actor_id, "RESET_PASSWORD", "users", str(user.id), {"message": "Password reset by admin"})
+
+    def delete_user(self, user_id: uuid.UUID, actor_id: uuid.UUID) -> None:
+        user = self.user_repo.get_by_id(user_id)
+        if not user:
+            raise ResourceNotFoundException(f"User with ID {user_id} not found.")
+
+        if user.role == UserRole.MASTER_ADMIN:
+            active_admin_count = self.db.query(User).filter(
+                User.role == UserRole.MASTER_ADMIN,
+                User.is_active == True,
+                User.is_deleted == False
+            ).count()
+            if active_admin_count <= 1:
+                raise BadRequestException("Cannot delete the sole active MASTER_ADMIN account.")
+
+        user.is_deleted = True
+        user.is_active = False
+        self.db.commit()
+        self._log_audit(actor_id, "DELETE_USER", "users", str(user.id), {"message": "User deleted by admin"})
 
     def bulk_user_action(self, action_data: BulkUserActionSchema, actor_id: uuid.UUID) -> int:
         count = 0
@@ -161,6 +203,15 @@ class AdminService:
             user = self.user_repo.get_by_id(uid)
             if not user:
                 continue
+
+            if user.role == UserRole.MASTER_ADMIN and action_data.action in ["deactivate", "delete"]:
+                active_admin_count = self.db.query(User).filter(
+                    User.role == UserRole.MASTER_ADMIN,
+                    User.is_active == True,
+                    User.is_deleted == False
+                ).count()
+                if active_admin_count <= 1:
+                    continue
 
             if action_data.action == "deactivate":
                 user.is_active = False
@@ -193,11 +244,16 @@ class AdminService:
         dept = Department(
             name=data.name,
             code=data.code,
-            coordinator_id=data.coordinator_id
         )
         self.db.add(dept)
         self.db.commit()
         self.db.refresh(dept)
+
+        if data.coordinator_id:
+            coord = self.user_repo.get_by_id(data.coordinator_id)
+            if coord:
+                coord.department_id = dept.id
+                self.db.commit()
 
         self._log_audit(actor_id, "CREATE_DEPARTMENT", "departments", str(dept.id), {"code": dept.code, "name": dept.name})
         return dept
@@ -212,7 +268,9 @@ class AdminService:
         if data.code is not None:
             dept.code = data.code
         if data.coordinator_id is not None:
-            dept.coordinator_id = data.coordinator_id
+            coord = self.user_repo.get_by_id(data.coordinator_id)
+            if coord:
+                coord.department_id = dept.id
 
         self.db.commit()
         self.db.refresh(dept)
@@ -346,3 +404,106 @@ class AdminService:
         )
         self.db.add(log)
         self.db.commit()
+
+    # -------------------------------------------------------------------------
+    # 7. Analytics & PDF Report Service Methods
+    # -------------------------------------------------------------------------
+    def get_analytics_summary(self) -> Dict[str, Any]:
+        return self.admin_repo.get_analytics_summary()
+
+    def generate_executive_pdf_report(self) -> bytes:
+        metrics = self.get_dashboard_metrics()
+        depts = self.get_departments()
+        now_str = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+
+        pdf_lines = [
+            "%PDF-1.4",
+            "1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj",
+            "2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj",
+            "3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >> endobj",
+            "5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj",
+        ]
+        
+        content_stream = f"BT /F1 18 Tf 50 740 Td (SRM RMP OD PLATFORM - EXECUTIVE REPORT) Tj ET\n"
+        content_stream += f"BT /F1 10 Tf 50 720 Td (Generated: {now_str}) Tj ET\n"
+        content_stream += f"BT /F1 12 Tf 50 680 Td (INSTITUTIONAL METRICS SUMMARY:) Tj ET\n"
+        content_stream += f"BT /F1 10 Tf 60 660 Td (- Total System Users: {metrics['total_users']}) Tj ET\n"
+        content_stream += f"BT /F1 10 Tf 60 645 Td (- Total On-Duty Requests: {metrics['total_od_requests']}) Tj ET\n"
+        content_stream += f"BT /F1 10 Tf 60 630 Td (- Completed Requests: {metrics['completed_requests']}) Tj ET\n"
+        content_stream += f"BT /F1 10 Tf 60 615 Td (- System Approval Rate: {metrics['approval_rate']}%) Tj ET\n"
+        content_stream += f"BT /F1 10 Tf 60 600 Td (- Storage Usage: {metrics['storage_usage_mb']} MB) Tj ET\n"
+        
+        content_stream += f"BT /F1 12 Tf 50 560 Td (DEPARTMENTAL BREAKDOWN:) Tj ET\n"
+        y = 540
+        for d in depts:
+            content_stream += f"BT /F1 10 Tf 60 {y} Td ({d['name']} ({d['code']}): {d['total_od_requests']} Reqs, {d['approval_rate']}% Approved) Tj ET\n"
+            y -= 15
+
+        content_bytes = content_stream.encode("utf-8")
+        stream_len = len(content_bytes)
+
+        pdf_lines.append(f"4 0 obj << /Length {stream_len} >> stream\n{content_stream}endstream\nendobj")
+        pdf_lines.append("xref\n0 6\n0000000000 65535 f \n0000000009 00000 n \n0000000058 00000 n \n0000000115 00000 n \n0000000300 00000 n \n0000000230 00000 n \ntrailer << /Size 6 /Root 1 0 R >>\nstartxref\n400\n%%EOF")
+
+        return "\n".join(pdf_lines).encode("utf-8")
+
+    # -------------------------------------------------------------------------
+    # 8. Student-Faculty Assignment Methods
+    # -------------------------------------------------------------------------
+    def get_available_faculty_for_student(self, student_id: uuid.UUID) -> List[User]:
+        student = self.user_repo.get_by_id(student_id)
+        if not student:
+            raise ResourceNotFoundException(f"Student with ID {student_id} not found.")
+
+        q = self.db.query(User).filter(
+            User.role == UserRole.FACULTY_ADVISOR,
+            User.is_active == True,
+            User.is_deleted == False
+        )
+        if student.department_id:
+            q = q.filter(User.department_id == student.department_id)
+
+        return q.order_by(User.full_name).all()
+
+    def assign_faculty_to_student(self, student_id: uuid.UUID, faculty_id: uuid.UUID, actor_id: uuid.UUID) -> User:
+        student = self.user_repo.get_by_id(student_id)
+        if not student or student.role != UserRole.STUDENT:
+            raise BadRequestException(f"Invalid student ID '{student_id}'.")
+
+        faculty = self.user_repo.get_by_id(faculty_id)
+        if not faculty or faculty.role != UserRole.FACULTY_ADVISOR or not faculty.is_active or faculty.is_deleted:
+            raise BadRequestException(f"Invalid or inactive Faculty Advisor ID '{faculty_id}'.")
+
+        if student.department_id and faculty.department_id and student.department_id != faculty.department_id:
+            raise BadRequestException("Student and Faculty Advisor must belong to the same department.")
+
+        student.assigned_faculty_id = faculty.id
+        self.db.commit()
+        self.db.refresh(student)
+
+        self._log_audit(actor_id, "ASSIGN_FACULTY_ADVISOR", "users", str(student.id), {
+            "student_id": str(student.id),
+            "faculty_id": str(faculty.id),
+            "faculty_name": faculty.full_name
+        })
+        return student
+
+    def unassign_faculty_from_student(self, student_id: uuid.UUID, actor_id: uuid.UUID) -> User:
+        student = self.user_repo.get_by_id(student_id)
+        if not student:
+            raise ResourceNotFoundException(f"Student with ID {student_id} not found.")
+
+        student.assigned_faculty_id = None
+        self.db.commit()
+        self.db.refresh(student)
+
+        self._log_audit(actor_id, "UNASSIGN_FACULTY_ADVISOR", "users", str(student.id), {
+            "student_id": str(student.id)
+        })
+        return student
+
+    def get_students_for_faculty(self, faculty_id: uuid.UUID) -> List[User]:
+        return self.db.query(User).filter(
+            User.assigned_faculty_id == faculty_id,
+            User.is_deleted == False
+        ).order_by(User.full_name).all()

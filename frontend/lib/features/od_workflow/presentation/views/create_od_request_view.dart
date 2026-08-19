@@ -194,8 +194,8 @@ class _CreateOdRequestViewState extends ConsumerState<CreateOdRequestView> {
 
     final session = ref.read(authControllerProvider).session;
     final studentId = session?.userId ?? '';
-    final studentName = session?.name ?? 'K.M. Harshanth';
-    final regNo = session?.username ?? 'RA2511026020400';
+    final studentName = session?.name ?? '';
+    final regNo = session?.username ?? '';
 
     final success = await ref.read(workflowControllerProvider.notifier).submitRequest(
           studentId: studentId,
@@ -294,32 +294,45 @@ class _CreateOdRequestViewState extends ConsumerState<CreateOdRequestView> {
                   ),
                   const SizedBox(height: AppSpacing.md),
 
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _venueController,
-                          decoration: const InputDecoration(
-                            labelText: 'Venue / Location *',
-                            hintText: 'e.g. Anna University Campus',
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: (val) => val == null || val.trim().isEmpty ? 'Please enter venue' : null,
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isWide = constraints.maxWidth > 550;
+                      final venueField = TextFormField(
+                        controller: _venueController,
+                        decoration: const InputDecoration(
+                          labelText: 'Venue / Location *',
+                          hintText: 'e.g. Anna University Campus',
+                          border: OutlineInputBorder(),
                         ),
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: TextFormField(
-                          controller: _organizerController,
-                          decoration: const InputDecoration(
-                            labelText: 'Organizing Authority *',
-                            hintText: 'e.g. Department of CSE',
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: (val) => val == null || val.trim().isEmpty ? 'Please enter organizer' : null,
+                        validator: (val) => val == null || val.trim().isEmpty ? 'Please enter venue' : null,
+                      );
+                      final organizerField = TextFormField(
+                        controller: _organizerController,
+                        decoration: const InputDecoration(
+                          labelText: 'Organizing Authority *',
+                          hintText: 'e.g. Department of CSE',
+                          border: OutlineInputBorder(),
                         ),
-                      ),
-                    ],
+                        validator: (val) => val == null || val.trim().isEmpty ? 'Please enter organizer' : null,
+                      );
+
+                      if (isWide) {
+                        return Row(
+                          children: [
+                            Expanded(child: venueField),
+                            const SizedBox(width: AppSpacing.md),
+                            Expanded(child: organizerField),
+                          ],
+                        );
+                      }
+                      return Column(
+                        children: [
+                          venueField,
+                          const SizedBox(height: AppSpacing.md),
+                          organizerField,
+                        ],
+                      );
+                    },
                   ),
                 ],
               ),
@@ -333,42 +346,55 @@ class _CreateOdRequestViewState extends ConsumerState<CreateOdRequestView> {
                 children: [
                   const Text('On Duty Dates & Duration', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.primaryBlue)),
                   const SizedBox(height: AppSpacing.md),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: InkWell(
-                          onTap: () => _selectDate(context, true),
-                          child: InputDecorator(
-                            decoration: const InputDecoration(
-                              labelText: 'Start Date *',
-                              border: OutlineInputBorder(),
-                              suffixIcon: Icon(Icons.calendar_today_rounded, size: 18),
-                            ),
-                            child: Text(
-                              _startDate != null ? _startDate.toString().split(' ')[0] : 'Select Start Date',
-                              style: TextStyle(color: _startDate != null ? Colors.black : AppColors.textSecondary),
-                            ),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isWide = constraints.maxWidth > 500;
+                      final startDateField = InkWell(
+                        onTap: () => _selectDate(context, true),
+                        child: InputDecorator(
+                          decoration: const InputDecoration(
+                            labelText: 'Start Date *',
+                            border: OutlineInputBorder(),
+                            suffixIcon: Icon(Icons.calendar_today_rounded, size: 18),
+                          ),
+                          child: Text(
+                            _startDate != null ? _startDate.toString().split(' ')[0] : 'Select Start Date',
+                            style: TextStyle(color: _startDate != null ? Colors.black : AppColors.textSecondary),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: InkWell(
-                          onTap: () => _selectDate(context, false),
-                          child: InputDecorator(
-                            decoration: const InputDecoration(
-                              labelText: 'End Date *',
-                              border: OutlineInputBorder(),
-                              suffixIcon: Icon(Icons.calendar_today_rounded, size: 18),
-                            ),
-                            child: Text(
-                              _endDate != null ? _endDate.toString().split(' ')[0] : 'Select End Date',
-                              style: TextStyle(color: _endDate != null ? Colors.black : AppColors.textSecondary),
-                            ),
+                      );
+                      final endDateField = InkWell(
+                        onTap: () => _selectDate(context, false),
+                        child: InputDecorator(
+                          decoration: const InputDecoration(
+                            labelText: 'End Date *',
+                            border: OutlineInputBorder(),
+                            suffixIcon: Icon(Icons.calendar_today_rounded, size: 18),
+                          ),
+                          child: Text(
+                            _endDate != null ? _endDate.toString().split(' ')[0] : 'Select End Date',
+                            style: TextStyle(color: _endDate != null ? Colors.black : AppColors.textSecondary),
                           ),
                         ),
-                      ),
-                    ],
+                      );
+
+                      if (isWide) {
+                        return Row(
+                          children: [
+                            Expanded(child: startDateField),
+                            const SizedBox(width: AppSpacing.md),
+                            Expanded(child: endDateField),
+                          ],
+                        );
+                      }
+                      return Column(
+                        children: [
+                          startDateField,
+                          const SizedBox(height: AppSpacing.md),
+                          endDateField,
+                        ],
+                      );
+                    },
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Container(
@@ -453,8 +479,11 @@ class _CreateOdRequestViewState extends ConsumerState<CreateOdRequestView> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 12,
+                    runSpacing: 8,
                     children: [
                       const Text('Supporting Documents & Certificates', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.primaryBlue)),
                       ElevatedButton.icon(

@@ -216,6 +216,38 @@ class WorkflowService:
                     request_id=request_id
                 )
 
+            # Smart Tiered Notification Routing for HOD (> 3 days, hackathon, symposium)
+            reason_lower = (req.reason or "").lower()
+            purpose_lower = (req.purpose or "").lower()
+            is_hod_worthy = req.duration_days > 3 or any(
+                keyword in reason_lower or keyword in purpose_lower
+                for keyword in ["hackathon", "symposium", "outstation", "workshop", "competition"]
+            )
+            if is_hod_worthy:
+                hod = self.user_repo.get_by_role(UserRole.HOD, department_id=dept_id)
+                if hod:
+                    self.notification_service.send_notification(
+                        recipient_id=hod.id,
+                        title=f"High-Impact OD Alert: {request_id}",
+                        message=f"{req.duration_days}-Day OD request for {req.reason} submitted by {student.full_name if student else 'Student'}.",
+                        request_id=request_id
+                    )
+
+            # Smart Tiered Notification Routing for DEAN (> 5 days, national/international, internship)
+            is_dean_worthy = req.duration_days > 5 or any(
+                keyword in reason_lower or keyword in purpose_lower
+                for keyword in ["national", "international", "conference", "internship", "sports", "inter-college"]
+            )
+            if is_dean_worthy:
+                dean = self.user_repo.get_by_role(UserRole.DEAN)
+                if dean:
+                    self.notification_service.send_notification(
+                        recipient_id=dean.id,
+                        title=f"Campus Sanction Required: {request_id}",
+                        message=f"High-profile event ({req.reason}, {req.duration_days} Days) requires institutional awareness.",
+                        request_id=request_id
+                    )
+
         return updated_req
 
     def process_coordinator_action(

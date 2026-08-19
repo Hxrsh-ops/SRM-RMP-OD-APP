@@ -23,6 +23,7 @@ class User(Base, AuditMixin, SoftDeleteMixin):
     assigned_faculty_id = Column(GUID, ForeignKey("users.id"), nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
     is_locked = Column(Boolean, default=False, nullable=False)
+    force_password_change = Column(Boolean, default=True, nullable=False)
     failed_login_attempts = Column(Integer, default=0, nullable=False)
     last_login_at = Column(DateTime(timezone=True), nullable=True)
 

@@ -11,28 +11,32 @@ class FacultyManagementView extends ConsumerWidget {
     final facultyAsync = ref.watch(adminFacultyWorkloadProvider);
 
     return Padding(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 16,
+            runSpacing: 12,
             children: [
               const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Faculty Workload & Queue Management', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                  Text('Faculty Workload & Queue Management', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                   SizedBox(height: 4),
-                  Text('Monitor approval queues, turnaround performance, and perform student reassignments', style: TextStyle(color: Colors.grey)),
+                  Text('Monitor approval queues, turnaround performance, and perform student reassignments', style: TextStyle(color: Colors.grey, fontSize: 12)),
                 ],
               ),
               IconButton(
                 icon: const Icon(Icons.refresh),
+                tooltip: 'Refresh Workload',
                 onPressed: () => ref.refresh(adminFacultyWorkloadProvider),
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           Expanded(
             child: facultyAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),

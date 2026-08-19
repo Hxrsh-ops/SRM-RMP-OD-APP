@@ -17,14 +17,10 @@ from .models.enums import UserRole
 # Initialize Logging
 setup_logging()
 
-from .services.seed_service import seed_production_ready_dataset
-
-def seed_demo_users():
-    """Seed default development accounts & production-ready demo dataset."""
-    seed_production_ready_dataset()
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Log database engine startup details
+    logger.info(f"PostgreSQL Engine Active: {engine.url.render_as_string(hide_password=True)}")
     # Ensure database tables exist (migrations handle schema updates)
     Base.metadata.create_all(bind=engine)
     yield

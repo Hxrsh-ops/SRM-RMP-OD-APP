@@ -72,8 +72,8 @@ class AdminDashboardMetrics {
       requestsThisMonth: json['requests_this_month'] ?? 0,
       approvalRate: (json['approval_rate'] ?? 0).toDouble(),
       avgProcessingTimeHours: (json['avg_processing_time_hours'] ?? 0).toDouble(),
-      mostActiveDepartment: json['most_active_department'] ?? 'CSE Department',
-      mostActiveFaculty: json['most_active_faculty'] ?? 'Dr. Karthik B',
+      mostActiveDepartment: json['most_active_department'] ?? 'N/A',
+      mostActiveFaculty: json['most_active_faculty'] ?? 'N/A',
       storageUsageMb: (json['storage_usage_mb'] ?? 0).toDouble(),
       dailyLoginCount: json['daily_login_count'] ?? 0,
       activeSessions: json['active_sessions'] ?? 0,
@@ -124,22 +124,24 @@ class AdminUser {
 
   factory AdminUser.fromJson(Map<String, dynamic> json) {
     return AdminUser(
-      id: json['id'] ?? '',
-      username: json['username'] ?? '',
-      email: json['email'] ?? '',
-      fullName: json['full_name'] ?? '',
-      role: json['role'] ?? 'STUDENT',
-      departmentId: json['department_id'],
-      departmentName: json['department_name'],
-      program: json['program'],
-      yearSection: json['year_section'],
-      assignedFacultyId: json['assigned_faculty_id'],
-      assignedFacultyName: json['assigned_faculty_name'],
-      isActive: json['is_active'] ?? true,
-      isLocked: json['is_locked'] ?? false,
-      failedLoginAttempts: json['failed_login_attempts'] ?? 0,
-      lastLoginAt: json['last_login_at'],
-      createdAt: json['created_at'],
+      id: json['id']?.toString() ?? '',
+      username: json['username']?.toString() ?? '',
+      email: json['email']?.toString() ?? '',
+      fullName: json['full_name']?.toString() ?? json['fullName']?.toString() ?? '',
+      role: json['role']?.toString() ?? 'STUDENT',
+      departmentId: json['department_id']?.toString(),
+      departmentName: json['department_name']?.toString(),
+      program: json['program']?.toString(),
+      yearSection: json['year_section']?.toString(),
+      assignedFacultyId: json['assigned_faculty_id']?.toString(),
+      assignedFacultyName: json['assigned_faculty_name']?.toString(),
+      isActive: json['is_active'] == null ? true : (json['is_active'] == true || json['is_active'] == 'true'),
+      isLocked: json['is_locked'] == true || json['is_locked'] == 'true',
+      failedLoginAttempts: json['failed_login_attempts'] is int 
+          ? json['failed_login_attempts'] as int 
+          : (int.tryParse(json['failed_login_attempts']?.toString() ?? '') ?? 0),
+      lastLoginAt: json['last_login_at']?.toString(),
+      createdAt: json['created_at']?.toString(),
     );
   }
 }

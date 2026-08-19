@@ -18,6 +18,7 @@ class UserCreate(UserBase):
 class UserResponse(UserBase):
     id: UUID
     is_active: bool
+    force_password_change: bool = False
     assigned_faculty_id: Optional[UUID] = None
     assigned_faculty_name: Optional[str] = None
 
@@ -27,3 +28,7 @@ class LoginRequest(BaseModel):
     username: str
     password: str
     remember_me: bool = True
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str

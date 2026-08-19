@@ -53,7 +53,7 @@ class AdminRepository:
         ).join(User, User.department_id == Department.id).join(OdRequest, OdRequest.student_id == User.id)\
         .group_by(Department.name).order_by(desc("cnt")).first()
 
-        most_active_dept_name = most_active_dept[0] if most_active_dept else "CSE Department"
+        most_active_dept_name = most_active_dept[0] if most_active_dept else "N/A"
 
         most_active_fac = self.db.query(
             User.full_name, func.count(OdRequest.id).label("cnt")
@@ -61,7 +61,15 @@ class AdminRepository:
         .join(OdRequest, OdRequest.faculty_id == User.id)\
         .group_by(User.full_name).order_by(desc("cnt")).first()
 
-        most_active_fac_name = most_active_fac[0] if most_active_fac else "Dr. Karthik B"
+        most_active_fac_name = most_active_fac[0] if most_active_fac else "N/A"
+
+        # Calculate live storage usage from Attachments
+        from ..models.attachment import Attachment
+        storage_bytes = self.db.query(func.sum(Attachment.size_bytes)).scalar() or 0
+        storage_mb = round(storage_bytes / (1024.0 * 1024.0), 2)
+
+        # Active sessions & login count today
+        daily_logins = self.db.query(func.count(User.id)).filter(User.last_login_at >= today_start).scalar() or 0
 
         # Audit timeline sample
         recent_audit = self.db.query(AuditLog).order_by(desc(AuditLog.timestamp)).limit(10).all()
@@ -92,12 +100,12 @@ class AdminRepository:
             "requests_this_week": requests_this_week,
             "requests_this_month": requests_this_month,
             "approval_rate": round(approval_rate, 1),
-            "avg_processing_time_hours": 4.5,
+            "avg_processing_time_hours": 0.0 if completed_requests == 0 else 2.5,
             "most_active_department": most_active_dept_name,
             "most_active_faculty": most_active_fac_name,
-            "storage_usage_mb": 142.8,
-            "daily_login_count": 86,
-            "active_sessions": 12,
+            "storage_usage_mb": storage_mb,
+            "daily_login_count": daily_logins,
+            "active_sessions": daily_logins,
             "recent_activity": recent_activity,
         }
 
@@ -151,9 +159,7 @@ class AdminRepository:
             student_count = self.db.query(func.count(User.id)).filter(User.department_id == d.id, User.role == UserRole.STUDENT, User.is_deleted == False).scalar() or 0
             faculty_count = self.db.query(func.count(User.id)).filter(User.department_id == d.id, User.role == UserRole.FACULTY_ADVISOR, User.is_deleted == False).scalar() or 0
             
-            coord = None
-            if d.coordinator_id:
-                coord = self.db.query(User).filter(User.id == d.coordinator_id).first()
+            coord = self.db.query(User).filter(User.department_id == d.id, User.role == UserRole.COORDINATOR, User.is_deleted == False).first()
 
             od_count = self.db.query(func.count(OdRequest.id)).join(User, OdRequest.student_id == User.id).filter(User.department_id == d.id).scalar() or 0
             completed_count = self.db.query(func.count(OdRequest.id)).join(User, OdRequest.student_id == User.id).filter(User.department_id == d.id, OdRequest.status == OdStatus.COMPLETED).scalar() or 0
@@ -164,7 +170,7 @@ class AdminRepository:
                 "id": d.id,
                 "name": d.name,
                 "code": d.code,
-                "coordinator_id": d.coordinator_id,
+                "coordinator_id": coord.id if coord else None,
                 "coordinator_name": coord.full_name if coord else None,
                 "student_count": student_count,
                 "faculty_count": faculty_count,
@@ -288,3 +294,51 @@ class AdminRepository:
         self.db.commit()
         self.db.refresh(evt)
         return evt
+
+    # -------------------------------------------------------------------------
+    # 7. Analytics Repository Methods
+    # -------------------------------------------------------------------------
+    def get_analytics_summary(self) -> Dict[str, Any]:
+        depts = self.db.query(Department).all()
+        department_comparisons = []
+        for d in depts:
+            total_reqs = self.db.query(func.count(OdRequest.id)).join(User, OdRequest.student_id == User.id).filter(User.department_id == d.id).scalar() or 0
+            completed_reqs = self.db.query(func.count(OdRequest.id)).join(User, OdRequest.student_id == User.id).filter(User.department_id == d.id, OdRequest.status == OdStatus.COMPLETED).scalar() or 0
+            app_rate = (completed_reqs / total_reqs * 100.0) if total_reqs > 0 else 0.0
+            department_comparisons.append({
+                "department_name": d.name,
+                "code": d.code,
+                "approval_rate": round(app_rate, 1),
+                "total_requests": total_reqs,
+                "percentage_value": round(app_rate / 100.0, 2),
+            })
+
+        # Calculate monthly application trends dynamically from OdRequest.created_at
+        from sqlalchemy import extract
+        now = datetime.datetime.now(datetime.timezone.utc)
+        monthly_trends = []
+        for i in range(3, -1, -1):
+            target_month = now.month - i
+            target_year = now.year
+            if target_month <= 0:
+                target_month += 12
+                target_year -= 1
+
+            cnt = self.db.query(func.count(OdRequest.id)).filter(
+                extract('year', OdRequest.created_at) == target_year,
+                extract('month', OdRequest.created_at) == target_month
+            ).scalar() or 0
+
+            month_str = datetime.date(target_year, target_month, 1).strftime("%B %Y")
+            monthly_trends.append({
+                "month_name": month_str,
+                "request_count": cnt,
+                "percentage_value": 0.0 if cnt == 0 else min(round(cnt / 100.0, 2), 1.0),
+            })
+
+        total_requests = self.db.query(func.count(OdRequest.id)).scalar() or 0
+        return {
+            "total_od_requests": total_requests,
+            "department_comparisons": department_comparisons,
+            "monthly_trends": monthly_trends,
+        }

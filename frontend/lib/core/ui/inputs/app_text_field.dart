@@ -15,6 +15,7 @@ class AppTextField extends StatelessWidget {
   final bool enabled;
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
+  final ValueChanged<String>? onFieldSubmitted;
   final FocusNode? focusNode;
   final bool autofocus;
 
@@ -33,6 +34,7 @@ class AppTextField extends StatelessWidget {
     this.enabled = true,
     this.keyboardType,
     this.textInputAction,
+    this.onFieldSubmitted,
     this.focusNode,
     this.autofocus = false,
   });
@@ -51,6 +53,7 @@ class AppTextField extends StatelessWidget {
         controller: controller,
         onChanged: onChanged,
         validator: validator,
+        onFieldSubmitted: onFieldSubmitted,
         readOnly: readOnly,
         enabled: enabled,
         keyboardType: keyboardType,

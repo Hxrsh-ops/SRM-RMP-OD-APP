@@ -1,9 +1,11 @@
 import uuid
-from typing import List, Optional
-from fastapi import APIRouter, Depends, Query, status
+from typing import List, Optional, Dict, Any
+from fastapi import APIRouter, Depends, Query, status, Response
+
 from sqlalchemy.orm import Session
 from ....core.database import get_db
 from ....models.user import User
+from ....models.department import Department
 from ....models.enums import UserRole
 from ...dependencies import require_roles, get_current_user
 from ....services.admin_service import AdminService
@@ -13,7 +15,7 @@ from ....schemas.admin import (
     DepartmentResponseSchema, DepartmentCreateSchema, DepartmentUpdateSchema,
     FacultyWorkloadSchema, FacultyTransferSchema, OrganizationSettingsSchema,
     AuditLogResponseSchema, PaginatedAuditLogsResponse, SystemHealthResponseSchema,
-    SecurityCenterSummaryResponse, AnalyticsSummarySchema
+    SecurityCenterSummaryResponse, AnalyticsSummarySchema, AssignFacultyRequestSchema
 )
 
 router = APIRouter()
@@ -51,6 +53,37 @@ def get_users(
         "total_pages": total_pages
     }
 
+def _build_admin_user_response(user: User, db: Session) -> Dict[str, Any]:
+    dept_name = None
+    if user.department_id:
+        dept = db.query(Department).filter(Department.id == user.department_id).first()
+        dept_name = dept.name if dept else None
+
+    fac_name = None
+    if user.assigned_faculty_id:
+        fac = db.query(User).filter(User.id == user.assigned_faculty_id).first()
+        fac_name = fac.full_name if fac else None
+
+    return {
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "full_name": user.full_name,
+        "role": user.role,
+        "department_id": user.department_id,
+        "department_name": dept_name,
+        "program": user.program,
+        "year_section": user.year_section,
+        "assigned_faculty_id": user.assigned_faculty_id,
+        "assigned_faculty_name": fac_name,
+        "is_active": user.is_active,
+        "is_locked": getattr(user, "is_locked", False),
+        "force_password_change": getattr(user, "force_password_change", False),
+        "failed_login_attempts": getattr(user, "failed_login_attempts", 0),
+        "last_login_at": getattr(user, "last_login_at", None),
+        "created_at": user.created_at,
+    }
+
 @router.post("/users", response_model=UserResponseSchema, status_code=status.HTTP_201_CREATED, dependencies=[Depends(admin_only)])
 def create_user(
     data: UserCreateSchema,
@@ -59,7 +92,7 @@ def create_user(
 ):
     service = AdminService(db)
     user = service.create_user(data, current_user.id)
-    return user
+    return _build_admin_user_response(user, db)
 
 @router.put("/users/{user_id}", response_model=UserResponseSchema, dependencies=[Depends(admin_only)])
 def update_user(
@@ -69,7 +102,8 @@ def update_user(
     db: Session = Depends(get_db)
 ):
     service = AdminService(db)
-    return service.update_user(user_id, data, current_user.id)
+    user = service.update_user(user_id, data, current_user.id)
+    return _build_admin_user_response(user, db)
 
 @router.patch("/users/{user_id}/status", response_model=UserResponseSchema, dependencies=[Depends(admin_only)])
 def update_user_status(
@@ -79,7 +113,8 @@ def update_user_status(
     db: Session = Depends(get_db)
 ):
     service = AdminService(db)
-    return service.set_user_status(user_id, data.is_active, data.is_locked, current_user.id)
+    user = service.set_user_status(user_id, data.is_active, data.is_locked, current_user.id)
+    return _build_admin_user_response(user, db)
 
 @router.post("/users/{user_id}/reset-password", status_code=status.HTTP_200_OK, dependencies=[Depends(admin_only)])
 def reset_user_password(
@@ -91,6 +126,16 @@ def reset_user_password(
     service = AdminService(db)
     service.reset_user_password(user_id, data.new_password, current_user.id)
     return {"message": "Password reset successfully"}
+
+@router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(admin_only)])
+def delete_user(
+    user_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    service = AdminService(db)
+    service.delete_user(user_id, current_user.id)
+    return None
 
 @router.post("/users/bulk", status_code=status.HTTP_200_OK, dependencies=[Depends(admin_only)])
 def bulk_user_action(
@@ -202,3 +247,63 @@ def get_system_monitoring(db: Session = Depends(get_db)):
 def get_security_center_summary(db: Session = Depends(get_db)):
     service = AdminService(db)
     return service.get_security_center_summary()
+
+# -----------------------------------------------------------------------------
+# 9. Analytics & PDF Export
+# -----------------------------------------------------------------------------
+@router.get("/analytics", dependencies=[Depends(admin_only)])
+def get_analytics_summary(db: Session = Depends(get_db)):
+    service = AdminService(db)
+    return service.get_analytics_summary()
+
+@router.get("/reports/pdf", dependencies=[Depends(admin_only)])
+def export_executive_pdf_report(db: Session = Depends(get_db)):
+    service = AdminService(db)
+    pdf_bytes = service.generate_executive_pdf_report()
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": "attachment; filename=Executive_OD_Report.pdf"}
+    )
+
+# -----------------------------------------------------------------------------
+# 10. Student-Faculty Assignment Routes
+# -----------------------------------------------------------------------------
+@router.get("/students/{student_id}/available-faculty", response_model=List[UserResponseSchema], dependencies=[Depends(admin_only)])
+def get_available_faculty_for_student(
+    student_id: uuid.UUID,
+    db: Session = Depends(get_db)
+):
+    service = AdminService(db)
+    faculty_list = service.get_available_faculty_for_student(student_id)
+    return [_build_admin_user_response(f, db) for f in faculty_list]
+
+@router.put("/students/{student_id}/assign-faculty", response_model=UserResponseSchema, dependencies=[Depends(admin_only)])
+def assign_faculty_to_student(
+    student_id: uuid.UUID,
+    data: AssignFacultyRequestSchema,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    service = AdminService(db)
+    student = service.assign_faculty_to_student(student_id, data.faculty_id, current_user.id)
+    return _build_admin_user_response(student, db)
+
+@router.delete("/students/{student_id}/assign-faculty", response_model=UserResponseSchema, dependencies=[Depends(admin_only)])
+def unassign_faculty_from_student(
+    student_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    service = AdminService(db)
+    student = service.unassign_faculty_from_student(student_id, current_user.id)
+    return _build_admin_user_response(student, db)
+
+@router.get("/faculty/{faculty_id}/students", response_model=List[UserResponseSchema], dependencies=[Depends(admin_only)])
+def get_students_for_faculty(
+    faculty_id: uuid.UUID,
+    db: Session = Depends(get_db)
+):
+    service = AdminService(db)
+    students = service.get_students_for_faculty(faculty_id)
+    return [_build_admin_user_response(s, db) for s in students]

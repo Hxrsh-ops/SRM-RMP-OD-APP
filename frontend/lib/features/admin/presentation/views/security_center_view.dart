@@ -11,7 +11,7 @@ class SecurityCenterView extends ConsumerWidget {
     final secAsync = ref.watch(adminSecuritySummaryProvider);
 
     return Padding(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(16),
       child: secAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, _) => Center(child: Text('Error loading security center: $err')),
@@ -22,33 +22,51 @@ class SecurityCenterView extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 16,
+                  runSpacing: 12,
                   children: [
                     const Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Security Control Center & Threat Monitoring', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                        Text('Security Control Center & Threat Monitoring', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                         SizedBox(height: 4),
-                        Text('Monitor authentication failures, locked accounts, role violations & security event timeline', style: TextStyle(color: Colors.grey)),
+                        Text('Monitor authentication failures, locked accounts, role violations & security event timeline', style: TextStyle(color: Colors.grey, fontSize: 12)),
                       ],
                     ),
-                    IconButton(icon: const Icon(Icons.refresh), onPressed: () => ref.refresh(adminSecuritySummaryProvider)),
+                    IconButton(
+                      icon: const Icon(Icons.refresh),
+                      tooltip: 'Refresh Security',
+                      onPressed: () => ref.refresh(adminSecuritySummaryProvider),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    _buildSecStatCard('Failed Logins (24h)', '${sec['failed_logins_24h']}', Icons.lock_clock, Colors.orange),
-                    const SizedBox(width: 16),
-                    _buildSecStatCard('Locked Accounts', '${sec['locked_accounts_count']}', Icons.no_accounts, Colors.red),
-                    const SizedBox(width: 16),
-                    _buildSecStatCard('Role Violations', '${sec['role_violations_24h']}', Icons.gavel, Colors.purple),
-                    const SizedBox(width: 16),
-                    _buildSecStatCard('Upload Violations', '${sec['upload_violations_24h']}', Icons.upload_file, Colors.amber),
-                  ],
+                const SizedBox(height: 20),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final width = constraints.maxWidth;
+                    final crossAxisCount = width > 900 ? 4 : (width > 550 ? 2 : 1);
+                    final aspectRatio = width > 900 ? 1.8 : (width > 550 ? 2.2 : 3.2);
+
+                    return GridView.count(
+                      crossAxisCount: crossAxisCount,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      childAspectRatio: aspectRatio,
+                      children: [
+                        _buildSecStatCard('Failed Logins (24h)', '${sec['failed_logins_24h']}', Icons.lock_clock, Colors.orange),
+                        _buildSecStatCard('Locked Accounts', '${sec['locked_accounts_count']}', Icons.no_accounts, Colors.red),
+                        _buildSecStatCard('Role Violations', '${sec['role_violations_24h']}', Icons.gavel, Colors.purple),
+                        _buildSecStatCard('Upload Violations', '${sec['upload_violations_24h']}', Icons.upload_file, Colors.amber),
+                      ],
+                    );
+                  },
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 Card(
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   child: Padding(
@@ -98,25 +116,26 @@ class SecurityCenterView extends ConsumerWidget {
   }
 
   Widget _buildSecStatCard(String title, String val, IconData icon, Color color) {
-    return Expanded(
-      child: Card(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        elevation: 2,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Icon(icon, color: color, size: 28),
-              const SizedBox(width: 12),
-              Column(
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 28),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(title, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                  Text(title, style: const TextStyle(fontSize: 11, color: Colors.grey), overflow: TextOverflow.ellipsis),
                   Text(val, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
                 ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

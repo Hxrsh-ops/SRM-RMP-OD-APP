@@ -61,6 +61,10 @@ class AdminRepository {
     await apiClient.post('/admin/users/$userId/reset-password', data: {'new_password': newPassword});
   }
 
+  Future<void> deleteUser(String userId) async {
+    await apiClient.delete('/admin/users/$userId');
+  }
+
   Future<void> bulkUserAction(List<String> userIds, String action, {String? departmentId, String? assignedFacultyId}) async {
     final payload = <String, dynamic>{
       'user_ids': userIds,
@@ -144,5 +148,34 @@ class AdminRepository {
       'upload_violations_24h': data['upload_violations_24h'] ?? 0,
       'recent_events': events,
     };
+  }
+
+  Future<Map<String, dynamic>> getAnalyticsSummary() async {
+    final response = await apiClient.get('/admin/analytics');
+    return response as Map<String, dynamic>;
+  }
+
+  Future<List<AdminUser>> getAvailableFaculty(String studentId) async {
+    final response = await apiClient.get('/admin/students/$studentId/available-faculty');
+    final list = response as List;
+    return list.map((json) => AdminUser.fromJson(json)).toList();
+  }
+
+  Future<AdminUser> assignFaculty(String studentId, String facultyId) async {
+    final response = await apiClient.put('/admin/students/$studentId/assign-faculty', data: {
+      'faculty_id': facultyId,
+    });
+    return AdminUser.fromJson(response);
+  }
+
+  Future<AdminUser> unassignFaculty(String studentId) async {
+    final response = await apiClient.delete('/admin/students/$studentId/assign-faculty');
+    return AdminUser.fromJson(response);
+  }
+
+  Future<List<AdminUser>> getAssignedStudents(String facultyId) async {
+    final response = await apiClient.get('/admin/faculty/$facultyId/students');
+    final list = response as List;
+    return list.map((json) => AdminUser.fromJson(json)).toList();
   }
 }

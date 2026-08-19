@@ -40,17 +40,21 @@ class UserQueryParams {
     int? page,
     int? limit,
     String? query,
+    bool clearQuery = false,
     String? role,
+    bool clearRole = false,
     String? departmentId,
+    bool clearDepartmentId = false,
     bool? isActive,
+    bool clearIsActive = false,
   }) {
     return UserQueryParams(
       page: page ?? this.page,
       limit: limit ?? this.limit,
-      query: query ?? this.query,
-      role: role ?? this.role,
-      departmentId: departmentId ?? this.departmentId,
-      isActive: isActive ?? this.isActive,
+      query: clearQuery ? null : (query ?? this.query),
+      role: clearRole ? null : (role ?? this.role),
+      departmentId: clearDepartmentId ? null : (departmentId ?? this.departmentId),
+      isActive: clearIsActive ? null : (isActive ?? this.isActive),
     );
   }
 }
@@ -68,6 +72,14 @@ final adminUsersProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref
     departmentId: params.departmentId,
     isActive: params.isActive,
   );
+});
+
+// -----------------------------------------------------------------------------
+// ANALYTICS CONTROLLER
+// -----------------------------------------------------------------------------
+final adminAnalyticsProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
+  final repo = ref.watch(adminRepositoryProvider);
+  return repo.getAnalyticsSummary();
 });
 
 // -----------------------------------------------------------------------------

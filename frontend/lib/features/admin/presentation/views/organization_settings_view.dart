@@ -35,7 +35,7 @@ class _OrganizationSettingsViewState extends ConsumerState<OrganizationSettingsV
     final settingsAsync = ref.watch(adminSettingsProvider);
 
     return Padding(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(16),
       child: settingsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, _) => Center(child: Text('Error loading settings: $err')),
@@ -46,26 +46,29 @@ class _OrganizationSettingsViewState extends ConsumerState<OrganizationSettingsV
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 16,
+                  runSpacing: 12,
                   children: [
                     const Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Organization Control & System Settings', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                        Text('Organization Control & System Settings', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                         SizedBox(height: 4),
-                        Text('Configure platform policies, upload rules, JWT session limits, branding, and maintenance mode', style: TextStyle(color: Colors.grey)),
+                        Text('Configure platform policies, upload rules, JWT session limits, branding, and maintenance mode', style: TextStyle(color: Colors.grey, fontSize: 12)),
                       ],
                     ),
                     ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1A365D), foregroundColor: Colors.white),
-                      icon: const Icon(Icons.save),
+                      icon: const Icon(Icons.save, size: 18),
                       label: const Text('Save Settings'),
                       onPressed: _saveSettings,
                     ),
                   ],
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
                 // Settings Cards Grid
                 Card(
@@ -77,22 +80,34 @@ class _OrganizationSettingsViewState extends ConsumerState<OrganizationSettingsV
                       children: [
                         const Text('Academic & Workflow Policy', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                         const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: _acadYearCtrl,
-                                decoration: const InputDecoration(labelText: 'Academic Year', border: OutlineInputBorder()),
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: TextField(
-                                controller: _maxSizeCtrl,
-                                decoration: const InputDecoration(labelText: 'Max Attachment File Size (MB)', border: OutlineInputBorder()),
-                              ),
-                            ),
-                          ],
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final acadField = TextField(
+                              controller: _acadYearCtrl,
+                              decoration: const InputDecoration(labelText: 'Academic Year', border: OutlineInputBorder()),
+                            );
+                            final sizeField = TextField(
+                              controller: _maxSizeCtrl,
+                              decoration: const InputDecoration(labelText: 'Max Attachment File Size (MB)', border: OutlineInputBorder()),
+                            );
+
+                            if (constraints.maxWidth >= 600) {
+                              return Row(
+                                children: [
+                                  Expanded(child: acadField),
+                                  const SizedBox(width: 16),
+                                  Expanded(child: sizeField),
+                                ],
+                              );
+                            }
+                            return Column(
+                              children: [
+                                acadField,
+                                const SizedBox(height: 16),
+                                sizeField,
+                              ],
+                            );
+                          },
                         ),
                         const SizedBox(height: 16),
                         SwitchListTile(

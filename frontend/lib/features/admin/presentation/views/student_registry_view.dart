@@ -11,23 +11,26 @@ class StudentRegistryView extends ConsumerWidget {
     final repo = ref.watch(adminRepositoryProvider);
 
     return Padding(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 16,
+            runSpacing: 12,
             children: [
               const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Centralized Student Registry', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                  Text('Centralized Student Registry', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                   SizedBox(height: 4),
-                  Text('View academic student profiles, OD history timeline, attachments & faculty assignments', style: TextStyle(color: Colors.grey)),
+                  Text('View academic student profiles, OD history timeline, attachments & faculty assignments', style: TextStyle(color: Colors.grey, fontSize: 12)),
                 ],
               ),
               OutlinedButton.icon(
-                icon: const Icon(Icons.download_sharp),
+                icon: const Icon(Icons.download_sharp, size: 18),
                 label: const Text('Export CSV Registry'),
                 onPressed: () {
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Student CSV Registry Export initiated')));
@@ -35,7 +38,7 @@ class StudentRegistryView extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           Expanded(
             child: FutureBuilder<Map<String, dynamic>>(
               future: repo.getUsers(role: 'STUDENT', limit: 50),
@@ -73,10 +76,10 @@ class StudentRegistryView extends ConsumerWidget {
                                   Text('${s.username} • ${s.email}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
                                 ],
                               )),
-                              DataCell(Text(s.departmentName ?? 'CSE')),
-                              DataCell(Text(s.program ?? 'B.Tech CSE')),
-                              DataCell(Text(s.yearSection ?? '2nd Year')),
-                              DataCell(Text(s.assignedFacultyName ?? 'Dr. Karthik B')),
+                              DataCell(Text(s.departmentName ?? '—')),
+                              DataCell(Text(s.program ?? '—')),
+                              DataCell(Text(s.yearSection ?? '—')),
+                              DataCell(Text(s.assignedFacultyName ?? 'Unassigned')),
                               DataCell(IconButton(
                                 icon: const Icon(Icons.history_edu, color: Colors.blue),
                                 onPressed: () {
@@ -85,28 +88,18 @@ class StudentRegistryView extends ConsumerWidget {
                                     isScrollControlled: true,
                                     builder: (_) => Container(
                                       padding: const EdgeInsets.all(24),
-                                      height: 500,
+                                      height: 400,
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text('OD Application History for ${s.fullName}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                                           const SizedBox(height: 12),
-                                          const Text('Register Number: RA2511026020400 | Department: CSE'),
+                                          Text('Register Number: ${s.username} | Department: ${s.departmentName ?? "SRM IST"}'),
                                           const Divider(height: 24),
-                                          const ListTile(
-                                            leading: Icon(Icons.check_circle, color: Colors.green),
-                                            title: Text('National AI Hackathon 2026'),
-                                            subtitle: Text('Status: COMPLETED • Duration: 3 Days'),
-                                          ),
-                                          const ListTile(
-                                            leading: Icon(Icons.check_circle, color: Colors.green),
-                                            title: Text('Smart India Hackathon Finals'),
-                                            subtitle: Text('Status: COMPLETED • Duration: 3 Days'),
-                                          ),
-                                          const ListTile(
-                                            leading: Icon(Icons.hourglass_top, color: Colors.orange),
-                                            title: Text('State Robotics Championship'),
-                                            subtitle: Text('Status: PENDING_FACULTY • Duration: 2 Days'),
+                                          Expanded(
+                                            child: Center(
+                                              child: Text('Select or search OD requests for ${s.fullName} in Central OD Management.'),
+                                            ),
                                           ),
                                         ],
                                       ),

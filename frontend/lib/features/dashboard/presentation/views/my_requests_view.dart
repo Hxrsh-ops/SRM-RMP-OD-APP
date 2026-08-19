@@ -110,36 +110,43 @@ class _MyRequestsViewState extends ConsumerState<MyRequestsView> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    flex: 6,
+                    flex: _selectedRequest != null ? 6 : 10,
                     child: AppCard(
                       padding: EdgeInsets.zero,
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: DataTable(
-                          showCheckboxColumn: false,
-                          headingRowColor: WidgetStateProperty.all(AppColors.surfaceVariant),
-                          columns: const [
-                            DataColumn(label: Text('Request ID', style: TextStyle(fontWeight: FontWeight.bold))),
-                            DataColumn(label: Text('Event / Reason', style: TextStyle(fontWeight: FontWeight.bold))),
-                            DataColumn(label: Text('Dates', style: TextStyle(fontWeight: FontWeight.bold))),
-                            DataColumn(label: Text('Duration', style: TextStyle(fontWeight: FontWeight.bold))),
-                            DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
-                          ],
-                          rows: requests.map((req) {
-                            final isSelected = _selectedRequest?.id == req.id;
-                            return DataRow(
-                              selected: isSelected,
-                              onSelectChanged: (_) => setState(() => _selectedRequest = req),
-                              cells: [
-                                DataCell(Text(req.id, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primaryBlue))),
-                                DataCell(Text(req.reason)),
-                                DataCell(Text('${req.startDate.toString().split(' ')[0]} to ${req.endDate.toString().split(' ')[0]}')),
-                                DataCell(Text('${req.durationDays} Days')),
-                                DataCell(AppStatusChip(label: req.status.displayName, statusType: req.status.statusType)),
-                              ],
-                            );
-                          }).toList(),
-                        ),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          return SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                              child: DataTable(
+                                showCheckboxColumn: false,
+                                headingRowColor: WidgetStateProperty.all(AppColors.surfaceVariant),
+                                columns: const [
+                                  DataColumn(label: Text('Request ID', style: TextStyle(fontWeight: FontWeight.bold))),
+                                  DataColumn(label: Text('Event / Reason', style: TextStyle(fontWeight: FontWeight.bold))),
+                                  DataColumn(label: Text('Dates', style: TextStyle(fontWeight: FontWeight.bold))),
+                                  DataColumn(label: Text('Duration', style: TextStyle(fontWeight: FontWeight.bold))),
+                                  DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
+                                ],
+                                rows: requests.map((req) {
+                                  final isSelected = _selectedRequest?.id == req.id;
+                                  return DataRow(
+                                    selected: isSelected,
+                                    onSelectChanged: (_) => setState(() => _selectedRequest = req),
+                                    cells: [
+                                      DataCell(Text(req.id, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primaryBlue))),
+                                      DataCell(Text(req.reason)),
+                                      DataCell(Text('${req.startDate.toString().split(' ')[0]} to ${req.endDate.toString().split(' ')[0]}')),
+                                      DataCell(Text('${req.durationDays} Days')),
+                                      DataCell(AppStatusChip(label: req.status.displayName, statusType: req.status.statusType)),
+                                    ],
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ),

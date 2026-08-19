@@ -54,6 +54,7 @@ class UserResponseSchema(BaseModel):
     assigned_faculty_name: Optional[str] = None
     is_active: bool
     is_locked: bool
+    force_password_change: bool = False
     failed_login_attempts: int
     last_login_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
@@ -233,3 +234,6 @@ class AnalyticsSummarySchema(BaseModel):
     department_comparisons: List[Dict[str, Any]]
     faculty_performance: List[Dict[str, Any]]
     status_distribution: Dict[str, int]
+
+class AssignFacultyRequestSchema(BaseModel):
+    faculty_id: UUID

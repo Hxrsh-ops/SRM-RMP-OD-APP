@@ -181,7 +181,7 @@ class _HomeDashboardView extends ConsumerWidget {
 
     if (role == 'FACULTY_ADVISOR') {
       return FacultyOverviewView(onNavigateToQueue: onNavigateToQueue);
-    } else if (role == 'COORDINATOR') {
+    } else if (role == 'COORDINATOR' || role == 'HOD' || role == 'DEAN') {
       return CoordinatorOverviewView(onNavigateToQueue: onNavigateToQueue);
     }
 
@@ -201,7 +201,7 @@ class _AllRequestsView extends ConsumerWidget {
 
     if (role == 'FACULTY_ADVISOR') {
       return const FacultyDashboardView();
-    } else if (role == 'COORDINATOR') {
+    } else if (role == 'COORDINATOR' || role == 'HOD' || role == 'DEAN') {
       return const CoordinatorDashboardView();
     }
 

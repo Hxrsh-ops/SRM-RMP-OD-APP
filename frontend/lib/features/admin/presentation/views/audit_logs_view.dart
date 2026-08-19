@@ -12,23 +12,26 @@ class AuditLogsView extends ConsumerWidget {
     final currentPage = ref.watch(auditLogPageProvider);
 
     return Padding(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 16,
+            runSpacing: 12,
             children: [
               const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Immutable System Audit Trail', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                  Text('Immutable System Audit Trail', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                   SizedBox(height: 4),
-                  Text('Comprehensive immutable logs of every user action, role change, and status transition', style: TextStyle(color: Colors.grey)),
+                  Text('Comprehensive immutable logs of every user action, role change, and status transition', style: TextStyle(color: Colors.grey, fontSize: 12)),
                 ],
               ),
               OutlinedButton.icon(
-                icon: const Icon(Icons.file_download),
+                icon: const Icon(Icons.file_download, size: 18),
                 label: const Text('Export Audit CSV'),
                 onPressed: () {
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Audit Logs CSV Export started')));
@@ -36,7 +39,7 @@ class AuditLogsView extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           Expanded(
             child: auditAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
