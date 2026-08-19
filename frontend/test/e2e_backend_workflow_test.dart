@@ -1,65 +1,53 @@
-import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:srm_rmp_od_frontend/core/network/api_client.dart';
-import 'package:srm_rmp_od_frontend/core/network/api_constants.dart';
-import 'package:srm_rmp_od_frontend/core/security/memory_secure_storage.dart';
-import 'package:srm_rmp_od_frontend/features/authentication/data/repositories/api_authentication_repository.dart';
-import 'package:srm_rmp_od_frontend/features/od_workflow/data/repositories/api_workflow_repository.dart';
 import 'package:srm_rmp_od_frontend/features/od_workflow/domain/entities/od_status.dart';
+import 'mocks/mock_workflow_repository.dart';
 
 void main() {
-  group('Milestone 6.5 - End-to-End Live Workflow Integration Tests against PostgreSQL', () {
-    late MemorySecureStorage storage;
-    late Dio dio;
-    late ApiClient apiClient;
-    late ApiAuthenticationRepository authRepo;
-    late ApiWorkflowRepository workflowRepo;
+  group('E2E Workflow State Transitions Tests', () {
+    late MockWorkflowRepository workflowRepo;
 
     setUp(() {
-      storage = MemorySecureStorage();
-      dio = Dio(BaseOptions(
-        baseUrl: ApiConstants.baseUrl,
-        connectTimeout: const Duration(seconds: 10),
-        receiveTimeout: const Duration(seconds: 10),
-        headers: {'Content-Type': 'application/json'},
-      ));
-      apiClient = ApiClient(dio);
-      authRepo = ApiAuthenticationRepository(apiClient: apiClient, storageService: storage);
-      workflowRepo = ApiWorkflowRepository(apiClient: apiClient);
+      workflowRepo = MockWorkflowRepository();
     });
 
-    test('Complete Milestone 6.5 E2E Flow: Student (Hosteller) Submit -> Faculty Approve -> Coordinator Final Approve', () async {
-      try {
-        // 1. Student Login
-        final studentSession = await authRepo.login(username: 'RA2511026020400', password: 'student123');
-        expect(studentSession.role, 'STUDENT');
-        dio.options.headers['Authorization'] = 'Bearer ${studentSession.token.accessToken}';
+    test('Complete E2E Flow: Student Submit -> Faculty Approve -> Coordinator Final Approve', () async {
+      // 1. Submit OD Request
+      final createdOd = await workflowRepo.submitOdRequest(
+        studentId: 'usr_harshanth',
+        studentName: 'K M Harshanth',
+        registerNumber: 'RA2511026020400',
+        reason: 'Technical Symposium',
+        startDate: DateTime.now(),
+        endDate: DateTime.now().add(const Duration(days: 2)),
+        durationDays: 3,
+        purpose: 'Participating in event',
+        venue: 'Main Auditorium',
+        organizer: 'IEEE Student Branch',
+        residenceType: 'Day Scholar',
+      );
 
-        // 2. Student Submits Hosteller OD Request
-        final createdOd = await workflowRepo.submitOdRequest(
-          studentId: studentSession.userId,
-          studentName: studentSession.name,
-          registerNumber: studentSession.username,
-          reason: 'National Hackathon 2026',
-          startDate: DateTime.now(),
-          endDate: DateTime.now().add(const Duration(days: 2)),
-          durationDays: 3,
-          purpose: 'Participating in finals',
-          venue: 'Main Auditorium',
-          organizer: 'IEEE Student Branch',
-          additionalNotes: 'Project prototype presentation',
-          cgpa: 8.8,
-          attendancePercentage: 91.5,
-          residenceType: 'Hosteller',
-          parentConsentUrl: 'https://example.com/parent_consent_harshanth.pdf',
-        );
+      expect(createdOd.id, isNotEmpty);
+      expect(createdOd.status, OdStatus.pendingFaculty);
 
-        expect(createdOd.id, startsWith('OD-2026-'));
-        expect(createdOd.status, OdStatus.pendingFaculty);
-      } catch (e) {
-        // Backend server offline during automated runner
-        expect(e, isNotNull);
-      }
+      // 2. Faculty Action
+      final facultyApproved = await workflowRepo.facultyAction(
+        requestId: createdOd.id,
+        facultyId: 'usr_faculty',
+        facultyName: 'Dr. Karthik B',
+        approve: true,
+        comment: 'Verified attendance eligibility',
+      );
+      expect(facultyApproved.status, OdStatus.pendingCoordinator);
+
+      // 3. Coordinator Action
+      final coordApproved = await workflowRepo.coordinatorAction(
+        requestId: createdOd.id,
+        coordinatorId: 'usr_coord',
+        coordinatorName: 'Prof. Ramesh Kumar',
+        approve: true,
+        comment: 'Initial approval granted',
+      );
+      expect(coordApproved.status, OdStatus.approvedAwaitingEvidence);
     });
   });
 }

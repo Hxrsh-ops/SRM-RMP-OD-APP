@@ -11,75 +11,16 @@ class MockWorkflowRepository implements WorkflowRepository {
   final List<NotificationItem> _notifications = [];
   final _streamController = StreamController<List<OdRequest>>.broadcast();
 
-  MockWorkflowRepository() {
-    _seedMockData();
+  MockWorkflowRepository({List<OdRequest>? initialRequests}) {
+    if (initialRequests != null) {
+      _requests.addAll(initialRequests);
+    }
   }
 
   Stream<List<OdRequest>> get watchRequests => _streamController.stream;
 
   void _notifyListeners() {
     _streamController.add(List.unmodifiable(_requests));
-  }
-
-  void _seedMockData() {
-    final now = DateTime.now();
-
-    final req1 = OdRequest(
-      id: 'OD-2026-001',
-      studentId: 'RA2511026020400',
-      studentName: 'K.M. Harshanth',
-      registerNumber: 'RA2511026020400',
-      reason: 'Hackathon / Competition',
-      startDate: now.subtract(const Duration(days: 2)),
-      endDate: now.add(const Duration(days: 1)),
-      durationDays: 3,
-      purpose: 'Participating in National AI Hackathon 2026',
-      venue: 'Tech Park Auditorium, SRM Ramapuram',
-      organizer: 'Department of CSE & AI Club',
-      additionalNotes: 'Team Leader for Antigravity Hackers',
-      cgpa: 8.8,
-      attendancePercentage: 91.5,
-      residenceType: 'Hosteller',
-      parentConsentUrl: 'https://example.com/parent_consent_harshanth.pdf',
-      facultyAdvisorId: 'FA1001',
-      facultyAdvisorName: 'Dr. Karthik B (Mock)',
-      status: OdStatus.pendingFaculty,
-      attachments: [
-        AttachmentItem(
-          id: 'ATT-1',
-          fileName: 'Hackathon_Invitation_Letter.pdf',
-          fileType: 'pdf',
-          sizeBytes: 1024 * 450,
-          fileUrl: 'https://example.com/att1.pdf',
-          uploadedBy: 'K.M. Harshanth',
-          uploadedAt: now.subtract(const Duration(days: 2)),
-        ),
-      ],
-      timeline: [
-        TimelineStep(
-          id: 'TS-1',
-          title: 'Request Submitted',
-          actorName: 'K.M. Harshanth',
-          actorRole: 'Student',
-          status: OdStatus.submitted,
-          timestamp: now.subtract(const Duration(days: 2)),
-          note: 'Submitted 3-day OD request for National Hackathon',
-        ),
-        TimelineStep(
-          id: 'TS-2',
-          title: 'Assigned to Faculty Advisor',
-          actorName: 'Dr. Karthik B (Mock)',
-          actorRole: 'Faculty Advisor',
-          status: OdStatus.pendingFaculty,
-          timestamp: now.subtract(const Duration(days: 2)),
-          note: 'Awaiting Faculty Advisor review',
-        ),
-      ],
-      comments: const [],
-      createdAt: now.subtract(const Duration(days: 2)),
-    );
-
-    _requests.add(req1);
   }
 
   @override
