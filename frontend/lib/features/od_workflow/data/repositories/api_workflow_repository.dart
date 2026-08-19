@@ -100,6 +100,7 @@ class ApiWorkflowRepository implements WorkflowRepository {
     required String coordinatorName,
     required bool approve,
     bool returnForCorrection = false,
+    String? escalateTo,
     String? comment,
   }) async {
     final response = await apiClient.post(
@@ -107,6 +108,7 @@ class ApiWorkflowRepository implements WorkflowRepository {
       data: {
         'approve': approve,
         'return_for_correction': returnForCorrection,
+        if (escalateTo != null) 'escalate_to': escalateTo,
         'comment': comment,
       },
     );

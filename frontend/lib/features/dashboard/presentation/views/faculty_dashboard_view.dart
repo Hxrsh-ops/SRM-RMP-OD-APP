@@ -240,14 +240,15 @@ class _FacultyDashboardViewState extends ConsumerState<FacultyDashboardView> {
             const SizedBox(height: AppSpacing.lg),
 
             // Tab Filter Buttons
-            Row(
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
               children: [
                 ChoiceChip(
                   label: Text('Initial Approvals (${initialPending.length})'),
                   selected: _activeTab == 0,
                   onSelected: (val) => setState(() => _activeTab = 0),
                 ),
-                const SizedBox(width: AppSpacing.sm),
                 ChoiceChip(
                   label: Text('Evidence Verification (${evidencePending.length})'),
                   selected: _activeTab == 1,

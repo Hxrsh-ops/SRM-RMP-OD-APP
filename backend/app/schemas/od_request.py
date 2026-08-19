@@ -37,6 +37,7 @@ class FacultyActionRequest(BaseModel):
 class CoordinatorActionRequest(BaseModel):
     approve: bool
     return_for_correction: bool = False
+    escalate_to: Optional[str] = None  # 'HOD' or 'DEAN'
     comment: Optional[str] = None
 
 class CompletionEvidenceSubmit(BaseModel):

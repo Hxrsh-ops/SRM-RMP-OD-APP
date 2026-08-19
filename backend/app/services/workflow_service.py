@@ -271,7 +271,11 @@ class WorkflowService:
         coordinator_name = coordinator_user.full_name if coordinator_user else "Coordinator"
         now = datetime.now(timezone.utc)
 
-        if req.status in WorkflowTransitions.VALID_COORDINATOR_INITIAL:
+        if action.escalate_to:
+            target_role_name = "Dean" if action.escalate_to.upper() == "DEAN" else "Head of Department (HOD)"
+            step_title = f"Escalated to {target_role_name}"
+            new_status = req.status  # Retains active queue status with escalated flag
+        elif req.status in WorkflowTransitions.VALID_COORDINATOR_INITIAL:
             if action.return_for_correction:
                 new_status = OdStatus.REVISION_REQUESTED
                 step_title = "Returned for Correction"
@@ -321,9 +325,31 @@ class WorkflowService:
         self.notification_service.send_notification(
             recipient_id=req.student_id,
             title=step_title,
-            message=f"Coordinator {coordinator_name} updated request {request_id}.",
+            message=f"Coordinator {coordinator_name}: {action.comment or step_title}",
             request_id=request_id
         )
+
+        if action.escalate_to:
+            student = self.user_repo.get_by_id(req.student_id)
+            dept_id = student.department_id if student else None
+            if action.escalate_to.upper() == "DEAN":
+                dean = self.user_repo.get_by_role(UserRole.DEAN)
+                if dean:
+                    self.notification_service.send_notification(
+                        recipient_id=dean.id,
+                        title=f"Request {request_id} Escalated by Coordinator",
+                        message=f"Coordinator {coordinator_name} escalated {student.full_name if student else 'Student'}'s OD ({req.reason}) for Dean review.",
+                        request_id=request_id
+                    )
+            else:
+                hod = self.user_repo.get_by_role(UserRole.HOD, department_id=dept_id)
+                if hod:
+                    self.notification_service.send_notification(
+                        recipient_id=hod.id,
+                        title=f"Request {request_id} Escalated by Coordinator",
+                        message=f"Coordinator {coordinator_name} escalated {student.full_name if student else 'Student'}'s OD ({req.reason}) for HOD concurrence.",
+                        request_id=request_id
+                    )
 
         return updated_req
 

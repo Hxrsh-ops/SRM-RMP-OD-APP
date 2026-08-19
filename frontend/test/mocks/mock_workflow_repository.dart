@@ -204,6 +204,7 @@ class MockWorkflowRepository implements WorkflowRepository {
     required String coordinatorName,
     required bool approve,
     bool returnForCorrection = false,
+    String? escalateTo,
     String? comment,
   }) async {
     await Future.delayed(const Duration(milliseconds: 10));

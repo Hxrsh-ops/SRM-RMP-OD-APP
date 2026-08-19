@@ -38,6 +38,7 @@ abstract class WorkflowRepository {
     required String coordinatorName,
     required bool approve,
     bool returnForCorrection = false,
+    String? escalateTo,
     String? comment,
   });
 

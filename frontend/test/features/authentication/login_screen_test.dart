@@ -15,7 +15,7 @@ void main() {
       );
 
       expect(find.text('Welcome Back'), findsOneWidget);
-      expect(find.textContaining('Register Number'), findsOneWidget);
+      expect(find.text('Register Number / Employee ID / Username'), findsOneWidget);
       expect(find.text('Password'), findsOneWidget);
       expect(find.text('Remember me'), findsOneWidget);
       expect(find.text('Sign In'), findsOneWidget);

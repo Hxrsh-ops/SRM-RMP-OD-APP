@@ -176,6 +176,101 @@ class _CoordinatorDashboardViewState extends ConsumerState<CoordinatorDashboardV
     );
   }
 
+  void _showCoordinatorEscalateDialog(BuildContext context, OdRequest request) {
+    String selectedTarget = 'HOD';
+    final remarksController = TextEditingController();
+    final session = ref.read(authControllerProvider).session;
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.forward_to_inbox, color: Color(0xFF1A365D), size: 24),
+                SizedBox(width: AppSpacing.xs),
+                Text('Escalate to Authority'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Student: ${request.studentName} (${request.registerNumber})'),
+                Text('Event: ${request.reason} • ${request.durationDays} Days'),
+                const SizedBox(height: AppSpacing.md),
+                const Text('Select Escalation Target:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: AppSpacing.xs),
+                DropdownButtonFormField<String>(
+                  value: selectedTarget,
+                  isExpanded: true,
+                  decoration: const InputDecoration(border: OutlineInputBorder()),
+                  items: const [
+                    DropdownMenuItem(value: 'HOD', child: Text('Head of Department (HOD)')),
+                    DropdownMenuItem(value: 'DEAN', child: Text('Dean (Campus Authority)')),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) setDialogState(() => selectedTarget = val);
+                  },
+                ),
+                const SizedBox(height: AppSpacing.md),
+                const Text('Escalation Reason (Notes for HOD / Dean):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: AppSpacing.xs),
+                TextField(
+                  controller: remarksController,
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                    hintText: 'Specify why this requires HOD / Dean attention...',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogCtx),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1A365D), foregroundColor: Colors.white),
+                icon: const Icon(Icons.send_rounded, size: 16),
+                label: const Text('Escalate'),
+                onPressed: () async {
+                  Navigator.pop(dialogCtx);
+                  final success = await ref.read(workflowControllerProvider.notifier).processCoordinatorAction(
+                        requestId: request.id,
+                        coordinatorId: session?.userId ?? '',
+                        coordinatorName: session?.name ?? '',
+                        approve: true,
+                        escalateTo: selectedTarget,
+                        comment: remarksController.text.trim().isNotEmpty
+                            ? remarksController.text.trim()
+                            : 'Escalated to $selectedTarget by Coordinator.',
+                      );
+                  if (context.mounted) {
+                    if (success) {
+                      AppSnackbar.showSuccess(
+                        context,
+                        'Request ${request.id} escalated to $selectedTarget successfully.',
+                      );
+                    } else {
+                      final errorMsg = ref.read(workflowControllerProvider).errorMessage;
+                      AppSnackbar.showError(
+                        context,
+                        errorMsg ?? 'Failed to escalate request.',
+                      );
+                    }
+                  }
+                },
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -324,14 +419,15 @@ class _CoordinatorDashboardViewState extends ConsumerState<CoordinatorDashboardV
             const SizedBox(height: AppSpacing.lg),
 
             // Queue Choice Chips
-            Row(
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
               children: [
                 ChoiceChip(
                   label: Text('Initial Approvals ($pendingCoordCount)'),
                   selected: _activeTab == 0,
                   onSelected: (val) => setState(() => _activeTab = 0),
                 ),
-                const SizedBox(width: AppSpacing.sm),
                 ChoiceChip(
                   label: Text('Evidence Verification ($pendingEvidenceCount)'),
                   selected: _activeTab == 1,
@@ -361,10 +457,12 @@ class _CoordinatorDashboardViewState extends ConsumerState<CoordinatorDashboardV
 
             if (activeList.isEmpty)
               AppEmptyState(
-                title: _activeTab == 0 ? 'No Pending Initial Approvals' : 'No Evidence Verification Queue',
-                description: _activeTab == 0
-                    ? 'All requests passed by Faculty Advisors have been processed.'
-                    : 'No student completion proof documents are currently awaiting final coordinator sign-off.',
+                title: _activeTab == 0 ? 'No Pending Approvals' : 'No Pending Evidence Reviews',
+                description: _filterQuery.isEmpty
+                    ? (_activeTab == 0
+                        ? 'All department On Duty requests have been processed.'
+                        : 'No event completion evidence is waiting for verification.')
+                    : 'No requests matched "$_filterQuery".',
               )
             else
               Column(
@@ -457,113 +555,57 @@ class _CoordinatorDashboardViewState extends ConsumerState<CoordinatorDashboardV
                           const AppDivider(),
 
                           // Equal Height & Width Responsive Action Buttons
-                          if (isMobile)
-                            Column(
-                              children: [
-                                SizedBox(
-                                  width: double.infinity,
-                                  height: 44,
-                                  child: OutlinedButton.icon(
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: AppColors.primaryBlue,
-                                      side: const BorderSide(color: AppColors.primaryBlue),
-                                      shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderMd),
-                                    ),
-                                    icon: const Icon(Icons.visibility_outlined, size: 16),
-                                    label: const Text('View Details'),
-                                    onPressed: () => RequestDetailsModal.show(context, req),
-                                  ),
+                          Wrap(
+                            spacing: AppSpacing.sm,
+                            runSpacing: AppSpacing.sm,
+                            alignment: WrapAlignment.end,
+                            children: [
+                              OutlinedButton.icon(
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppColors.primaryBlue,
+                                  side: const BorderSide(color: AppColors.primaryBlue),
+                                  shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderMd),
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                                 ),
-                                const SizedBox(height: AppSpacing.sm),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: SizedBox(
-                                        height: 44,
-                                        child: OutlinedButton.icon(
-                                          style: OutlinedButton.styleFrom(
-                                            foregroundColor: AppColors.danger,
-                                            side: const BorderSide(color: AppColors.danger),
-                                            shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderMd),
-                                          ),
-                                          icon: const Icon(Icons.close_rounded, size: 16),
-                                          label: Text(_activeTab == 1 ? 'Revise' : 'Reject'),
-                                          onPressed: () => _showCoordinatorRejectDialog(context, req),
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: AppSpacing.sm),
-                                    Expanded(
-                                      child: SizedBox(
-                                        height: 44,
-                                        child: ElevatedButton.icon(
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: AppColors.primaryBlue,
-                                            foregroundColor: Colors.white,
-                                            shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderMd),
-                                          ),
-                                          icon: const Icon(Icons.verified_rounded, size: 16),
-                                          label: Text(_activeTab == 1 ? 'Grant OD' : 'Approve'),
-                                          onPressed: () => _showCoordinatorApproveDialog(context, req),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                                icon: const Icon(Icons.visibility_outlined, size: 16),
+                                label: const Text('Details'),
+                                onPressed: () => RequestDetailsModal.show(context, req),
+                              ),
+                              OutlinedButton.icon(
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: const Color(0xFF1A365D),
+                                  side: const BorderSide(color: Color(0xFF1A365D)),
+                                  shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderMd),
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                                 ),
-                              ],
-                            )
-                          else
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: SizedBox(
-                                    height: 44,
-                                    child: OutlinedButton.icon(
-                                      style: OutlinedButton.styleFrom(
-                                        foregroundColor: AppColors.primaryBlue,
-                                        side: const BorderSide(color: AppColors.primaryBlue),
-                                        shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderMd),
-                                      ),
-                                      icon: const Icon(Icons.visibility_outlined, size: 16),
-                                      label: const Text('View Details'),
-                                      onPressed: () => RequestDetailsModal.show(context, req),
-                                    ),
-                                  ),
+                                icon: const Icon(Icons.forward_to_inbox, size: 16),
+                                label: const Text('Escalate'),
+                                onPressed: () => _showCoordinatorEscalateDialog(context, req),
+                              ),
+                              OutlinedButton.icon(
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppColors.danger,
+                                  side: const BorderSide(color: AppColors.danger),
+                                  shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderMd),
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                                 ),
-                                const SizedBox(width: AppSpacing.sm),
-                                Expanded(
-                                  child: SizedBox(
-                                    height: 44,
-                                    child: OutlinedButton.icon(
-                                      style: OutlinedButton.styleFrom(
-                                        foregroundColor: AppColors.danger,
-                                        side: const BorderSide(color: AppColors.danger),
-                                        shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderMd),
-                                      ),
-                                      icon: const Icon(Icons.close_rounded, size: 16),
-                                      label: Text(_activeTab == 1 ? 'Revise' : 'Reject'),
-                                      onPressed: () => _showCoordinatorRejectDialog(context, req),
-                                    ),
-                                  ),
+                                icon: const Icon(Icons.close_rounded, size: 16),
+                                label: Text(_activeTab == 1 ? 'Revise' : 'Reject'),
+                                onPressed: () => _showCoordinatorRejectDialog(context, req),
+                              ),
+                              ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primaryBlue,
+                                  foregroundColor: Colors.white,
+                                  shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderMd),
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                                 ),
-                                const SizedBox(width: AppSpacing.sm),
-                                Expanded(
-                                  child: SizedBox(
-                                    height: 44,
-                                    child: ElevatedButton.icon(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppColors.primaryBlue,
-                                        foregroundColor: Colors.white,
-                                        shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderMd),
-                                      ),
-                                      icon: const Icon(Icons.verified_rounded, size: 16),
-                                      label: Text(_activeTab == 1 ? 'Grant OD' : 'Approve'),
-                                      onPressed: () => _showCoordinatorApproveDialog(context, req),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+                                icon: const Icon(Icons.verified_rounded, size: 16),
+                                label: Text(_activeTab == 1 ? 'Grant OD' : 'Approve'),
+                                onPressed: () => _showCoordinatorApproveDialog(context, req),
+                              ),
+                            ],
+                          ),
                         ],
                       ),
                     ),

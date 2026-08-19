@@ -207,6 +207,7 @@ class WorkflowController extends StateNotifier<WorkflowState> {
     required String coordinatorName,
     required bool approve,
     bool returnForCorrection = false,
+    String? escalateTo,
     String? comment,
   }) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
@@ -217,6 +218,7 @@ class WorkflowController extends StateNotifier<WorkflowState> {
         coordinatorName: coordinatorName,
         approve: approve,
         returnForCorrection: returnForCorrection,
+        escalateTo: escalateTo,
         comment: comment,
       );
       final updatedRequests = state.requests.map((r) => r.id == requestId ? updated : r).toList();

@@ -65,7 +65,7 @@ class _LoginFormState extends ConsumerState<LoginForm> {
           AppTextField(
             controller: _usernameController,
             labelText: 'Register Number / Employee ID / Username',
-            hintText: 'Enter your ID (e.g. RA2511026020400, 7793, ADMIN1001)',
+            hintText: 'Enter your Register Number, Employee ID, or Username',
             prefixIcon: const Icon(Icons.badge_outlined, size: 20),
             enabled: !isAuthenticating,
             textInputAction: TextInputAction.next,
