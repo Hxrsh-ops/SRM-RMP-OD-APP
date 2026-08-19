@@ -20,7 +20,7 @@ class EnvConfig {
 
   static Environment get currentEnvironment {
     const envStr = String.fromEnvironment('ENVIRONMENT', defaultValue: '');
-    if (envStr.toLowerCase() == 'prod' || kReleaseMode) {
+    if (envStr.toLowerCase() == 'prod') {
       return Environment.prod;
     } else if (envStr.toLowerCase() == 'staging') {
       return Environment.staging;
@@ -40,7 +40,8 @@ class EnvConfig {
       return 'http://$overrideLanIp:8000/api/v1';
     }
 
-    if (currentEnvironment == Environment.prod) {
+    const envStr = String.fromEnvironment('ENVIRONMENT', defaultValue: '');
+    if (envStr.toLowerCase() == 'prod') {
       return 'https://srm-od.ramapuram.srmist.edu.in/api/v1';
     }
 
@@ -52,8 +53,8 @@ class EnvConfig {
         const bool.fromEnvironment('FLUTTER_TEST');
 
     if (defaultTargetPlatform == TargetPlatform.android && !isTest) {
-      // Standard Android Emulator loopback IP to host machine
-      return 'http://10.0.2.2:8000/api/v1';
+      // Default to host machine LAN IP for real mobile device testing
+      return 'http://192.168.1.14:8000/api/v1';
     }
 
     return 'http://127.0.0.1:8000/api/v1';
