@@ -159,6 +159,11 @@ class OrganizationSettingsSchema(BaseModel):
     primary_color_hex: str = "#1A365D"
     maintenance_mode: bool = False
     environment_info: str = "Production-Ready Enterprise"
+    # Dynamic Workflow Policy Controls
+    workflow_mode: str = "STANDARD"  # "STANDARD", "COMPREHENSIVE", "DIRECT_HOD"
+    hod_auto_escalation_days: int = 0  # 0 = disabled. If > 0, requests with duration >= N days require HOD concurrence
+    allow_coordinator_escalation_to_hod: bool = True
+    allow_hod_escalation_to_dean: bool = True
 
 # -----------------------------------------------------------------------------
 # AUDIT LOG SCHEMAS

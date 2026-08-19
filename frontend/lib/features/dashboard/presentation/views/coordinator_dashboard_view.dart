@@ -203,111 +203,111 @@ class _CoordinatorDashboardViewState extends ConsumerState<CoordinatorDashboardV
   }
 
   void _showCoordinatorEscalateDialog(BuildContext context, OdRequest request) {
-    String selectedTarget = 'HOD';
     final remarksController = TextEditingController();
     final session = ref.read(authControllerProvider).session;
 
     showDialog(
       context: context,
-      builder: (dialogCtx) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderLg),
-            titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            actionsPadding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-            title: const Row(
-              children: [
-                Icon(Icons.forward_to_inbox, color: Color(0xFF1A365D), size: 22),
-                SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Text(
-                    'Escalate to Authority',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Student: ${request.studentName} (${request.registerNumber})'),
-                Text('Event: ${request.reason} • ${request.durationDays} Days'),
-                const SizedBox(height: AppSpacing.md),
-                const Text('Select Escalation Target:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                const SizedBox(height: AppSpacing.xs),
-                DropdownButtonFormField<String>(
-                  value: selectedTarget,
-                  isExpanded: true,
-                  decoration: const InputDecoration(border: OutlineInputBorder()),
-                  items: const [
-                    DropdownMenuItem(value: 'HOD', child: Text('Head of Department (HOD)')),
-                    DropdownMenuItem(value: 'DEAN', child: Text('Dean (Campus Authority)')),
-                  ],
-                  onChanged: (val) {
-                    if (val != null) setDialogState(() => selectedTarget = val);
-                  },
-                ),
-                const SizedBox(height: AppSpacing.md),
-                const Text('Escalation Reason (Notes for HOD / Dean):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                const SizedBox(height: AppSpacing.xs),
-                TextField(
-                  controller: remarksController,
-                  maxLines: 2,
-                  decoration: const InputDecoration(
-                    hintText: 'Enter reason for escalation...',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogCtx),
-                child: const Text('Cancel'),
+      builder: (dialogCtx) => AlertDialog(
+        shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderLg),
+        titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        actionsPadding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+        title: const Row(
+          children: [
+            Icon(Icons.forward_to_inbox, color: Color(0xFF1A365D), size: 22),
+            SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(
+                'Escalate to Head of Department',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1A365D),
-                  foregroundColor: Colors.white,
-                  shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderMd),
-                ),
-                icon: const Icon(Icons.send_rounded, size: 16),
-                label: const Text('Escalate Request'),
-                onPressed: () async {
-                  if (remarksController.text.trim().isEmpty) {
-                    AppSnackbar.showError(dialogCtx, 'Please specify why this request is being escalated.');
-                    return;
-                  }
-                  Navigator.pop(dialogCtx);
-                  final success = await ref.read(workflowControllerProvider.notifier).processCoordinatorAction(
-                        requestId: request.id,
-                        coordinatorId: session?.userId ?? '',
-                        coordinatorName: session?.name ?? '',
-                        approve: true,
-                        escalateTo: selectedTarget,
-                        comment: '[Escalated to $selectedTarget]: ${remarksController.text.trim()}',
-                      );
-                  if (context.mounted) {
-                    final errorMsg = ref.read(workflowControllerProvider).errorMessage;
-                    if (success) {
-                      AppSnackbar.showSuccess(
-                        context,
-                        'Request ${request.id} escalated to $selectedTarget successfully.',
-                      );
-                    } else {
-                      AppSnackbar.showError(
-                        context,
-                        errorMsg ?? 'Failed to escalate request.',
-                      );
-                    }
-                  }
-                },
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Student: ${request.studentName} (${request.registerNumber})'),
+            Text('Event: ${request.reason} • ${request.durationDays} Days'),
+            const SizedBox(height: AppSpacing.md),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1A365D).withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(8),
               ),
-            ],
-          );
-        },
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline, size: 16, color: Color(0xFF1A365D)),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Request will be escalated to the HOD. (Only HOD has executive authority to escalate to the Dean).',
+                      style: TextStyle(fontSize: 11.5, color: Color(0xFF1A365D)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            const Text('Escalation Reason / Notes for HOD (Mandatory):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+            const SizedBox(height: AppSpacing.xs),
+            TextField(
+              controller: remarksController,
+              maxLines: 2,
+              decoration: const InputDecoration(
+                hintText: 'Enter reason for HOD concurrence/review...',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1A365D),
+              foregroundColor: Colors.white,
+              shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderMd),
+            ),
+            icon: const Icon(Icons.send_rounded, size: 16),
+            label: const Text('Escalate to HOD'),
+            onPressed: () async {
+              if (remarksController.text.trim().isEmpty) {
+                AppSnackbar.showError(dialogCtx, 'Please specify why this request is being escalated.');
+                return;
+              }
+              Navigator.pop(dialogCtx);
+              final success = await ref.read(workflowControllerProvider.notifier).processCoordinatorAction(
+                    requestId: request.id,
+                    coordinatorId: session?.userId ?? '',
+                    coordinatorName: session?.name ?? '',
+                    approve: true,
+                    escalateTo: 'HOD',
+                    comment: '[Escalated to HOD]: ${remarksController.text.trim()}',
+                  );
+              if (context.mounted) {
+                final errorMsg = ref.read(workflowControllerProvider).errorMessage;
+                if (success) {
+                  AppSnackbar.showSuccess(
+                    context,
+                    'Request ${request.id} escalated to HOD successfully.',
+                  );
+                } else {
+                  AppSnackbar.showError(
+                    context,
+                    errorMsg ?? 'Failed to escalate request.',
+                  );
+                }
+              }
+            },
+          ),
+        ],
       ),
     );
   }

@@ -233,21 +233,6 @@ class WorkflowService:
                         request_id=request_id
                     )
 
-            # Smart Tiered Notification Routing for DEAN (> 5 days, national/international, internship)
-            is_dean_worthy = req.duration_days > 5 or any(
-                keyword in reason_lower or keyword in purpose_lower
-                for keyword in ["national", "international", "conference", "internship", "sports", "inter-college"]
-            )
-            if is_dean_worthy:
-                dean = self.user_repo.get_by_role(UserRole.DEAN)
-                if dean:
-                    self.notification_service.send_notification(
-                        recipient_id=dean.id,
-                        title=f"Campus Sanction Required: {request_id}",
-                        message=f"High-profile event ({req.reason}, {req.duration_days} Days) requires institutional awareness.",
-                        request_id=request_id
-                    )
-
         return updated_req
 
     def process_coordinator_action(
@@ -271,30 +256,45 @@ class WorkflowService:
         coordinator_name = coordinator_user.full_name if coordinator_user else "Coordinator"
         now = datetime.now(timezone.utc)
 
+        actor_role = "Coordinator"
+        if coordinator_user.role == UserRole.HOD:
+            actor_role = "Head of Department (HOD)"
+        elif coordinator_user.role == UserRole.DEAN:
+            actor_role = "Dean"
+        elif coordinator_user.role == UserRole.MASTER_ADMIN:
+            actor_role = "Master Admin"
+
         if action.escalate_to:
-            target_role_name = "Dean" if action.escalate_to.upper() == "DEAN" else "Head of Department (HOD)"
-            step_title = f"Escalated to {target_role_name}"
+            target_upper = action.escalate_to.upper()
+            if target_upper == "DEAN":
+                if coordinator_user.role not in (UserRole.HOD, UserRole.MASTER_ADMIN):
+                    raise BadRequestException("Coordinators can only escalate requests to the Head of Department (HOD). Only HODs have executive authority to escalate to the Dean.")
+                target_role_name = "Dean"
+                step_title = f"Escalated to Dean by {actor_role}"
+            else:
+                target_role_name = "Head of Department (HOD)"
+                step_title = f"Escalated to Head of Department (HOD) by {actor_role}"
             new_status = req.status  # Retains active queue status with escalated flag
         elif req.status in WorkflowTransitions.VALID_COORDINATOR_INITIAL:
             if action.return_for_correction:
                 new_status = OdStatus.REVISION_REQUESTED
-                step_title = "Returned for Correction"
+                step_title = f"Returned for Correction by {actor_role}"
             elif action.approve:
                 new_status = OdStatus.APPROVED_AWAITING_EVIDENCE
-                step_title = "Coordinator Approved (Awaiting Event Completion Evidence)"
+                step_title = f"Initial Approval Granted by {actor_role} (Awaiting Event Proof)"
             else:
                 new_status = OdStatus.REJECTED
-                step_title = "Coordinator Rejected"
+                step_title = f"Rejected by {actor_role}"
         elif req.status in WorkflowTransitions.VALID_COORDINATOR_EVIDENCE:
             if action.return_for_correction or not action.approve:
                 new_status = OdStatus.EVIDENCE_REVISION_REQUESTED
-                step_title = "Coordinator Requested Evidence Revision"
+                step_title = f"Evidence Revision Requested by {actor_role}"
             else:
                 new_status = OdStatus.COMPLETED
-                step_title = "Completion Verified & OD Granted"
+                step_title = f"Completion Evidence Verified & OD Granted by {actor_role}"
                 req.completion_verified_at = now
         else:
-            raise BadRequestException(f"Cannot perform coordinator action on request in status {req.status.value}")
+            raise BadRequestException(f"Cannot perform action on request in status {req.status.value}")
 
         req.status = new_status
         req.updated_at = now
@@ -303,7 +303,7 @@ class WorkflowService:
             TimelineEvent(
                 title=step_title,
                 actor_name=coordinator_name,
-                actor_role="Coordinator",
+                actor_role=actor_role,
                 status=new_status,
                 note=action.comment or step_title,
                 timestamp=now
@@ -314,7 +314,7 @@ class WorkflowService:
             req.comments.append(
                 Comment(
                     author_name=coordinator_name,
-                    author_role="Coordinator",
+                    author_role=actor_role,
                     text=action.comment.strip(),
                     timestamp=now
                 )
@@ -325,7 +325,7 @@ class WorkflowService:
         self.notification_service.send_notification(
             recipient_id=req.student_id,
             title=step_title,
-            message=f"Coordinator {coordinator_name}: {action.comment or step_title}",
+            message=f"{actor_role} {coordinator_name}: {action.comment or step_title}",
             request_id=request_id
         )
 
@@ -337,8 +337,8 @@ class WorkflowService:
                 if dean:
                     self.notification_service.send_notification(
                         recipient_id=dean.id,
-                        title=f"Request {request_id} Escalated by Coordinator",
-                        message=f"Coordinator {coordinator_name} escalated {student.full_name if student else 'Student'}'s OD ({req.reason}) for Dean review.",
+                        title=f"OD Request {request_id} Escalated by HOD",
+                        message=f"HOD {coordinator_name} escalated {student.full_name if student else 'Student'}'s OD ({req.reason}) for Executive Dean review.",
                         request_id=request_id
                     )
             else:
@@ -346,7 +346,7 @@ class WorkflowService:
                 if hod:
                     self.notification_service.send_notification(
                         recipient_id=hod.id,
-                        title=f"Request {request_id} Escalated by Coordinator",
+                        title=f"OD Request {request_id} Escalated by Coordinator",
                         message=f"Coordinator {coordinator_name} escalated {student.full_name if student else 'Student'}'s OD ({req.reason}) for HOD concurrence.",
                         request_id=request_id
                     )

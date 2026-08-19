@@ -244,6 +244,11 @@ class OrganizationSettings {
   final bool maintenanceMode;
   final String environmentInfo;
 
+  final String workflowMode;
+  final int hodAutoEscalationDays;
+  final bool allowCoordinatorEscalationToHod;
+  final bool allowHodEscalationToDean;
+
   OrganizationSettings({
     required this.academicYear,
     required this.currentSemester,
@@ -256,6 +261,10 @@ class OrganizationSettings {
     required this.primaryColorHex,
     required this.maintenanceMode,
     required this.environmentInfo,
+    this.workflowMode = 'STANDARD',
+    this.hodAutoEscalationDays = 0,
+    this.allowCoordinatorEscalationToHod = true,
+    this.allowHodEscalationToDean = true,
   });
 
   factory OrganizationSettings.fromJson(Map<String, dynamic> json) {
@@ -271,6 +280,10 @@ class OrganizationSettings {
       primaryColorHex: json['primary_color_hex'] ?? '#1A365D',
       maintenanceMode: json['maintenance_mode'] ?? false,
       environmentInfo: json['environment_info'] ?? 'Production-Ready Enterprise',
+      workflowMode: json['workflow_mode'] ?? 'STANDARD',
+      hodAutoEscalationDays: json['hod_auto_escalation_days'] ?? 0,
+      allowCoordinatorEscalationToHod: json['allow_coordinator_escalation_to_hod'] ?? true,
+      allowHodEscalationToDean: json['allow_hod_escalation_to_dean'] ?? true,
     );
   }
 
@@ -286,6 +299,10 @@ class OrganizationSettings {
     'primary_color_hex': primaryColorHex,
     'maintenance_mode': maintenanceMode,
     'environment_info': environmentInfo,
+    'workflow_mode': workflowMode,
+    'hod_auto_escalation_days': hodAutoEscalationDays,
+    'allow_coordinator_escalation_to_hod': allowCoordinatorEscalationToHod,
+    'allow_hod_escalation_to_dean': allowHodEscalationToDean,
   };
 }
 
