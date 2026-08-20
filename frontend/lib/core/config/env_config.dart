@@ -40,8 +40,8 @@ class EnvConfig {
       return 'http://$overrideLanIp:8000/api/v1';
     }
 
-    final isTest = Platform.environment.containsKey('FLUTTER_TEST') ||
-        const bool.fromEnvironment('FLUTTER_TEST');
+    final isTest = !kIsWeb && (Platform.environment.containsKey('FLUTTER_TEST') ||
+        const bool.fromEnvironment('FLUTTER_TEST'));
 
     if (isTest) {
       return 'http://127.0.0.1:8000/api/v1';
