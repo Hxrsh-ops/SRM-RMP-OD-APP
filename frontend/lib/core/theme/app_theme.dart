@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'color_tokens.dart';
 import 'custom_theme_extensions.dart';
 import 'dimension_tokens.dart';
 import 'typography_tokens.dart';
+
+final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.light);
 
 abstract class AppTheme {
   static ThemeData get lightTheme {
@@ -47,5 +50,5 @@ abstract class AppTheme {
     );
   }
 
-  static ThemeData get darkTheme => lightTheme; // UI Kit Specification is Light-First
+  static ThemeData get darkTheme => lightTheme;
 }

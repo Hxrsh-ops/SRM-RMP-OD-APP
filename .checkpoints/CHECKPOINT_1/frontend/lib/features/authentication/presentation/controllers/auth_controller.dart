@@ -1,0 +1,140 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/network/providers/dio_provider.dart';
+import '../../data/datasources/auth_local_datasource.dart';
+import '../../data/repositories/api_authentication_repository.dart';
+import '../../domain/entities/auth_status.dart';
+import '../../domain/repositories/authentication_repository.dart';
+import '../../domain/usecases/login_usecase.dart';
+import '../../domain/usecases/logout_usecase.dart';
+import '../../domain/usecases/restore_session_usecase.dart';
+import 'auth_state.dart';
+
+final authLocalDataSourceProvider = Provider<AuthLocalDataSource>((ref) {
+  final storage = ref.watch(secureStorageProvider);
+  return AuthLocalDataSource(storage);
+});
+
+final authenticationRepositoryProvider = Provider<AuthenticationRepository>((ref) {
+  final apiClient = ref.watch(apiClientProvider);
+  final storage = ref.watch(secureStorageProvider);
+  return ApiAuthenticationRepository(apiClient: apiClient, storageService: storage);
+});
+
+final loginUseCaseProvider = Provider<LoginUseCase>((ref) {
+  final repository = ref.watch(authenticationRepositoryProvider);
+  return LoginUseCase(repository);
+});
+
+final logoutUseCaseProvider = Provider<LogoutUseCase>((ref) {
+  final repository = ref.watch(authenticationRepositoryProvider);
+  return LogoutUseCase(repository);
+});
+
+final restoreSessionUseCaseProvider = Provider<RestoreSessionUseCase>((ref) {
+  final repository = ref.watch(authenticationRepositoryProvider);
+  return RestoreSessionUseCase(repository);
+});
+
+final authControllerProvider = StateNotifierProvider<AuthController, AuthState>((ref) {
+  return AuthController(
+    loginUseCase: ref.watch(loginUseCaseProvider),
+    logoutUseCase: ref.watch(logoutUseCaseProvider),
+    restoreSessionUseCase: ref.watch(restoreSessionUseCaseProvider),
+    authRepository: ref.watch(authenticationRepositoryProvider),
+  );
+});
+
+class AuthController extends StateNotifier<AuthState> {
+  final LoginUseCase _loginUseCase;
+  final LogoutUseCase _logoutUseCase;
+  final RestoreSessionUseCase _restoreSessionUseCase;
+
+  final AuthenticationRepository _authRepository;
+
+  AuthController({
+    required LoginUseCase loginUseCase,
+    required LogoutUseCase logoutUseCase,
+    required RestoreSessionUseCase restoreSessionUseCase,
+    required AuthenticationRepository authRepository,
+  })  : _loginUseCase = loginUseCase,
+        _logoutUseCase = logoutUseCase,
+        _restoreSessionUseCase = restoreSessionUseCase,
+        _authRepository = authRepository,
+        super(const AuthState(status: AuthStatus.initial));
+
+  void toggleRememberMe(bool value) {
+    state = state.copyWith(rememberMe: value);
+  }
+
+  Future<bool> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      await _authRepository.changePassword(
+        currentPassword: currentPassword,
+        newPassword: newPassword,
+      );
+      if (state.session != null) {
+        state = state.copyWith(
+          session: state.session!.copyWith(forcePasswordChange: false),
+        );
+      }
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<void> login({
+    required String username,
+    required String password,
+  }) async {
+    state = state.copyWith(status: AuthStatus.authenticating, errorMessage: null);
+
+    try {
+      final session = await _loginUseCase.execute(
+        username: username,
+        password: password,
+      );
+      state = state.copyWith(
+        status: AuthStatus.authenticated,
+        session: session,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        status: AuthStatus.failure,
+        errorMessage: e.toString().replaceFirst('AppException: ', '').replaceFirst('Exception: ', ''),
+      );
+    }
+  }
+
+  Future<void> restoreSession() async {
+    state = state.copyWith(status: AuthStatus.initial, errorMessage: null);
+    try {
+      final isTest = !kIsWeb && Platform.environment.containsKey('FLUTTER_TEST');
+      final sessionFuture = _restoreSessionUseCase.execute();
+      final session = isTest
+          ? await sessionFuture
+          : await sessionFuture.timeout(const Duration(seconds: 2), onTimeout: () => null);
+
+      if (session != null) {
+        state = state.copyWith(
+          status: AuthStatus.authenticated,
+          session: session,
+        );
+      } else {
+        state = state.copyWith(status: AuthStatus.unauthenticated);
+      }
+    } catch (_) {
+      state = state.copyWith(status: AuthStatus.unauthenticated);
+    }
+  }
+
+  Future<void> logout() async {
+    await _logoutUseCase.execute();
+    state = const AuthState(status: AuthStatus.unauthenticated);
+  }
+}

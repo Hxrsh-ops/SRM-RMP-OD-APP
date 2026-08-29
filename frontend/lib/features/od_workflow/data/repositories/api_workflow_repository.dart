@@ -15,10 +15,10 @@ class ApiWorkflowRepository implements WorkflowRepository {
   ApiWorkflowRepository({required this.apiClient});
 
   @override
-  Future<List<OdRequest>> getMyRequests({bool includeHistory = false}) async {
+  Future<List<OdRequest>> getMyRequests({bool includeHistory = true}) async {
     final response = await apiClient.get(
       ApiConstants.odRequests,
-      queryParameters: includeHistory ? {'include_history': 'true'} : null,
+      queryParameters: {'include_history': includeHistory ? 'true' : 'false'},
     );
     final list = response as List;
     return list.map((item) => _mapJsonToOdRequest(item as Map<String, dynamic>)).toList();
@@ -288,5 +288,44 @@ class ApiWorkflowRepository implements WorkflowRepository {
       timeline: timelineList,
       comments: commentsList,
     );
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getFacultyAdvisees() async {
+    final response = await apiClient.get('/users/advisees');
+    final list = response as List? ?? [];
+    return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  @override
+  Future<Map<String, dynamic>> getAdviseeRecords(String studentId) async {
+    final response = await apiClient.get('/users/advisees/$studentId/records');
+    return Map<String, dynamic>.from(response as Map);
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getDepartmentStudentDirectory({int limit = 30}) async {
+    final response = await apiClient.get('/users/students/directory', queryParameters: {'limit': limit});
+    final list = response as List? ?? [];
+    return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> searchStudents(String query, {int limit = 30}) async {
+    final response = await apiClient.get('/users/students/search', queryParameters: {'q': query, 'limit': limit});
+    final list = response as List? ?? [];
+    return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  @override
+  Future<Map<String, dynamic>> getStudentRecords(String studentId) async {
+    final response = await apiClient.get('/users/students/$studentId/records');
+    return Map<String, dynamic>.from(response as Map);
+  }
+
+  @override
+  Future<String> exportDepartmentOdCsv() async {
+    final response = await apiClient.get('/od-requests/department/export-csv');
+    return response.toString();
   }
 }

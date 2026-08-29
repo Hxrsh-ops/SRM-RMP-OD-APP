@@ -3,6 +3,10 @@ from uuid import UUID
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload, selectinload
 from ..models.od_request import OdRequest
+from ..models.attachment import Attachment
+from ..models.timeline import TimelineEvent
+from ..models.comment import Comment
+from ..models.shared_clearance import SharedOdClearance
 from ..models.enums import OdStatus, WorkflowStatusGroups, UserRole
 
 class OdRequestRepository:
@@ -16,6 +20,7 @@ class OdRequestRepository:
             selectinload(OdRequest.attachments),
             selectinload(OdRequest.timeline),
             selectinload(OdRequest.comments),
+            selectinload(OdRequest.shared_clearances),
         )
 
     def get_by_id(self, request_id: str) -> Optional[OdRequest]:
@@ -60,10 +65,17 @@ class OdRequestRepository:
             OdRequest.is_deleted == False
         ).order_by(OdRequest.created_at.desc()).all()
 
+    def _delete_request_dependencies(self, req_id: str):
+        self.db.query(SharedOdClearance).filter(SharedOdClearance.od_request_id == req_id).delete(synchronize_session=False)
+        self.db.query(Attachment).filter(Attachment.od_request_id == req_id).delete(synchronize_session=False)
+        self.db.query(TimelineEvent).filter(TimelineEvent.od_request_id == req_id).delete(synchronize_session=False)
+        self.db.query(Comment).filter(Comment.od_request_id == req_id).delete(synchronize_session=False)
+
     def hard_delete(self, request_id: str) -> bool:
         req = self.db.query(OdRequest).filter(OdRequest.id == request_id).first()
         if not req:
             return False
+        self._delete_request_dependencies(request_id)
         self.db.delete(req)
         self.db.commit()
         return True
@@ -80,6 +92,7 @@ class OdRequestRepository:
 
         count = len(reqs)
         for r in reqs:
+            self._delete_request_dependencies(r.id)
             self.db.delete(r)
         self.db.commit()
         return count

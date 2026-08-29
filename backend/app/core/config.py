@@ -12,8 +12,8 @@ class Settings(BaseSettings):
 
     SECRET_KEY: str = "srm_rmp_od_super_secret_jwt_key_2026_change_in_production"
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 43200  # 30 days (enterprise session duration)
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 60
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 1 day (24 hours standard session security)
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     # PostgreSQL Connection Credentials
     POSTGRES_SERVER: str = "localhost"
@@ -47,6 +47,9 @@ class Settings(BaseSettings):
         "http://127.0.0.1:8080",
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        "https://srm-rmp-od.onrender.com",
+        "https://srm-rmp-od-app.onrender.com",
+        "*",
     ]
 
     model_config = SettingsConfigDict(

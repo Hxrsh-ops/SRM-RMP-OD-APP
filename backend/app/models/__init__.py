@@ -2,8 +2,10 @@ from .enums import UserRole, OdStatus
 from .guid import GUID
 from .base import AuditMixin, SoftDeleteMixin
 from .department import Department
+from .class_section import ClassSection
 from .user import User
 from .od_request import OdRequest
+from .shared_clearance import SharedOdClearance, ClearanceShareStatus
 from .attachment import Attachment
 from .timeline import TimelineEvent
 from .comment import Comment
@@ -19,8 +21,11 @@ __all__ = [
     "AuditMixin",
     "SoftDeleteMixin",
     "Department",
+    "ClassSection",
     "User",
     "OdRequest",
+    "SharedOdClearance",
+    "ClearanceShareStatus",
     "Attachment",
     "TimelineEvent",
     "Comment",

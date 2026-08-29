@@ -134,3 +134,19 @@ final adminSecuritySummaryProvider = FutureProvider.autoDispose<Map<String, dyna
   final repo = ref.watch(adminRepositoryProvider);
   return repo.getSecurityCenterSummary();
 });
+
+// -----------------------------------------------------------------------------
+// ACADEMIC CLASS SECTIONS CONTROLLER
+// -----------------------------------------------------------------------------
+final classSectionsProvider = FutureProvider.autoDispose<List<ClassSectionModel>>((ref) async {
+  final repo = ref.watch(adminRepositoryProvider);
+  return repo.getClassSections();
+});
+
+// -----------------------------------------------------------------------------
+// SHARED OD CLEARANCES CONTROLLER
+// -----------------------------------------------------------------------------
+final sharedClearancesProvider = FutureProvider.autoDispose<List<SharedClearanceModel>>((ref) async {
+  final repo = ref.watch(adminRepositoryProvider);
+  return repo.getSharedClearances();
+});

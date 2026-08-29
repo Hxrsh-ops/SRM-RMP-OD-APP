@@ -10,7 +10,7 @@ from ....repositories.od_request_repository import OdRequestRepository
 from ....repositories.audit_log_repository import AuditLogRepository
 from ....models.user import User
 from ....models.department import Department
-from ....models.enums import UserRole
+from ....models.enums import UserRole, OdStatus
 from ...dependencies import require_roles, get_current_user
 from ....services.admin_service import AdminService
 from ....schemas.admin import (
@@ -198,9 +198,11 @@ def transfer_faculty_students(
 
 # -----------------------------------------------------------------------------
 # 5. Organization Settings
-# -----------------------------------------------------------------------------
-@router.get("/settings", response_model=OrganizationSettingsSchema, dependencies=[Depends(admin_only)])
-def get_organization_settings(db: Session = Depends(get_db)):
+@router.get("/settings", response_model=OrganizationSettingsSchema)
+def get_organization_settings(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     service = AdminService(db)
     return service.get_organization_settings()
 
@@ -326,18 +328,81 @@ def get_user_profile_and_records(
     if not user:
         raise NotFoundException("User not found")
 
+    from .od_requests import _build_od_response, _get_student_dept, _is_escalated_to_hod, _is_escalated_to_dean
+    from ....models.system_setting import SystemSetting
+
+    setting = db.query(SystemSetting).filter(SystemSetting.key == "org_settings").first()
+    policy = {}
+    if setting and setting.value and isinstance(setting.value, dict):
+        policy = setting.value
+    workflow_mode = policy.get("workflow_mode", "STANDARD")
+    evidence_mode = policy.get("evidence_workflow_mode", "FA_ONLY")
+
+    def _user_acted_on(r, u):
+        for ev in (r.timeline or []):
+            if ev.actor_name and (u.full_name in ev.actor_name or u.username in ev.actor_name):
+                return True
+        for c in (r.comments or []):
+            if c.author_name and (u.full_name in c.author_name or u.username in c.author_name):
+                return True
+        return False
+
     user_info = UserResponseSchema.model_validate(_build_admin_user_response(user, db)).model_dump(mode="json")
     if user.role == UserRole.STUDENT:
         requests = od_repo.list_by_student(user.id)
     elif user.role == UserRole.FACULTY_ADVISOR:
-        requests = od_repo.list_by_faculty_assigned(user.id)
-    elif user.role in (UserRole.COORDINATOR, UserRole.HOD):
+        all_fa_reqs = od_repo.list_by_faculty_assigned(user.id)
+        # Active in-flight records only: vanish after full completion or rejection to avoid pile-up
+        requests = [r for r in all_fa_reqs if r.status not in (OdStatus.COMPLETED, OdStatus.REJECTED, OdStatus.FACULTY_REJECTED)]
+    elif user.role == UserRole.COORDINATOR:
         all_reqs = od_repo.list_all()
-        requests = [r for r in all_reqs if r.student and r.student.department_id == user.department_id] if user.department_id else all_reqs
+        if user.department_id:
+            target_dept = str(user.department_id)
+            dept_reqs = [r for r in all_reqs if _get_student_dept(r, user_repo) == target_dept]
+        else:
+            dept_reqs = all_reqs
+
+        if workflow_mode == "DIRECT_HOD":
+            requests = []
+        else:
+            filtered = []
+            for r in dept_reqs:
+                if r.status in [OdStatus.PENDING_COORDINATOR, OdStatus.FACULTY_APPROVED] and not _is_escalated_to_hod(r) and not _is_escalated_to_dean(r):
+                    filtered.append(r)
+                elif r.status == OdStatus.PENDING_EVIDENCE_COORDINATOR and evidence_mode in ["FA_COORDINATOR", "FA_COORDINATOR_HOD"] and not _is_escalated_to_dean(r):
+                    filtered.append(r)
+            requests = filtered
+
+    elif user.role == UserRole.HOD:
+        all_reqs = od_repo.list_all()
+        if user.department_id:
+            target_dept = str(user.department_id)
+            dept_reqs = [r for r in all_reqs if _get_student_dept(r, user_repo) == target_dept]
+        else:
+            dept_reqs = all_reqs
+
+        filtered = []
+        for r in dept_reqs:
+            if workflow_mode == "DIRECT_HOD":
+                if r.status in [OdStatus.PENDING_COORDINATOR, OdStatus.FACULTY_APPROVED] and not _is_escalated_to_dean(r):
+                    filtered.append(r)
+                elif r.status == OdStatus.PENDING_EVIDENCE_COORDINATOR and (evidence_mode in ["FA_HOD", "FA_COORDINATOR_HOD"] or _is_escalated_to_hod(r)) and not _is_escalated_to_dean(r):
+                    filtered.append(r)
+            else: # STANDARD or COMPREHENSIVE
+                if r.status in [OdStatus.PENDING_COORDINATOR, OdStatus.FACULTY_APPROVED] and _is_escalated_to_hod(r) and not _is_escalated_to_dean(r):
+                    filtered.append(r)
+                elif r.status == OdStatus.PENDING_EVIDENCE_COORDINATOR and (evidence_mode in ["FA_HOD", "FA_COORDINATOR_HOD"] or _is_escalated_to_hod(r)) and not _is_escalated_to_dean(r):
+                    filtered.append(r)
+        requests = filtered
+
+    elif user.role == UserRole.DEAN:
+        all_reqs = od_repo.list_all()
+        requests = [r for r in all_reqs if _is_escalated_to_dean(r) and r.status not in (OdStatus.COMPLETED, OdStatus.REJECTED, OdStatus.FACULTY_REJECTED)]
+    elif user.role == UserRole.MASTER_ADMIN:
+        requests = []
     else:
         requests = od_repo.list_all()
 
-    from .od_requests import _build_od_response
     serialized_reqs = [_build_od_response(r, user_repo).model_dump(mode="json") for r in requests]
 
     return {

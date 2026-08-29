@@ -93,6 +93,7 @@ class AdminUser {
   final String role;
   final String? departmentId;
   final String? departmentName;
+  final String? classSectionId;
   final String? program;
   final String? yearSection;
   final String? assignedFacultyId;
@@ -111,6 +112,7 @@ class AdminUser {
     required this.role,
     this.departmentId,
     this.departmentName,
+    this.classSectionId,
     this.program,
     this.yearSection,
     this.assignedFacultyId,
@@ -131,6 +133,7 @@ class AdminUser {
       role: json['role']?.toString() ?? 'STUDENT',
       departmentId: json['department_id']?.toString(),
       departmentName: json['department_name']?.toString(),
+      classSectionId: json['class_section_id']?.toString(),
       program: json['program']?.toString(),
       yearSection: json['year_section']?.toString(),
       assignedFacultyId: json['assigned_faculty_id']?.toString(),
@@ -276,7 +279,7 @@ class OrganizationSettings {
       maxFileSizeMb: json['max_file_size_mb'] ?? 10,
       allowedFileTypes: List<String>.from(json['allowed_file_types'] ?? ['pdf', 'jpg', 'png']),
       requireEvidence: json['require_evidence'] ?? true,
-      jwtExpirationMinutes: json['jwt_expiration_minutes'] ?? 43200,
+      jwtExpirationMinutes: json['jwt_expiration_minutes'] ?? 1440,
       notificationEmailEnabled: json['notification_email_enabled'] ?? true,
       systemBrandingTitle: json['system_branding_title'] ?? 'SRM RMP OD Platform',
       primaryColorHex: json['primary_color_hex'] ?? '#1A365D',
@@ -443,4 +446,132 @@ class SecurityEventEntry {
       timestamp: json['timestamp'] ?? '',
     );
   }
+}
+
+// -----------------------------------------------------------------------------
+// ACADEMIC CLASS SECTION MODEL
+// -----------------------------------------------------------------------------
+class ClassSectionModel {
+  final String id;
+  final String departmentId;
+  final int academicYear;
+  final String section;
+  final String? batch;
+  final String? program;
+  final String? facultyAdvisorId;
+  final String? facultyAdvisorName;
+  final String? facultyAdvisorEmail;
+  final String? departmentName;
+  final int studentCount;
+
+  ClassSectionModel({
+    required this.id,
+    required this.departmentId,
+    required this.academicYear,
+    required this.section,
+    this.batch,
+    this.program,
+    this.facultyAdvisorId,
+    this.facultyAdvisorName,
+    this.facultyAdvisorEmail,
+    this.departmentName,
+    this.studentCount = 0,
+  });
+
+  factory ClassSectionModel.fromJson(Map<String, dynamic> json) {
+    return ClassSectionModel(
+      id: json['id'] ?? '',
+      departmentId: json['department_id'] ?? '',
+      academicYear: json['academic_year'] ?? 1,
+      section: json['section'] ?? '',
+      batch: json['batch'],
+      program: json['program'],
+      facultyAdvisorId: json['faculty_advisor_id'],
+      facultyAdvisorName: json['faculty_advisor_name'],
+      facultyAdvisorEmail: json['faculty_advisor_email'],
+      departmentName: json['department_name'],
+      studentCount: json['student_count'] ?? 0,
+    );
+  }
+
+  String get displayName => 'Year $academicYear - $section';
+}
+
+// -----------------------------------------------------------------------------
+// SHARED OD CLEARANCE MODEL
+// -----------------------------------------------------------------------------
+class SharedClearanceModel {
+  final String id;
+  final String odRequestId;
+  final String studentId;
+  final String studentName;
+  final String studentRegNo;
+  final String? studentProgram;
+  final String? studentYearSection;
+  final String? facultyId;
+  final String facultyEmail;
+  final String? facultyName;
+  final String reason;
+  final String purpose;
+  final String startDate;
+  final String endDate;
+  final int durationDays;
+  final String? venue;
+  final String? organizer;
+  final String status;
+  final String? acknowledgedAt;
+  final String? notes;
+  final String createdAt;
+
+  SharedClearanceModel({
+    required this.id,
+    required this.odRequestId,
+    required this.studentId,
+    required this.studentName,
+    required this.studentRegNo,
+    this.studentProgram,
+    this.studentYearSection,
+    this.facultyId,
+    required this.facultyEmail,
+    this.facultyName,
+    required this.reason,
+    required this.purpose,
+    required this.startDate,
+    required this.endDate,
+    required this.durationDays,
+    this.venue,
+    this.organizer,
+    required this.status,
+    this.acknowledgedAt,
+    this.notes,
+    required this.createdAt,
+  });
+
+  factory SharedClearanceModel.fromJson(Map<String, dynamic> json) {
+    return SharedClearanceModel(
+      id: json['id'] ?? '',
+      odRequestId: json['od_request_id'] ?? '',
+      studentId: json['student_id'] ?? '',
+      studentName: json['student_name'] ?? 'Student',
+      studentRegNo: json['student_reg_no'] ?? '',
+      studentProgram: json['student_program'],
+      studentYearSection: json['student_year_section'],
+      facultyId: json['faculty_id'],
+      facultyEmail: json['faculty_email'] ?? '',
+      facultyName: json['faculty_name'],
+      reason: json['reason'] ?? 'OD',
+      purpose: json['purpose'] ?? '',
+      startDate: json['start_date'] ?? '',
+      endDate: json['end_date'] ?? '',
+      durationDays: json['duration_days'] ?? 0,
+      venue: json['venue'],
+      organizer: json['organizer'],
+      status: json['status'] ?? 'SENT',
+      acknowledgedAt: json['acknowledged_at'],
+      notes: json['notes'],
+      createdAt: json['created_at'] ?? '',
+    );
+  }
+
+  bool get isAcknowledged => status == 'ACKNOWLEDGED';
 }

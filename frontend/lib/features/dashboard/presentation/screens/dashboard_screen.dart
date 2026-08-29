@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/responsive/responsive_layout.dart';
 import '../../../../core/theme/color_tokens.dart';
+import '../../../../core/ui/command_palette_dialog.dart';
 import '../../../../core/ui/ui.dart';
 import '../../../authentication/authentication.dart';
 import '../../../od_workflow/presentation/controllers/workflow_controller.dart';
 import '../../../od_workflow/presentation/views/create_od_request_view.dart';
 import '../views/coordinator_dashboard_view.dart';
 import '../views/coordinator_overview_view.dart';
+import '../views/department_student_directory_view.dart';
+import '../views/faculty_advisees_view.dart';
 import '../views/faculty_dashboard_view.dart';
 import '../views/faculty_overview_view.dart';
 import '../views/my_requests_view.dart';
@@ -39,6 +43,7 @@ class _MainShellDashboardScreenState extends ConsumerState<MainShellDashboardScr
       return const AdminControlCenterShell();
     }
     final isStudent = role == 'STUDENT';
+    final isFaculty = role == 'FACULTY_ADVISOR';
     final userName = session?.name ?? 'User';
     final userSubtext = session?.program ?? session?.role ?? 'SRM Ramapuram';
 
@@ -54,21 +59,37 @@ class _MainShellDashboardScreenState extends ConsumerState<MainShellDashboardScr
             const NotificationsView(),
             const ProfileView(),
           ]
-        : [
-            _HomeDashboardView(
-              onNavigateToQueue: () => setState(() => _currentIndex = 1),
-            ),
-            const _AllRequestsView(),
-            const NotificationsView(),
-            const ProfileView(),
-          ];
+        : (isFaculty
+            ? [
+                _HomeDashboardView(
+                  onNavigateToQueue: () => setState(() => _currentIndex = 1),
+                ),
+                const _AllRequestsView(),
+                const FacultyAdviseesView(),
+                const NotificationsView(),
+                const ProfileView(),
+              ]
+            : [
+                _HomeDashboardView(
+                  onNavigateToQueue: () => setState(() => _currentIndex = 1),
+                ),
+                const _AllRequestsView(),
+                const DepartmentStudentDirectoryView(),
+                const NotificationsView(),
+                const ProfileView(),
+              ]);
 
     final safeIndex = _currentIndex < pages.length ? _currentIndex : 0;
     final isDesktop = ResponsiveLayout.isLaptop(context) || ResponsiveLayout.isDesktop(context);
     final topInset = isDesktop ? 0.0 : MediaQuery.paddingOf(context).top;
 
+    void openCommandPalette() {
+      CommandPaletteDialog.show(context, onNavigate: (idx) => setState(() => _currentIndex = idx));
+    }
+
+    Widget content;
     if (isDesktop) {
-      return Scaffold(
+      content = Scaffold(
         key: _scaffoldKey,
         backgroundColor: AppColors.background,
         body: Row(
@@ -91,11 +112,12 @@ class _MainShellDashboardScreenState extends ConsumerState<MainShellDashboardScr
                     userName: userName,
                     userSubtext: userSubtext,
                     unreadNotificationCount: unreadCount,
+                    onSearchTap: openCommandPalette,
                     onNotificationTap: () {
-                      setState(() => _currentIndex = isStudent ? 3 : 2);
+                      setState(() => _currentIndex = 3);
                     },
                     onProfileTap: () {
-                      setState(() => _currentIndex = isStudent ? 4 : 3);
+                      setState(() => _currentIndex = 4);
                     },
                   ),
                   Expanded(
@@ -110,59 +132,71 @@ class _MainShellDashboardScreenState extends ConsumerState<MainShellDashboardScr
           ],
         ),
       );
+    } else {
+      content = Scaffold(
+        key: _scaffoldKey,
+        backgroundColor: AppColors.background,
+        drawer: ResponsiveLayout.isTablet(context)
+            ? Drawer(
+                child: AppDesktopSidebar(
+                  selectedIndex: safeIndex,
+                  onDestinationSelected: (index) {
+                    setState(() => _currentIndex = index);
+                    Navigator.pop(context);
+                  },
+                  role: role,
+                  userName: userName,
+                  onLogout: () {
+                    Navigator.pop(context);
+                    ref.read(authControllerProvider.notifier).logout();
+                  },
+                ),
+              )
+            : null,
+        appBar: PreferredSize(
+          preferredSize: Size.fromHeight(64.0 + topInset),
+          child: AppTopHeader(
+            userName: userName,
+            userSubtext: userSubtext,
+            unreadNotificationCount: unreadCount,
+            onSearchTap: openCommandPalette,
+            onNotificationTap: () {
+              setState(() => _currentIndex = 3);
+            },
+            onProfileTap: () {
+              setState(() => _currentIndex = 4);
+            },
+            onMenuTap: ResponsiveLayout.isTablet(context)
+                ? () => _scaffoldKey.currentState?.openDrawer()
+                : null,
+          ),
+        ),
+        body: SafeArea(
+          top: false,
+          child: IndexedStack(
+            index: safeIndex,
+            children: pages,
+          ),
+        ),
+        bottomNavigationBar: ResponsiveLayout.isMobile(context)
+            ? AppBottomNavBar(
+                currentIndex: safeIndex,
+                onTap: (index) => setState(() => _currentIndex = index),
+                role: role,
+              )
+            : null,
+      );
     }
 
-    return Scaffold(
-      key: _scaffoldKey,
-      backgroundColor: AppColors.background,
-      drawer: ResponsiveLayout.isTablet(context)
-          ? Drawer(
-              child: AppDesktopSidebar(
-                selectedIndex: safeIndex,
-                onDestinationSelected: (index) {
-                  setState(() => _currentIndex = index);
-                  Navigator.pop(context);
-                },
-                role: role,
-                userName: userName,
-                onLogout: () {
-                  Navigator.pop(context);
-                  ref.read(authControllerProvider.notifier).logout();
-                },
-              ),
-            )
-          : null,
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(64.0 + topInset),
-        child: AppTopHeader(
-          userName: userName,
-          userSubtext: userSubtext,
-          unreadNotificationCount: unreadCount,
-          onNotificationTap: () {
-            setState(() => _currentIndex = isStudent ? 3 : 2);
-          },
-          onProfileTap: () {
-            setState(() => _currentIndex = isStudent ? 4 : 3);
-          },
-          onMenuTap: ResponsiveLayout.isTablet(context)
-              ? () => _scaffoldKey.currentState?.openDrawer()
-              : null,
-        ),
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.keyK, control: true): openCommandPalette,
+        const SingleActivator(LogicalKeyboardKey.keyK, meta: true): openCommandPalette,
+      },
+      child: Focus(
+        autofocus: true,
+        child: content,
       ),
-      body: SafeArea(
-        top: false,
-        child: IndexedStack(
-          index: safeIndex,
-          children: pages,
-        ),
-      ),
-      bottomNavigationBar: ResponsiveLayout.isMobile(context)
-          ? AppBottomNavBar(
-              currentIndex: safeIndex,
-              onTap: (index) => setState(() => _currentIndex = index),
-              role: role,
-            )
-          : null,
     );
   }
 }

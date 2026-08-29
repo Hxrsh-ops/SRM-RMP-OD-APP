@@ -52,7 +52,7 @@ class WorkflowController extends StateNotifier<WorkflowState> {
     loadAllData();
   }
 
-  Future<void> loadAllData({bool includeHistory = false}) async {
+  Future<void> loadAllData({bool includeHistory = true}) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
       final requests = await _repository.getMyRequests(includeHistory: includeHistory);

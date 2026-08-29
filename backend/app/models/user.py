@@ -17,6 +17,7 @@ class User(Base, AuditMixin, SoftDeleteMixin):
     role = Column(SQLEnum(UserRole), nullable=False, default=UserRole.STUDENT)
     
     department_id = Column(GUID, ForeignKey("departments.id"), nullable=True)
+    class_section_id = Column(GUID, ForeignKey("class_sections.id"), nullable=True)
     program = Column(String(100), nullable=True) # e.g. B.Tech CSE (AI & ML)
     year_section = Column(String(50), nullable=True) # e.g. 2nd Year - Sec G
     
@@ -28,6 +29,7 @@ class User(Base, AuditMixin, SoftDeleteMixin):
     last_login_at = Column(DateTime(timezone=True), nullable=True)
 
     department = relationship("Department", back_populates="users")
+    class_section = relationship("ClassSection", back_populates="students", foreign_keys=[class_section_id])
     assigned_faculty = relationship("User", remote_side=[id])
     
     od_requests = relationship("OdRequest", back_populates="student", foreign_keys="OdRequest.student_id")

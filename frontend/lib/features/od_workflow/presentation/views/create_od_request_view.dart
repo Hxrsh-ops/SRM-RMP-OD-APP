@@ -1,6 +1,7 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/network/providers/dio_provider.dart';
 import '../../../../core/theme/color_tokens.dart';
 import '../../../../core/theme/tokens/theme_tokens.dart';
 import '../../../../core/ui/ui.dart';
@@ -25,6 +26,8 @@ class _CreateOdRequestViewState extends ConsumerState<CreateOdRequestView> {
   final _venueController = TextEditingController();
   final _organizerController = TextEditingController();
   final _notesController = TextEditingController();
+  final _cgpaController = TextEditingController();
+  final _attendanceController = TextEditingController();
 
   DateTime? _startDate;
   DateTime? _endDate;
@@ -38,12 +41,44 @@ class _CreateOdRequestViewState extends ConsumerState<CreateOdRequestView> {
   String? _uploadError;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadSavedAcademicDetails());
+  }
+
+  Future<void> _loadSavedAcademicDetails() async {
+    final session = ref.read(authControllerProvider).session;
+    final studentId = session?.userId ?? '';
+    if (studentId.isEmpty) return;
+
+    final storage = ref.read(secureStorageProvider);
+    final savedCgpa = await storage.read(key: 'student_cgpa_$studentId');
+    final savedAttendance = await storage.read(key: 'student_attendance_$studentId');
+
+    if (savedCgpa != null && savedCgpa.trim().isNotEmpty) {
+      _cgpaController.text = savedCgpa.trim();
+    } else {
+      _cgpaController.text = '';
+    }
+
+    if (savedAttendance != null && savedAttendance.trim().isNotEmpty) {
+      _attendanceController.text = savedAttendance.trim();
+    } else {
+      _attendanceController.text = '';
+    }
+
+    if (mounted) setState(() {});
+  }
+
+  @override
   void dispose() {
     _reasonController.dispose();
     _purposeController.dispose();
     _venueController.dispose();
     _organizerController.dispose();
     _notesController.dispose();
+    _cgpaController.dispose();
+    _attendanceController.dispose();
     super.dispose();
   }
 
@@ -175,6 +210,24 @@ class _CreateOdRequestViewState extends ConsumerState<CreateOdRequestView> {
     }
   }
 
+  void _clearForm() {
+    _reasonController.clear();
+    _purposeController.clear();
+    _venueController.clear();
+    _organizerController.clear();
+    _notesController.clear();
+    _loadSavedAcademicDetails();
+    setState(() {
+      _startDate = null;
+      _endDate = null;
+      _durationDays = 0;
+      _residenceType = 'Day Scholar';
+      _parentConsentUrl = null;
+      _uploadedAttachments.clear();
+      _uploadError = null;
+    });
+  }
+
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -208,6 +261,29 @@ class _CreateOdRequestViewState extends ConsumerState<CreateOdRequestView> {
       return;
     }
 
+    final cgpaVal = double.tryParse(_cgpaController.text.trim());
+    final attVal = double.tryParse(_attendanceController.text.trim());
+
+    if (cgpaVal == null || cgpaVal < 0.0 || cgpaVal > 10.0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid CGPA (0.00 - 10.00).'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+      return;
+    }
+
+    if (attVal == null || attVal < 0.0 || attVal > 100.0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid Attendance % (0.0 - 100.0).'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+      return;
+    }
+
     final session = ref.read(authControllerProvider).session;
     final studentId = session?.userId ?? '';
     final studentName = session?.name ?? '';
@@ -225,6 +301,8 @@ class _CreateOdRequestViewState extends ConsumerState<CreateOdRequestView> {
           venue: _venueController.text.trim(),
           organizer: _organizerController.text.trim(),
           additionalNotes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+          cgpa: cgpaVal,
+          attendancePercentage: attVal,
           residenceType: _residenceType,
           parentConsentUrl: _parentConsentUrl,
           attachments: _uploadedAttachments,
@@ -232,6 +310,12 @@ class _CreateOdRequestViewState extends ConsumerState<CreateOdRequestView> {
 
     if (mounted) {
       if (success) {
+        final storage = ref.read(secureStorageProvider);
+        if (studentId.isNotEmpty) {
+          await storage.write(key: 'student_cgpa_$studentId', value: _cgpaController.text.trim());
+          await storage.write(key: 'student_attendance_$studentId', value: _attendanceController.text.trim());
+        }
+        _clearForm();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('On Duty Request submitted successfully!'),
@@ -432,6 +516,80 @@ class _CreateOdRequestViewState extends ConsumerState<CreateOdRequestView> {
             ),
             const SizedBox(height: AppSpacing.lg),
 
+            // Student Academic Eligibility (CGPA & Attendance)
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Student Academic Eligibility Details',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.primaryBlue),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  const Text(
+                    'Enter your current cumulative GPA and overall attendance percentage for advisor verification',
+                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isWide = constraints.maxWidth > 500;
+                      final cgpaField = TextFormField(
+                        controller: _cgpaController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: const InputDecoration(
+                          labelText: 'Current CGPA *',
+                          hintText: 'e.g. 8.75',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.school_outlined, size: 18),
+                        ),
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) return 'Please enter CGPA';
+                          final parsed = double.tryParse(val.trim());
+                          if (parsed == null || parsed < 0.0 || parsed > 10.0) return 'Enter valid CGPA (0.0 - 10.0)';
+                          return null;
+                        },
+                      );
+                      final attendanceField = TextFormField(
+                        controller: _attendanceController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: const InputDecoration(
+                          labelText: 'Current Attendance % *',
+                          hintText: 'e.g. 85.5',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.percent_rounded, size: 18),
+                        ),
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) return 'Please enter attendance %';
+                          final parsed = double.tryParse(val.trim());
+                          if (parsed == null || parsed < 0.0 || parsed > 100.0) return 'Enter valid percentage (0 - 100)';
+                          return null;
+                        },
+                      );
+
+                      if (isWide) {
+                        return Row(
+                          children: [
+                            Expanded(child: cgpaField),
+                            const SizedBox(width: AppSpacing.md),
+                            Expanded(child: attendanceField),
+                          ],
+                        );
+                      }
+                      return Column(
+                        children: [
+                          cgpaField,
+                          const SizedBox(height: AppSpacing.md),
+                          attendanceField,
+                        ],
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+
             // Residence & Parent Consent
             AppCard(
               child: Column(
@@ -479,7 +637,7 @@ class _CreateOdRequestViewState extends ConsumerState<CreateOdRequestView> {
                             style: ElevatedButton.styleFrom(backgroundColor: AppColors.warning, foregroundColor: Colors.white),
                             onPressed: _isUploadingFile ? null : () => _pickAndUploadFile(isParentConsent: true),
                             icon: const Icon(Icons.upload_file_rounded, size: 18),
-                            label: Text(_parentConsentUrl != null ? 'Parent Consent Attached ✓' : 'Upload Parent Consent Letter'),
+                            label: Text(_parentConsentUrl != null ? 'Parent Consent Attached' : 'Upload Parent Consent Letter'),
                           ),
                         ],
                       ),

@@ -19,7 +19,7 @@ class AppWelcomeHeader extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Welcome back, $userName 👋',
+          'Welcome back, $userName',
           style: theme.textTheme.headlineMedium?.copyWith(
             fontWeight: FontWeight.bold,
             color: AppColors.primaryBlue,

@@ -51,7 +51,7 @@ class OdRequestTile extends StatelessWidget {
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
-          AppStatusChip(label: request.status.displayName, statusType: request.status.statusType),
+          AppStatusChip(label: request.statusDisplayLabel, statusType: request.status.statusType),
           if (!isMobile) ...[
             const SizedBox(width: AppSpacing.xs),
             const Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary, size: 20),

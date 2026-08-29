@@ -122,7 +122,7 @@ class SecurityCenterView extends ConsumerWidget {
                                       onPressed: () async {
                                         final repo = ref.read(adminRepositoryProvider);
                                         await repo.deleteSecurityEvent(evt.id);
-                                        ref.refresh(adminSecuritySummaryProvider);
+                                        ref.invalidate(adminSecuritySummaryProvider);
                                       },
                                     ),
                                   ],
@@ -156,7 +156,7 @@ class SecurityCenterView extends ConsumerWidget {
               Navigator.pop(ctx);
               final repo = ref.read(adminRepositoryProvider);
               await repo.clearAllSecurityEvents();
-              ref.refresh(adminSecuritySummaryProvider);
+              ref.invalidate(adminSecuritySummaryProvider);
             },
             child: const Text('Clear All'),
           ),

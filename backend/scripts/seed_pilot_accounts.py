@@ -49,7 +49,11 @@ def seed_pilot_accounts():
                 is_active=True,
             )
             db.add(admin)
-            db.commit()
+        else:
+            admin.hashed_password = get_password_hash("Admin@123456")
+            admin.is_active = True
+            admin.is_locked = False
+        db.commit()
 
         # 3. Dean (Campus-wide)
         dean = db.query(User).filter(User.username == "DEAN1001").first()
@@ -63,7 +67,11 @@ def seed_pilot_accounts():
                 is_active=True,
             )
             db.add(dean)
-            db.commit()
+        else:
+            dean.hashed_password = get_password_hash("Dean@123456")
+            dean.is_active = True
+            dean.is_locked = False
+        db.commit()
 
         # 4. HOD (AI Department)
         hod = db.query(User).filter(User.username == "HOD1001").first()
@@ -78,7 +86,12 @@ def seed_pilot_accounts():
                 is_active=True,
             )
             db.add(hod)
-            db.commit()
+        else:
+            hod.hashed_password = get_password_hash("Hod@123456")
+            hod.is_active = True
+            hod.is_locked = False
+            hod.department_id = ai_dept.id
+        db.commit()
 
         # 5. Coordinator (AI Department)
         coord = db.query(User).filter(User.username == "CO1001").first()
@@ -93,7 +106,12 @@ def seed_pilot_accounts():
                 is_active=True,
             )
             db.add(coord)
-            db.commit()
+        else:
+            coord.hashed_password = get_password_hash("Coord@123")
+            coord.is_active = True
+            coord.is_locked = False
+            coord.department_id = ai_dept.id
+        db.commit()
 
         # 6. Faculty Advisor (AI Department)
         fa = db.query(User).filter(User.username == "FA1001").first()
@@ -108,10 +126,60 @@ def seed_pilot_accounts():
                 is_active=True,
             )
             db.add(fa)
-            db.commit()
-            db.refresh(fa)
+        else:
+            fa.hashed_password = get_password_hash("Faculty@123")
+            fa.is_active = True
+            fa.is_locked = False
+            fa.department_id = ai_dept.id
+        db.commit()
+        db.refresh(fa)
 
-        # 7. Student (Harshanth)
+        # 7. Class Sections
+        from app.models.class_section import ClassSection
+        sec_g = db.query(ClassSection).filter(
+            ClassSection.department_id == ai_dept.id,
+            ClassSection.academic_year == 2,
+            ClassSection.section == "Sec G"
+        ).first()
+        if not sec_g:
+            sec_g = ClassSection(
+                department_id=ai_dept.id,
+                academic_year=2,
+                section="Sec G",
+                batch="2024-2028",
+                program="B.Tech CSE (AI & ML)",
+                faculty_advisor_id=fa.id
+            )
+            db.add(sec_g)
+        else:
+            sec_g.faculty_advisor_id = fa.id
+        db.commit()
+        db.refresh(sec_g)
+
+        # Seed additional sections for pilot testing
+        other_secs = [
+            (ai_dept.id, 2, "Sec A", "2024-2028", "B.Tech CSE (AI & ML)", fa.id),
+            (ai_dept.id, 1, "Sec A", "2025-2029", "B.Tech CSE (AI & ML)", None),
+            (cse_dept.id, 2, "Sec A", "2024-2028", "B.Tech CSE", None),
+        ]
+        for dept_id, yr, sec_name, batch, prog, fa_id in other_secs:
+            existing_sec = db.query(ClassSection).filter(
+                ClassSection.department_id == dept_id,
+                ClassSection.academic_year == yr,
+                ClassSection.section == sec_name
+            ).first()
+            if not existing_sec:
+                db.add(ClassSection(
+                    department_id=dept_id,
+                    academic_year=yr,
+                    section=sec_name,
+                    batch=batch,
+                    program=prog,
+                    faculty_advisor_id=fa_id
+                ))
+        db.commit()
+
+        # 8. Student (Harshanth)
         student = db.query(User).filter(User.username == "RA2511026020400").first()
         if not student:
             student = User(
@@ -121,17 +189,25 @@ def seed_pilot_accounts():
                 hashed_password=get_password_hash("Student@123"),
                 role=UserRole.STUDENT,
                 department_id=ai_dept.id,
+                class_section_id=sec_g.id,
                 program="B Tech CSE AI/ML",
                 year_section="2nd Year - Sec G",
                 assigned_faculty_id=fa.id,
                 is_active=True,
             )
             db.add(student)
-            db.commit()
+        else:
+            student.hashed_password = get_password_hash("Student@123")
+            student.is_active = True
+            student.is_locked = False
+            student.department_id = ai_dept.id
+            student.class_section_id = sec_g.id
+            student.assigned_faculty_id = fa.id
+        db.commit()
 
-        print("[SUCCESS] Provisioned Clean Pilot Accounts (0 OD Requests created):")
-        print("  1. Student     : RA2511026020400 / Student@123 (K M HARSHANTH)")
-        print("  2. Faculty Adv : FA1001          / Faculty@123 (Karthik)")
+        print("[SUCCESS] Provisioned Clean Pilot Accounts & Class Sections:")
+        print("  1. Student     : RA2511026020400 / Student@123 (K M HARSHANTH) [Linked to AIML Year 2 - Sec G]")
+        print("  2. Faculty Adv : FA1001          / Faculty@123 (Karthik) [Assigned FA for AIML Year 2 - Sec G]")
         print("  3. Coordinator : CO1001          / Coord@123   (Kamalesh)")
         print("  4. HOD         : HOD1001         / Hod@123456  (Dr. Krishna)")
         print("  5. Dean        : DEAN1001        / Dean@123456 (Dr. Kailash)")

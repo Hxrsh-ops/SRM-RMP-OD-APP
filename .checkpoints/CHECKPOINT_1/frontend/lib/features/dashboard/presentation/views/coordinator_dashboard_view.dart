@@ -1,0 +1,794 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/responsive/responsive_layout.dart';
+import '../../../../core/theme/color_tokens.dart';
+import '../../../../core/theme/tokens/theme_tokens.dart';
+import '../../../../core/ui/ui.dart';
+import '../../../../core/utils/file_download_helper.dart';
+import '../../../authentication/authentication.dart';
+import '../../../od_workflow/domain/entities/od_request.dart';
+import '../../../od_workflow/domain/entities/od_status.dart';
+import '../../../od_workflow/presentation/controllers/workflow_controller.dart';
+import '../../../od_workflow/presentation/widgets/request_details_modal.dart';
+
+class CoordinatorDashboardView extends ConsumerStatefulWidget {
+  const CoordinatorDashboardView({super.key});
+
+  @override
+  ConsumerState<CoordinatorDashboardView> createState() => _CoordinatorDashboardViewState();
+}
+
+class _CoordinatorDashboardViewState extends ConsumerState<CoordinatorDashboardView> {
+  final _searchController = TextEditingController();
+  String _filterQuery = '';
+  int _activeTab = 0; // 0 = Initial Approvals, 1 = Evidence Verification
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _showCoordinatorApproveDialog(BuildContext context, OdRequest request) {
+    final isEvidenceMode = request.status == OdStatus.pendingEvidenceCoordinator;
+    final remarksController = TextEditingController(
+      text: isEvidenceMode ? 'Completion evidence verified. Final OD granted.' : 'Approved for event participation. Awaiting post-event completion proof.',
+    );
+    final session = ref.read(authControllerProvider).session;
+    final role = session?.role ?? 'COORDINATOR';
+    final roleName = role == 'HOD' ? 'Head of Department' : (role == 'DEAN' ? 'Executive Dean' : 'Coordinator');
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderLg),
+        titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        actionsPadding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+        title: Row(
+          children: [
+            const Icon(Icons.verified_rounded, color: AppColors.primaryBlue, size: 22),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(
+                isEvidenceMode ? 'Final Evidence Verification' : '$roleName Approval',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Student: ${request.studentName} (${request.registerNumber})'),
+            Text('Faculty Advisor: ${request.facultyAdvisorName} (Verified)'),
+            if (isEvidenceMode && request.completionSummary != null) ...[
+              const SizedBox(height: AppSpacing.xs),
+              Text('Completion Report: "${request.completionSummary}"', style: const TextStyle(fontStyle: FontStyle.italic, fontSize: 12)),
+            ],
+            const SizedBox(height: AppSpacing.md),
+            Text('$roleName Decision Remarks:', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+            const SizedBox(height: AppSpacing.xs),
+            TextField(
+              controller: remarksController,
+              maxLines: 2,
+              decoration: const InputDecoration(
+                hintText: 'Enter decision notes...',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryBlue,
+              foregroundColor: Colors.white,
+              shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderMd),
+            ),
+            onPressed: () async {
+              Navigator.pop(dialogCtx);
+              final success = await ref.read(workflowControllerProvider.notifier).processCoordinatorAction(
+                    requestId: request.id,
+                    coordinatorId: session?.userId ?? '',
+                    coordinatorName: session?.name ?? '',
+                    approve: true,
+                    comment: remarksController.text.trim(),
+                  );
+              if (context.mounted) {
+                final errorMsg = ref.read(workflowControllerProvider).errorMessage;
+                if (success) {
+                  AppSnackbar.showSuccess(
+                    context,
+                    isEvidenceMode ? 'OD Request ${request.id} completed & granted!' : 'Request ${request.id} approved by $roleName.',
+                  );
+                } else {
+                  AppSnackbar.showError(
+                    context,
+                    errorMsg ?? 'Failed to approve request ${request.id}.',
+                  );
+                }
+              }
+            },
+            child: Text(isEvidenceMode ? 'Complete & Grant OD' : 'Approve Request'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCoordinatorRejectDialog(BuildContext context, OdRequest request) {
+    final remarksController = TextEditingController();
+    final isEvidenceMode = request.status == OdStatus.pendingEvidenceCoordinator;
+    final session = ref.read(authControllerProvider).session;
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderLg),
+        titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        actionsPadding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+        title: Row(
+          children: [
+            const Icon(Icons.cancel_outlined, color: AppColors.danger, size: 22),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(
+                isEvidenceMode ? 'Request Evidence Revision' : 'Reject OD Request',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Student: ${request.studentName} (${request.registerNumber})'),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              isEvidenceMode ? 'Evidence Revision Requirements (Mandatory):' : 'Rejection Reason Remarks (Mandatory):',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            TextField(
+              controller: remarksController,
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: isEvidenceMode ? 'Enter evidence revision requirements...' : 'Enter rejection reason explanation...',
+                border: const OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.danger,
+              foregroundColor: Colors.white,
+              shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderMd),
+            ),
+            onPressed: () async {
+              if (remarksController.text.trim().isEmpty) {
+                AppSnackbar.showError(dialogCtx, 'Please specify a rejection reason.');
+                return;
+              }
+              Navigator.pop(dialogCtx);
+              final success = await ref.read(workflowControllerProvider.notifier).processCoordinatorAction(
+                    requestId: request.id,
+                    coordinatorId: session?.userId ?? '',
+                    coordinatorName: session?.name ?? '',
+                    approve: false,
+                    returnForCorrection: false,
+                    comment: remarksController.text.trim(),
+                  );
+              if (context.mounted) {
+                final errorMsg = ref.read(workflowControllerProvider).errorMessage;
+                if (success) {
+                  AppSnackbar.showWarning(context, 'Request ${request.id} rejected.');
+                } else {
+                  AppSnackbar.showError(context, errorMsg ?? 'Failed to reject request ${request.id}');
+                }
+              }
+            },
+            child: Text(isEvidenceMode ? 'Request Revision' : 'Confirm Rejection'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCoordinatorEscalateDialog(BuildContext context, OdRequest request) {
+    final remarksController = TextEditingController();
+    final session = ref.read(authControllerProvider).session;
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderLg),
+        titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        actionsPadding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+        title: const Row(
+          children: [
+            Icon(Icons.forward_to_inbox, color: Color(0xFF1A365D), size: 22),
+            SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(
+                'Escalate to Head of Department',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Student: ${request.studentName} (${request.registerNumber})'),
+            Text('Event: ${request.reason} • ${request.durationDays} Days'),
+            const SizedBox(height: AppSpacing.md),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1A365D).withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline, size: 16, color: Color(0xFF1A365D)),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Request will be escalated to the HOD. (Only HOD has executive authority to escalate to the Dean).',
+                      style: TextStyle(fontSize: 11.5, color: Color(0xFF1A365D)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            const Text('Escalation Reason / Notes for HOD (Mandatory):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+            const SizedBox(height: AppSpacing.xs),
+            TextField(
+              controller: remarksController,
+              maxLines: 2,
+              decoration: const InputDecoration(
+                hintText: 'Enter reason for HOD concurrence/review...',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1A365D),
+              foregroundColor: Colors.white,
+              shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderMd),
+            ),
+            icon: const Icon(Icons.send_rounded, size: 16),
+            label: const Text('Escalate to HOD'),
+            onPressed: () async {
+              if (remarksController.text.trim().isEmpty) {
+                AppSnackbar.showError(dialogCtx, 'Please specify why this request is being escalated.');
+                return;
+              }
+              Navigator.pop(dialogCtx);
+              final success = await ref.read(workflowControllerProvider.notifier).processCoordinatorAction(
+                    requestId: request.id,
+                    coordinatorId: session?.userId ?? '',
+                    coordinatorName: session?.name ?? '',
+                    approve: true,
+                    escalateTo: 'HOD',
+                    comment: '[Escalated to HOD]: ${remarksController.text.trim()}',
+                  );
+              if (context.mounted) {
+                final errorMsg = ref.read(workflowControllerProvider).errorMessage;
+                if (success) {
+                  AppSnackbar.showSuccess(
+                    context,
+                    'Request ${request.id} escalated to HOD successfully.',
+                  );
+                } else {
+                  AppSnackbar.showError(
+                    context,
+                    errorMsg ?? 'Failed to escalate request.',
+                  );
+                }
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final allRequests = ref.watch(workflowControllerProvider.select((s) => s.requests));
+    final analytics = ref.watch(workflowControllerProvider.select((s) => s.analytics));
+    final isMobile = ResponsiveLayout.isMobile(context);
+
+    final initialPending = allRequests.where((r) => r.status == OdStatus.pendingCoordinator || r.status == OdStatus.facultyApproved).toList();
+    final evidencePending = allRequests.where((r) => r.status == OdStatus.pendingEvidenceCoordinator).toList();
+
+    final activeList = (_activeTab == 0 ? initialPending : evidencePending).where((r) {
+      if (_filterQuery.isEmpty) return true;
+      final q = _filterQuery.toLowerCase();
+      return r.studentName.toLowerCase().contains(q) || r.registerNumber.toLowerCase().contains(q) || r.reason.toLowerCase().contains(q);
+    }).toList();
+
+    final pendingCoordCount = analytics?['pending_coordinator_count'] ?? initialPending.length;
+    final awaitingEvidenceCount = analytics?['approved_awaiting_evidence_count'] ?? allRequests.where((r) => r.status == OdStatus.approvedAwaitingEvidence).length;
+    final pendingEvidenceCount = analytics?['pending_evidence_coordinator_count'] ?? evidencePending.length;
+    final completedCount = analytics?['completed_count'] ?? allRequests.where((r) => r.status == OdStatus.completed).length;
+    final totalCount = analytics?['total_submissions_count'] ?? allRequests.length;
+
+    final session = ref.watch(authControllerProvider.select((s) => s.session));
+    final role = session?.role ?? 'COORDINATOR';
+    final isHod = role == 'HOD';
+    final isDean = role == 'DEAN';
+    final workspaceTitle = isDean
+        ? 'Executive Dean Clearance Workspace'
+        : (isHod ? 'Head of Department (HOD) Approval Workspace' : 'Coordinator Approval Workspace');
+    final workspaceSubtitle = isDean
+        ? 'Campus-wide escalated On Duty clearance queue & analytics overview'
+        : (isHod
+            ? 'Department-wide Head of Department approval queue & analytics overview'
+            : 'Department-wide On Duty approval queue & real-time analytics overview');
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        await ref.read(workflowControllerProvider.notifier).loadAllData();
+      },
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        workspaceTitle,
+                        style: theme.textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primaryBlue,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        workspaceSubtitle,
+                        style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.file_download_outlined, size: 16),
+                  label: const Text('Export CSV'),
+                  onPressed: () async {
+                    try {
+                      final repo = ref.read(workflowRepositoryProvider);
+                      final csvStr = await repo.exportDepartmentOdCsv();
+                      FileDownloadHelper.downloadCsv(
+                        csvContent: csvStr,
+                        filename: 'department_od_report_${DateTime.now().toIso8601String().substring(0, 10)}.csv',
+                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Department OD Report downloaded successfully.'), backgroundColor: Colors.green),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Failed to export CSV: $e'), backgroundColor: Colors.red),
+                        );
+                      }
+                    }
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
+
+            // Department Real-Time Analytics Cards
+            if (isMobile)
+              Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: AppMetricCard(
+                          title: 'Pending Initial',
+                          value: '$pendingCoordCount',
+                          icon: Icons.hourglass_top_rounded,
+                          statusType: AppStatusType.warning,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: AppMetricCard(
+                          title: 'Awaiting Proof',
+                          value: '$awaitingEvidenceCount',
+                          icon: Icons.pending_actions_rounded,
+                          statusType: AppStatusType.info,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: AppMetricCard(
+                          title: 'Pending Proof',
+                          value: '$pendingEvidenceCount',
+                          icon: Icons.fact_check_outlined,
+                          statusType: AppStatusType.warning,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: AppMetricCard(
+                          title: 'Completed',
+                          value: '$completedCount',
+                          icon: Icons.verified_user_outlined,
+                          statusType: AppStatusType.success,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              )
+            else
+              Row(
+                children: [
+                  Expanded(
+                    child: AppMetricCard(
+                      title: 'Pending Initial',
+                      value: '$pendingCoordCount',
+                      icon: Icons.hourglass_top_rounded,
+                      statusType: AppStatusType.warning,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: AppMetricCard(
+                      title: 'Awaiting Proof',
+                      value: '$awaitingEvidenceCount',
+                      icon: Icons.pending_actions_rounded,
+                      statusType: AppStatusType.info,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: AppMetricCard(
+                      title: 'Pending Proof',
+                      value: '$pendingEvidenceCount',
+                      icon: Icons.fact_check_outlined,
+                      statusType: AppStatusType.warning,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: AppMetricCard(
+                      title: 'Completed',
+                      value: '$completedCount',
+                      icon: Icons.verified_user_outlined,
+                      statusType: AppStatusType.success,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: AppMetricCard(
+                      title: 'Total Requests',
+                      value: '$totalCount',
+                      icon: Icons.analytics_outlined,
+                      statusType: AppStatusType.info,
+                    ),
+                  ),
+                ],
+              ),
+
+            const SizedBox(height: AppSpacing.lg),
+
+            // Queue Choice Chips
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: [
+                ChoiceChip(
+                  label: Text('Initial Approvals ($pendingCoordCount)'),
+                  selected: _activeTab == 0,
+                  onSelected: (val) => setState(() => _activeTab = 0),
+                ),
+                ChoiceChip(
+                  label: Text('Evidence Verification ($pendingEvidenceCount)'),
+                  selected: _activeTab == 1,
+                  onSelected: (val) => setState(() => _activeTab = 1),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+
+            // Search Bar
+            SizedBox(
+              height: 42,
+              child: TextField(
+                controller: _searchController,
+                onChanged: (val) => setState(() => _filterQuery = val.trim()),
+                decoration: const InputDecoration(
+                  hintText: 'Search department requests...',
+                  prefixIcon: Icon(Icons.search_rounded, size: 18),
+                  filled: true,
+                  fillColor: AppColors.surfaceVariant,
+                  contentPadding: EdgeInsets.symmetric(vertical: 0, horizontal: AppSpacing.md),
+                  border: OutlineInputBorder(borderRadius: AppRadius.borderMd, borderSide: BorderSide.none),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+
+            if (activeList.isEmpty)
+              AppEmptyState(
+                title: _activeTab == 0 ? 'No Pending Approvals' : 'No Pending Evidence Reviews',
+                description: _filterQuery.isEmpty
+                    ? (_activeTab == 0
+                        ? 'All department On Duty requests have been processed.'
+                        : 'No event completion evidence is waiting for verification.')
+                    : 'No requests matched "$_filterQuery".',
+              )
+            else
+              Column(
+                children: activeList.map((req) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                    child: AppCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              CircleAvatar(
+                                radius: 20,
+                                backgroundColor: AppColors.primaryContainer,
+                                child: Text(
+                                  req.studentName.isNotEmpty ? req.studentName[0].toUpperCase() : 'S',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primaryBlue),
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      req.studentName,
+                                      style: theme.textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        height: 1.2,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${req.registerNumber} • Advisor: ${req.facultyAdvisorName}',
+                                      style: theme.textTheme.bodySmall?.copyWith(
+                                        color: AppColors.textSecondary,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.xs),
+                              AppStatusChip(label: req.status.displayName, statusType: req.status.statusType),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+
+                          // Event Details Box
+                          Container(
+                            padding: const EdgeInsets.all(AppSpacing.md),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceVariant.withValues(alpha: 0.5),
+                              borderRadius: AppRadius.borderMd,
+                              border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.event_note_rounded, size: 18, color: AppColors.primaryBlue),
+                                const SizedBox(width: AppSpacing.sm),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        req.reason,
+                                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '${req.durationDays} Days (${req.startDate.toString().split(" ")[0]}) • Venue: ${req.venue}',
+                                        style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+
+                          // Responsive Equal-Width Action Buttons (2x2 Grid on Mobile, Row on Desktop)
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              final isCompact = constraints.maxWidth < 460;
+                              if (isCompact) {
+                                return Column(
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: OutlinedButton.icon(
+                                            style: OutlinedButton.styleFrom(
+                                              foregroundColor: AppColors.primaryBlue,
+                                              side: const BorderSide(color: AppColors.primaryBlue),
+                                              shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderMd),
+                                              padding: const EdgeInsets.symmetric(vertical: 10),
+                                            ),
+                                            icon: const Icon(Icons.visibility_outlined, size: 16),
+                                            label: const Text('Details'),
+                                            onPressed: () => RequestDetailsModal.show(context, req),
+                                          ),
+                                        ),
+                                        const SizedBox(width: AppSpacing.sm),
+                                        Expanded(
+                                          child: OutlinedButton.icon(
+                                            style: OutlinedButton.styleFrom(
+                                              foregroundColor: const Color(0xFF1A365D),
+                                              side: const BorderSide(color: Color(0xFF1A365D)),
+                                              shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderMd),
+                                              padding: const EdgeInsets.symmetric(vertical: 10),
+                                            ),
+                                            icon: const Icon(Icons.forward_to_inbox, size: 16),
+                                            label: const Text('Escalate'),
+                                            onPressed: () => _showCoordinatorEscalateDialog(context, req),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: AppSpacing.xs),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: OutlinedButton.icon(
+                                            style: OutlinedButton.styleFrom(
+                                              foregroundColor: AppColors.danger,
+                                              side: const BorderSide(color: AppColors.danger),
+                                              shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderMd),
+                                              padding: const EdgeInsets.symmetric(vertical: 10),
+                                            ),
+                                            icon: const Icon(Icons.close_rounded, size: 16),
+                                            label: Text(_activeTab == 1 ? 'Revise' : 'Reject'),
+                                            onPressed: () => _showCoordinatorRejectDialog(context, req),
+                                          ),
+                                        ),
+                                        const SizedBox(width: AppSpacing.sm),
+                                        Expanded(
+                                          child: ElevatedButton.icon(
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: AppColors.primaryBlue,
+                                              foregroundColor: Colors.white,
+                                              shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderMd),
+                                              padding: const EdgeInsets.symmetric(vertical: 10),
+                                            ),
+                                            icon: const Icon(Icons.verified_rounded, size: 16),
+                                            label: Text(_activeTab == 1 ? 'Grant OD' : 'Approve'),
+                                            onPressed: () => _showCoordinatorApproveDialog(context, req),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                );
+                              }
+
+                              return Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  OutlinedButton.icon(
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: AppColors.primaryBlue,
+                                      side: const BorderSide(color: AppColors.primaryBlue),
+                                      shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderMd),
+                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                    ),
+                                    icon: const Icon(Icons.visibility_outlined, size: 16),
+                                    label: const Text('Details'),
+                                    onPressed: () => RequestDetailsModal.show(context, req),
+                                  ),
+                                  const SizedBox(width: AppSpacing.sm),
+                                  OutlinedButton.icon(
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: const Color(0xFF1A365D),
+                                      side: const BorderSide(color: Color(0xFF1A365D)),
+                                      shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderMd),
+                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                    ),
+                                    icon: const Icon(Icons.forward_to_inbox, size: 16),
+                                    label: const Text('Escalate'),
+                                    onPressed: () => _showCoordinatorEscalateDialog(context, req),
+                                  ),
+                                  const SizedBox(width: AppSpacing.sm),
+                                  OutlinedButton.icon(
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: AppColors.danger,
+                                      side: const BorderSide(color: AppColors.danger),
+                                      shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderMd),
+                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                    ),
+                                    icon: const Icon(Icons.close_rounded, size: 16),
+                                    label: Text(_activeTab == 1 ? 'Revise' : 'Reject'),
+                                    onPressed: () => _showCoordinatorRejectDialog(context, req),
+                                  ),
+                                  const SizedBox(width: AppSpacing.sm),
+                                  ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.primaryBlue,
+                                      foregroundColor: Colors.white,
+                                      shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderMd),
+                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                    ),
+                                    icon: const Icon(Icons.verified_rounded, size: 16),
+                                    label: Text(_activeTab == 1 ? 'Grant OD' : 'Approve'),
+                                    onPressed: () => _showCoordinatorApproveDialog(context, req),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}

@@ -4,6 +4,7 @@ import '../../../../core/responsive/responsive_layout.dart';
 import '../../../../core/theme/color_tokens.dart';
 import '../../../../core/theme/tokens/theme_tokens.dart';
 import '../../../../core/ui/ui.dart';
+import '../../../admin/presentation/controllers/admin_controller.dart';
 import '../../../authentication/authentication.dart';
 import '../../../od_workflow/domain/entities/od_request.dart';
 import '../../../od_workflow/domain/entities/od_status.dart';
@@ -103,8 +104,8 @@ class _FacultyDashboardViewState extends ConsumerState<FacultyDashboardView> {
                   final successMsg = isEvidenceMode
                       ? (isCompleted
                           ? 'Completion evidence verified & Final OD granted for ${request.id}!'
-                          : 'Completion evidence verified & passed for department review.')
-                      : 'Faculty approval submitted successfully for ${request.id}.';
+                          : 'Completion evidence verified & forwarded for department review.')
+                      : 'Faculty approval submitted for ${request.id} & forwarded for department review.';
                   AppSnackbar.showSuccess(context, successMsg);
                 } else {
                   AppSnackbar.showError(
@@ -207,19 +208,119 @@ class _FacultyDashboardViewState extends ConsumerState<FacultyDashboardView> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final allRequests = ref.watch(workflowControllerProvider.select((s) => s.requests));
+    final sharedClearancesAsync = ref.watch(sharedClearancesProvider);
+    final sharedList = sharedClearancesAsync.value ?? [];
     final isMobile = ResponsiveLayout.isMobile(context);
 
     final initialPending = allRequests.where((r) => r.status == OdStatus.pendingFaculty || r.status == OdStatus.submitted).toList();
     final evidencePending = allRequests.where((r) => r.status == OdStatus.pendingEvidenceFaculty).toList();
 
-    final activeList = (_activeTab == 0 ? initialPending : evidencePending).where((r) {
+    final activeRequestsList = (_activeTab == 0 ? initialPending : evidencePending).where((r) {
       if (_filterQuery.isEmpty) return true;
       final q = _filterQuery.toLowerCase();
       return r.studentName.toLowerCase().contains(q) || r.registerNumber.toLowerCase().contains(q) || r.reason.toLowerCase().contains(q);
     }).toList();
 
+    final activeSharedList = sharedList.where((s) {
+      if (_filterQuery.isEmpty) return true;
+      final q = _filterQuery.toLowerCase();
+      return s.studentName.toLowerCase().contains(q) || s.studentRegNo.toLowerCase().contains(q) || s.reason.toLowerCase().contains(q);
+    }).toList();
+
+    Widget buildFacultyMetricCard({
+      required String title,
+      required String value,
+      required IconData icon,
+      required AppStatusType statusType,
+      required int tabIndex,
+    }) {
+      final isSelected = _activeTab == tabIndex;
+      Color activeColor;
+      switch (statusType) {
+        case AppStatusType.warning:
+          activeColor = Colors.orange.shade700;
+          break;
+        case AppStatusType.info:
+          activeColor = const Color(0xFF1A365D);
+          break;
+        case AppStatusType.success:
+          activeColor = Colors.green.shade700;
+          break;
+        default:
+          activeColor = const Color(0xFF1A365D);
+      }
+
+      return InkWell(
+        onTap: () => setState(() => _activeTab = tabIndex),
+        borderRadius: BorderRadius.circular(12),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? activeColor.withValues(alpha: 0.08) : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected ? activeColor : Colors.grey.shade200,
+              width: isSelected ? 2 : 1,
+            ),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: activeColor.withValues(alpha: 0.12),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Icon(icon, size: 20, color: activeColor),
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isSelected ? activeColor : Colors.transparent,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: isSelected ? activeColor : Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  color: isSelected ? activeColor : Colors.grey.shade700,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return RefreshIndicator(
-      onRefresh: () => ref.read(workflowControllerProvider.notifier).loadAllData(),
+      onRefresh: () async {
+        await ref.read(workflowControllerProvider.notifier).loadAllData();
+        ref.invalidate(sharedClearancesProvider);
+      },
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -235,7 +336,7 @@ class _FacultyDashboardViewState extends ConsumerState<FacultyDashboardView> {
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
-              'Review student attendance eligibility and approve On Duty submissions',
+              'Review student attendance eligibility, approve On Duty submissions, and acknowledge course clearances',
               style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
             ),
             const SizedBox(height: AppSpacing.lg),
@@ -243,40 +344,33 @@ class _FacultyDashboardViewState extends ConsumerState<FacultyDashboardView> {
             Row(
               children: [
                 Expanded(
-                  child: AppMetricCard(
-                    title: 'Pending Initial Reviews',
+                  child: buildFacultyMetricCard(
+                    title: 'Initial Approvals',
                     value: '${initialPending.length}',
                     icon: Icons.assignment_late_outlined,
                     statusType: AppStatusType.warning,
+                    tabIndex: 0,
                   ),
                 ),
-                const SizedBox(width: AppSpacing.md),
+                const SizedBox(width: 8),
                 Expanded(
-                  child: AppMetricCard(
-                    title: 'Pending Evidence Reviews',
+                  child: buildFacultyMetricCard(
+                    title: 'Evidence Verification',
                     value: '${evidencePending.length}',
                     icon: Icons.fact_check_outlined,
                     statusType: AppStatusType.info,
+                    tabIndex: 1,
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.lg),
-
-            // Tab Filter Buttons
-            Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.sm,
-              children: [
-                ChoiceChip(
-                  label: Text('Initial Approvals (${initialPending.length})'),
-                  selected: _activeTab == 0,
-                  onSelected: (val) => setState(() => _activeTab = 0),
-                ),
-                ChoiceChip(
-                  label: Text('Evidence Verification (${evidencePending.length})'),
-                  selected: _activeTab == 1,
-                  onSelected: (val) => setState(() => _activeTab = 1),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: buildFacultyMetricCard(
+                    title: 'Shared Clearances',
+                    value: '${sharedList.length}',
+                    icon: Icons.mark_email_read_outlined,
+                    statusType: AppStatusType.success,
+                    tabIndex: 2,
+                  ),
                 ),
               ],
             ),
@@ -300,16 +394,230 @@ class _FacultyDashboardViewState extends ConsumerState<FacultyDashboardView> {
             ),
             const SizedBox(height: AppSpacing.lg),
 
-            if (activeList.isEmpty)
-              AppEmptyState(
-                title: _activeTab == 0 ? 'No Pending Initial Reviews' : 'No Evidence Pending Verification',
-                description: _activeTab == 0
-                    ? 'All student OD requests assigned to your advisor queue have been reviewed.'
-                    : 'No student completion proof documents are currently awaiting your verification.',
-              )
+            if (_activeTab == 2)
+              // Tab 3: Shared Clearances List
+              if (activeSharedList.isEmpty)
+                const AppEmptyState(
+                  title: 'No Shared Course Clearances',
+                  description: 'Students who share their verified OD attendance clearances with you will appear here.',
+                )
+              else
+                Column(
+                  children: activeSharedList.map((share) {
+                    final isAck = share.isAcknowledged;
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: isAck ? Colors.green.shade200 : Colors.grey.shade200),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.03),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Card Header
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                CircleAvatar(
+                                  radius: 20,
+                                  backgroundColor: isAck ? Colors.green.shade50 : const Color(0xFF1A365D).withValues(alpha: 0.08),
+                                  child: Icon(
+                                    isAck ? Icons.check_circle : Icons.school_rounded,
+                                    size: 20,
+                                    color: isAck ? Colors.green.shade700 : const Color(0xFF1A365D),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        share.studentName,
+                                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '${share.studentRegNo} • ${share.studentYearSection ?? ""} (${share.studentProgram ?? ""})',
+                                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: isAck ? Colors.green.shade50 : Colors.blue.shade50,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: isAck ? Colors.green.shade200 : Colors.blue.shade200),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        isAck ? Icons.check_circle : Icons.verified,
+                                        size: 12,
+                                        color: isAck ? Colors.green.shade800 : Colors.blue.shade800,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        isAck ? 'Acknowledged' : 'Clearance Verified',
+                                        style: TextStyle(
+                                          fontSize: 10.5,
+                                          fontWeight: FontWeight.bold,
+                                          color: isAck ? Colors.green.shade900 : Colors.blue.shade900,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Event Details Box
+                          Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 14),
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade50,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: Colors.grey.shade200),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.event_available_rounded, size: 16, color: Color(0xFF1A365D)),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        '${share.reason} (${share.startDate} to ${share.endDate})',
+                                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12.5),
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF1A365D).withValues(alpha: 0.08),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        '${share.durationDays} ${share.durationDays == 1 ? "Day" : "Days"}',
+                                        style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF1A365D)),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (share.notes != null && share.notes!.isNotEmpty) ...[
+                                  const SizedBox(height: 6),
+                                  Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Icon(Icons.notes_rounded, size: 14, color: Colors.grey.shade600),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          'Student Note: "${share.notes}"',
+                                          style: TextStyle(fontStyle: FontStyle.italic, fontSize: 11.5, color: Colors.grey.shade700),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 10),
+                          const Divider(height: 1),
+
+                          // Action Footer
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            child: isAck
+                                ? Row(
+                                    children: [
+                                      Icon(Icons.verified_rounded, size: 16, color: Colors.green.shade700),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'Attendance Exemption Recorded • Synced with ERP',
+                                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.green.shade800),
+                                      ),
+                                    ],
+                                  )
+                                : Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.info_outline, size: 15, color: Colors.orange.shade800),
+                                            const SizedBox(width: 6),
+                                            Flexible(
+                                              child: Text(
+                                                'Grant attendance waiver for course',
+                                                style: TextStyle(fontSize: 11.5, color: Colors.grey.shade700),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      ElevatedButton.icon(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color(0xFF1A365D),
+                                          foregroundColor: Colors.white,
+                                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                        ),
+                                        icon: const Icon(Icons.check_circle_outline, size: 16),
+                                        label: const Text('Acknowledge Attendance', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                        onPressed: () async {
+                                          final repo = ref.read(adminRepositoryProvider);
+                                          await repo.acknowledgeClearance(share.id);
+                                          ref.invalidate(sharedClearancesProvider);
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(
+                                                content: Text('Attendance acknowledged for ${share.studentName}.'),
+                                                backgroundColor: Colors.green.shade700,
+                                              ),
+                                            );
+                                          }
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                )
             else
-              Column(
-                children: activeList.map((req) {
+              // Tab 0 & 1: Initial Approvals & Evidence Verification
+              if (activeRequestsList.isEmpty)
+                AppEmptyState(
+                  title: _activeTab == 0 ? 'No Pending Initial Reviews' : 'No Evidence Pending Verification',
+                  description: _activeTab == 0
+                      ? 'All student OD requests assigned to your advisor queue have been reviewed.'
+                      : 'No student completion proof documents are currently awaiting your verification.',
+                )
+              else
+                Column(
+                  children: activeRequestsList.map((req) {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: AppSpacing.md),
                     child: AppCard(
@@ -354,7 +662,7 @@ class _FacultyDashboardViewState extends ConsumerState<FacultyDashboardView> {
                                 ),
                               ),
                               const SizedBox(width: AppSpacing.xs),
-                              AppStatusChip(label: req.status.displayName, statusType: req.status.statusType),
+                              AppStatusChip(label: req.statusDisplayLabel, statusType: req.status.statusType),
                             ],
                           ),
                           const SizedBox(height: AppSpacing.md),
@@ -392,7 +700,7 @@ class _FacultyDashboardViewState extends ConsumerState<FacultyDashboardView> {
                               ],
                             ),
                           ),
-                          const AppDivider(),
+                          const SizedBox(height: AppSpacing.md),
 
                           // Uniform Equal Height & Width Action Buttons
                           if (isMobile)

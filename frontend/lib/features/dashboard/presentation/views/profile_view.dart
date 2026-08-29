@@ -156,49 +156,58 @@ class ProfileView extends ConsumerWidget {
           return AlertDialog(
             title: const Row(
               children: [
-                Icon(Icons.lock_outline_rounded, color: Color(0xFF1A365D), size: 24),
-                SizedBox(width: AppSpacing.xs),
-                Text('Change Account Password'),
+                Icon(Icons.lock_outline_rounded, color: Color(0xFF1A365D), size: 22),
+                SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    'Change Password',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
-            content: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextFormField(
-                    controller: currentPwController,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Current Password',
-                      border: OutlineInputBorder(),
+            content: SingleChildScrollView(
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      controller: currentPwController,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Current Password',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (v) => v == null || v.isEmpty ? 'Enter current password' : null,
                     ),
-                    validator: (v) => v == null || v.isEmpty ? 'Enter current password' : null,
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: newPwController,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: 'New Password',
-                      border: OutlineInputBorder(),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: newPwController,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        labelText: 'New Password',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (v) => v == null || v.length < 6 ? 'Minimum 6 characters' : null,
                     ),
-                    validator: (v) => v == null || v.length < 6 ? 'Minimum 6 characters' : null,
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: confirmPwController,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Confirm New Password',
-                      border: OutlineInputBorder(),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: confirmPwController,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Confirm New Password',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (v) {
+                        if (v != newPwController.text) return 'Passwords do not match';
+                        return null;
+                      },
                     ),
-                    validator: (v) {
-                      if (v != newPwController.text) return 'Passwords do not match';
-                      return null;
-                    },
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             actions: [

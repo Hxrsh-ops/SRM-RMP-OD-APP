@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone, date
+from datetime import datetime, timezone, date, timedelta
 from typing import List, Optional, Dict, Any
 from uuid import UUID
 from ..core.exceptions import NotFoundException, PermissionDeniedException, BadRequestException
@@ -36,6 +36,35 @@ class WorkflowService:
         if req_in.duration_days <= 0 or req_in.duration_days != expected_duration:
             req_in.duration_days = expected_duration
 
+        # Spam Protection: Daily Submission Limit (Max 3 per 24 hours)
+        def _to_utc(dt):
+            if dt is None:
+                return None
+            if dt.tzinfo is None:
+                return dt.replace(tzinfo=timezone.utc)
+            return dt.astimezone(timezone.utc)
+
+        cutoff_24h = datetime.now(timezone.utc) - timedelta(hours=24)
+        student_all_reqs = self.od_repo.list_by_student(student_id)
+        recent_requests = [
+            r for r in student_all_reqs
+            if r.created_at and _to_utc(r.created_at) >= cutoff_24h
+        ]
+        if len(recent_requests) >= 3:
+            raise BadRequestException("Daily submission limit reached. You can submit a maximum of 3 On Duty requests per 24 hours to prevent spam.")
+
+        # Overlapping / Duplicate Date Range Protection
+        active_requests = [
+            r for r in student_all_reqs
+            if r.status not in (OdStatus.REJECTED, OdStatus.FACULTY_REJECTED)
+        ]
+        for existing in active_requests:
+            if existing.start_date <= req_in.end_date and req_in.start_date <= existing.end_date:
+                raise BadRequestException(
+                    f"An active OD request ({existing.id}) already exists for overlapping date range "
+                    f"({existing.start_date} to {existing.end_date}). You cannot submit another OD request for the same days."
+                )
+
         # Hosteller Parent Consent Validation
         if req_in.residence_type == "Hosteller":
             has_parent_consent = bool(req_in.parent_consent_url) or any(
@@ -55,6 +84,16 @@ class WorkflowService:
 
         # Collision-safe ID generation
         new_id = f"OD-2026-{uuid.uuid4().hex[:6].upper()}"
+        policy = self._get_workflow_policy()
+        workflow_mode = policy.get("workflow_mode") or policy.get("workflow_hierarchy_mode", "STANDARD")
+
+        # Determine Initial Status & Routing (All workflows begin with assigned Faculty Advisor)
+        initial_status = OdStatus.PENDING_FACULTY
+        sub_note = f"Submitted On Duty request for {req_in.reason}"
+        faculty_user = self.user_repo.get_by_id(faculty_id)
+        route_title = "Assigned to Faculty Advisor"
+        route_actor = faculty_user.full_name if faculty_user else "Faculty Advisor"
+        route_note = "Awaiting Faculty Advisor review"
 
         now = datetime.now(timezone.utc)
         od = OdRequest(
@@ -73,7 +112,7 @@ class WorkflowService:
             attendance_percentage=req_in.attendance_percentage or 88.0,
             residence_type=req_in.residence_type or "Day Scholar",
             parent_consent_url=req_in.parent_consent_url,
-            status=OdStatus.PENDING_FACULTY,
+            status=initial_status,
             created_at=now,
             updated_at=now
         )
@@ -99,19 +138,17 @@ class WorkflowService:
                 actor_name=student.full_name,
                 actor_role="Student",
                 status=OdStatus.SUBMITTED,
-                note=f"Submitted On Duty request for {req_in.reason}",
+                note=sub_note,
                 timestamp=now
             )
         )
-        faculty_user = self.user_repo.get_by_id(faculty_id)
-        faculty_name = faculty_user.full_name if faculty_user else "Faculty Advisor"
         od.timeline.append(
             TimelineEvent(
-                title="Assigned to Faculty Advisor",
-                actor_name=faculty_name,
-                actor_role="Faculty Advisor",
-                status=OdStatus.PENDING_FACULTY,
-                note="Awaiting Faculty Advisor review",
+                title=route_title,
+                actor_name=route_actor,
+                actor_role=route_actor,
+                status=initial_status,
+                note=route_note,
                 timestamp=now
             )
         )
@@ -125,7 +162,16 @@ class WorkflowService:
             message=f"Your OD request for {req_in.reason} has been submitted successfully.",
             request_id=new_id
         )
-        if faculty_id:
+        if workflow_mode == "DIRECT_HOD":
+            hod = self.user_repo.get_by_role(UserRole.HOD, department_id=student.department_id)
+            if hod:
+                self.notification_service.send_notification(
+                    recipient_id=hod.id,
+                    title="New OD Request (Direct HOD Review)",
+                    message=f"{student.full_name} submitted OD request {new_id} ({req_in.reason}) directly for HOD review.",
+                    request_id=new_id
+                )
+        elif faculty_id:
             self.notification_service.send_notification(
                 recipient_id=faculty_id,
                 title="New OD Request Assigned",
@@ -173,13 +219,21 @@ class WorkflowService:
         faculty_name = faculty_user.full_name if faculty_user else "Faculty Advisor"
         now = datetime.now(timezone.utc)
         policy = self._get_workflow_policy()
+        workflow_mode = policy.get("workflow_mode", "STANDARD")
+        evidence_mode = policy.get("evidence_workflow_mode", "FA_ONLY")
 
         # Process depending on current state
         if req.status in WorkflowTransitions.VALID_FACULTY_INITIAL:
-            new_status = OdStatus.PENDING_COORDINATOR if action.approve else OdStatus.FACULTY_REJECTED
-            step_title = "Faculty Advisor Approved" if action.approve else "Faculty Advisor Rejected"
+            if not action.approve:
+                new_status = OdStatus.FACULTY_REJECTED
+                step_title = "Faculty Advisor Rejected"
+            else:
+                new_status = OdStatus.PENDING_COORDINATOR
+                if workflow_mode == "DIRECT_HOD":
+                    step_title = "Faculty Advisor Approved (Forwarded for HOD Review)"
+                else:
+                    step_title = "Faculty Advisor Approved (Forwarded to Coordinator)"
         elif req.status in WorkflowTransitions.VALID_FACULTY_EVIDENCE:
-            evidence_mode = policy.get("evidence_workflow_mode", "FA_ONLY")
             was_escalated_to_dean = any(
                 "dean" in (event.title or "").lower() or "dean" in (event.note or "").lower()
                 for event in (req.timeline or [])
@@ -196,9 +250,12 @@ class WorkflowService:
                     new_status = OdStatus.COMPLETED
                     step_title = "Completion Evidence Verified & OD Granted by Faculty Advisor"
                     req.completion_verified_at = now
+                elif evidence_mode == "FA_HOD":
+                    new_status = OdStatus.PENDING_EVIDENCE_COORDINATOR
+                    step_title = "Faculty Verified Evidence (Forwarded for Head of Department Review)"
                 else:
                     new_status = OdStatus.PENDING_EVIDENCE_COORDINATOR
-                    step_title = "Faculty Verified Evidence (Forwarded for Department Review)"
+                    step_title = "Faculty Verified Evidence (Forwarded for Coordinator Review)"
         else:
             raise BadRequestException(f"Cannot perform faculty action on request in status {req.status.value}")
 
@@ -240,16 +297,27 @@ class WorkflowService:
         if action.approve and new_status != OdStatus.COMPLETED:
             student = self.user_repo.get_by_id(req.student_id)
             dept_id = student.department_id if student else None
-            coord = self.user_repo.get_by_role(UserRole.COORDINATOR, department_id=dept_id)
-            if not coord:
-                coord = self.user_repo.get_by_username("CO1001")
-            if coord:
-                self.notification_service.send_notification(
-                    recipient_id=coord.id,
-                    title=f"Request {request_id} Pending Review",
-                    message=f"Faculty {faculty_name} verified request {request_id}. Pending department action.",
-                    request_id=request_id
-                )
+            workflow_mode = policy.get("workflow_mode", "STANDARD")
+            if workflow_mode == "DIRECT_HOD" or evidence_mode == "FA_HOD":
+                hod = self.user_repo.get_by_role(UserRole.HOD, department_id=dept_id)
+                if hod:
+                    self.notification_service.send_notification(
+                        recipient_id=hod.id,
+                        title=f"Request {request_id} Pending HOD Review",
+                        message=f"Faculty {faculty_name} approved request {request_id}. Pending HOD clearance.",
+                        request_id=request_id
+                    )
+            else:
+                coord = self.user_repo.get_by_role(UserRole.COORDINATOR, department_id=dept_id)
+                if not coord:
+                    coord = self.user_repo.get_by_username("CO1001")
+                if coord:
+                    self.notification_service.send_notification(
+                        recipient_id=coord.id,
+                        title=f"Request {request_id} Pending Review",
+                        message=f"Faculty {faculty_name} verified request {request_id}. Pending department action.",
+                        request_id=request_id
+                    )
 
             # Smart Tiered Notification Routing for HOD (> 3 days, hackathon, symposium)
             reason_lower = (req.reason or "").lower()
@@ -282,7 +350,7 @@ class WorkflowService:
 
         coordinator_user = self.user_repo.get_by_id(coordinator_user_id)
         if not coordinator_user or coordinator_user.role not in (UserRole.COORDINATOR, UserRole.MASTER_ADMIN, UserRole.HOD, UserRole.DEAN):
-            raise PermissionDeniedException("Only Coordinators can perform this action.")
+            raise PermissionDeniedException("Only Coordinators, HODs, Deans, and Admins can perform this action.")
 
         # Require non-empty comment on rejection or return for correction
         if (not action.approve or action.return_for_correction) and (not action.comment or not action.comment.strip()):
@@ -292,6 +360,7 @@ class WorkflowService:
         now = datetime.now(timezone.utc)
         policy = self._get_workflow_policy()
         workflow_mode = policy.get("workflow_mode", "STANDARD")
+        evidence_mode = policy.get("evidence_workflow_mode", "FA_ONLY")
         hod_auto_days = int(policy.get("hod_auto_escalation_days", 0))
 
         actor_role = "Coordinator"
@@ -307,12 +376,12 @@ class WorkflowService:
             if target_upper == "DEAN":
                 if coordinator_user.role not in (UserRole.HOD, UserRole.MASTER_ADMIN):
                     raise BadRequestException("Coordinators can only escalate requests to the Head of Department (HOD). Only HODs have executive authority to escalate to the Dean.")
-                target_role_name = "Dean"
-                step_title = f"Escalated to Dean by {actor_role}"
+                target_role_name = "Executive Dean"
+                step_title = f"Escalated to Executive Dean by {actor_role}"
             else:
                 target_role_name = "Head of Department (HOD)"
                 step_title = f"Escalated to Head of Department (HOD) by {actor_role}"
-            new_status = req.status  # Retains active queue status with escalated flag
+            new_status = req.status  # Retains active queue status with escalation flag recorded in timeline
         elif req.status in WorkflowTransitions.VALID_COORDINATOR_INITIAL:
             if action.return_for_correction:
                 new_status = OdStatus.REVISION_REQUESTED
@@ -321,7 +390,7 @@ class WorkflowService:
                 new_status = OdStatus.REJECTED
                 step_title = f"Rejected by {actor_role}"
             else:
-                # Check if this requires HOD escalation
+                # Check if Coordinator needs to route to HOD
                 needs_hod = (
                     coordinator_user.role == UserRole.COORDINATOR and (
                         workflow_mode == "COMPREHENSIVE" or (
@@ -332,7 +401,7 @@ class WorkflowService:
                 if needs_hod:
                     action.escalate_to = "HOD"
                     new_status = req.status
-                    step_title = f"Coordinator Recommended (Escalated to HOD for {req.duration_days}-Day Concurrence)"
+                    step_title = f"Coordinator Endorsed (Routed to HOD for Final Clearance)"
                 else:
                     new_status = OdStatus.APPROVED_AWAITING_EVIDENCE
                     step_title = f"Initial Approval Granted by {actor_role} (Awaiting Event Proof)"
@@ -341,9 +410,17 @@ class WorkflowService:
                 new_status = OdStatus.EVIDENCE_REVISION_REQUESTED
                 step_title = f"Evidence Revision Requested by {actor_role}"
             else:
-                new_status = OdStatus.COMPLETED
-                step_title = f"Completion Evidence Verified & OD Granted by {actor_role}"
-                req.completion_verified_at = now
+                needs_evidence_hod = (
+                    coordinator_user.role == UserRole.COORDINATOR and evidence_mode == "FA_COORDINATOR_HOD"
+                )
+                if needs_evidence_hod:
+                    action.escalate_to = "HOD"
+                    new_status = req.status
+                    step_title = f"Coordinator Verified Evidence (Forwarded to HOD for Final OD Grant)"
+                else:
+                    new_status = OdStatus.COMPLETED
+                    step_title = f"Completion Evidence Verified & OD Granted by {actor_role}"
+                    req.completion_verified_at = now
         else:
             raise BadRequestException(f"Cannot perform action on request in status {req.status.value}")
 

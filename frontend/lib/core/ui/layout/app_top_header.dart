@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../responsive/responsive_layout.dart';
 import '../../theme/color_tokens.dart';
 import '../../theme/tokens/theme_tokens.dart';
+import '../command_palette_dialog.dart';
 import 'app_initials_avatar.dart';
 
-class AppTopHeader extends StatelessWidget implements PreferredSizeWidget {
+class AppTopHeader extends ConsumerWidget implements PreferredSizeWidget {
   final String userName;
   final String userSubtext;
   final int unreadNotificationCount;
   final VoidCallback onNotificationTap;
   final VoidCallback onProfileTap;
   final VoidCallback? onMenuTap;
+  final VoidCallback? onSearchTap;
 
   const AppTopHeader({
     super.key,
@@ -20,13 +23,14 @@ class AppTopHeader extends StatelessWidget implements PreferredSizeWidget {
     required this.onNotificationTap,
     required this.onProfileTap,
     this.onMenuTap,
+    this.onSearchTap,
   });
 
   @override
   Size get preferredSize => const Size.fromHeight(64.0);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isDesktop = ResponsiveLayout.isDesktop(context) || ResponsiveLayout.isLaptop(context);
     final topInset = isDesktop ? 0.0 : MediaQuery.paddingOf(context).top;
     final totalHeight = 64.0 + topInset;
@@ -57,60 +61,73 @@ class AppTopHeader extends StatelessWidget implements PreferredSizeWidget {
               const SizedBox(width: AppSpacing.xs),
             ],
 
-            // App Header Title & Subtitle (No Overlap)
-            const Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'SRM RMP OD Platform',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primaryBlue,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+            // App Header Title & Subtitle
+            const Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'SRM RMP OD Platform',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primaryBlue,
                   ),
-                  Text(
-                    'On Duty Approval Workflow',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: AppColors.textSecondary,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  'On Duty Approval Workflow',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textSecondary,
                   ),
-                ],
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+
+            const Spacer(),
+
+            // Spotlight Search Trigger Bar
+            InkWell(
+              onTap: onSearchTap ?? () => CommandPaletteDialog.show(context),
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceVariant,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.search_rounded, size: 16, color: AppColors.textSecondary),
+                    const SizedBox(width: 8),
+                    if (isDesktop) ...[
+                      const Text(
+                        'Search requests, actions...',
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      ),
+                      const SizedBox(width: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: const Text('Ctrl K', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ),
 
-            // Search Bar (Desktop / Laptop)
-            if (isDesktop) ...[
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 280),
-                child: const SizedBox(
-                  height: 40,
-                  child: TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Search requests, events...',
-                      hintStyle: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-                      prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.textSecondary),
-                      filled: true,
-                      fillColor: AppColors.surfaceVariant,
-                      contentPadding: EdgeInsets.symmetric(vertical: 0, horizontal: AppSpacing.md),
-                      border: OutlineInputBorder(
-                        borderRadius: AppRadius.borderMd,
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                    style: TextStyle(fontSize: 13),
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.lg),
-            ],
+            const SizedBox(width: AppSpacing.sm),
 
             // Notification Icon Button with Badge Counter
             Stack(
@@ -144,15 +161,38 @@ class AppTopHeader extends StatelessWidget implements PreferredSizeWidget {
 
             const SizedBox(width: AppSpacing.sm),
 
-            // Profile Initials Avatar Button
+            // User Initials Avatar and Profile Click
             InkWell(
               onTap: onProfileTap,
-              borderRadius: AppRadius.borderFull,
-              child: AppInitialsAvatar(
-                name: userName,
-                size: 36,
-                backgroundColor: AppColors.primaryContainer,
-                foregroundColor: AppColors.primaryBlue,
+              borderRadius: BorderRadius.circular(20),
+              child: Row(
+                children: [
+                  AppInitialsAvatar(name: userName, size: 34),
+                  if (isDesktop) ...[
+                    const SizedBox(width: AppSpacing.xs),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 120),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            userName,
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            userSubtext,
+                            style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
           ],

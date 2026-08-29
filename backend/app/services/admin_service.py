@@ -6,6 +6,7 @@ from ..repositories.admin_repository import AdminRepository
 from ..repositories.user_repository import UserRepository
 from ..models.user import User
 from ..models.department import Department
+from ..models.class_section import ClassSection
 from ..models.system_setting import SystemSetting
 from ..models.audit_log import AuditLog
 from ..models.security_event import SecurityEvent
@@ -35,14 +36,20 @@ class AdminService:
     def get_users(
         self,
         page: int = 1,
-        limit: int = 20,
+        per_page: int = 20,
         query: Optional[str] = None,
         role: Optional[UserRole] = None,
         department_id: Optional[uuid.UUID] = None,
         is_active: Optional[bool] = None
     ) -> Tuple[List[Dict[str, Any]], int]:
-        users, total = self.admin_repo.get_users_paginated(page, limit, query, role, department_id, is_active)
-
+        users, total = self.admin_repo.get_users_paginated(
+            page=page,
+            limit=per_page,
+            query=query,
+            role=role,
+            department_id=department_id,
+            is_active=is_active
+        )
         items = []
         for u in users:
             dept_name = u.department.name if u.department else None
@@ -55,6 +62,7 @@ class AdminService:
                 "role": u.role,
                 "department_id": u.department_id,
                 "department_name": dept_name,
+                "class_section_id": u.class_section_id,
                 "program": u.program,
                 "year_section": u.year_section,
                 "assigned_faculty_id": u.assigned_faculty_id,
@@ -76,6 +84,24 @@ class AdminService:
         if self.user_repo.get_by_email(data.email):
             raise BadRequestException(f"Email '{data.email}' already exists.")
 
+        assigned_fa = data.assigned_faculty_id
+        linked_section_id = data.class_section_id
+
+        # Auto-detect class section and FA if student
+        if data.role == UserRole.STUDENT:
+            if linked_section_id:
+                sec = self.db.query(ClassSection).filter(ClassSection.id == linked_section_id, ClassSection.is_deleted == False).first()
+                if sec and sec.faculty_advisor_id and not assigned_fa:
+                    assigned_fa = sec.faculty_advisor_id
+            elif data.year_section and data.department_id:
+                secs = self.db.query(ClassSection).filter(ClassSection.department_id == data.department_id, ClassSection.is_deleted == False).all()
+                for s in secs:
+                    if s.section.lower() in data.year_section.lower():
+                        linked_section_id = s.id
+                        if s.faculty_advisor_id and not assigned_fa:
+                            assigned_fa = s.faculty_advisor_id
+                        break
+
         user = User(
             username=data.username,
             email=data.email,
@@ -83,9 +109,10 @@ class AdminService:
             hashed_password=get_password_hash(data.password),
             role=data.role,
             department_id=data.department_id,
+            class_section_id=linked_section_id,
             program=data.program,
             year_section=data.year_section,
-            assigned_faculty_id=data.assigned_faculty_id,
+            assigned_faculty_id=assigned_fa,
             is_active=True,
             is_locked=False,
             force_password_change=True,
@@ -103,21 +130,22 @@ class AdminService:
         if not user:
             raise ResourceNotFoundException(f"User with ID {user_id} not found.")
 
+        if data.username is not None and data.username.strip() and data.username.strip() != user.username:
+            existing = self.user_repo.get_by_username(data.username.strip())
+            if existing and existing.id != user.id:
+                raise BadRequestException(f"Username '{data.username.strip()}' is already in use.")
+            user.username = data.username.strip()
+
         if data.full_name is not None:
             user.full_name = data.full_name
         if data.email is not None and data.email != user.email:
-            if self.user_repo.get_by_email(data.email):
+            existing_email = self.user_repo.get_by_email(data.email)
+            if existing_email and existing_email.id != user.id:
                 raise BadRequestException(f"Email '{data.email}' is already taken.")
             user.email = data.email
-        if data.role is not None and user.role == UserRole.MASTER_ADMIN and data.role != UserRole.MASTER_ADMIN:
-            active_admin_count = self.db.query(User).filter(
-                User.role == UserRole.MASTER_ADMIN,
-                User.is_active == True,
-                User.is_deleted == False
-            ).count()
-            if active_admin_count <= 1:
-                raise BadRequestException("Cannot downgrade role of the sole active MASTER_ADMIN account.")
-            user.role = data.role
+        if user.role == UserRole.MASTER_ADMIN:
+            # Master Admin role is locked and cannot be demoted or changed
+            user.role = UserRole.MASTER_ADMIN
         elif data.role is not None:
             user.role = data.role
 

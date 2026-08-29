@@ -6,6 +6,7 @@ import '../../../../core/config/env_config.dart';
 import '../../../../core/theme/color_tokens.dart';
 import '../../../../core/theme/tokens/theme_tokens.dart';
 import '../../../../core/ui/ui.dart';
+import '../../../admin/presentation/controllers/admin_controller.dart';
 import '../../../authentication/authentication.dart';
 import '../../domain/entities/od_request.dart';
 import '../../domain/entities/od_status.dart';
@@ -81,9 +82,16 @@ class _RequestDetailsModalState extends ConsumerState<RequestDetailsModal> with 
             shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderLg),
             title: const Row(
               children: [
-                Icon(Icons.assignment_turned_in_rounded, color: AppColors.primaryBlue, size: 24),
-                SizedBox(width: AppSpacing.xs),
-                Text('Submit Completion Proof'),
+                Icon(Icons.assignment_turned_in_rounded, color: AppColors.primaryBlue, size: 22),
+                SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    'Submit Completion Proof',
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
             content: SingleChildScrollView(
@@ -196,6 +204,133 @@ class _RequestDetailsModalState extends ConsumerState<RequestDetailsModal> with 
     );
   }
 
+  void _showShareClearanceDialog(BuildContext context, OdRequest req) {
+    final emailCtrl = TextEditingController();
+    final noteCtrl = TextEditingController();
+    bool isSubmitting = false;
+    String? errorMessage;
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            shape: const RoundedRectangleBorder(borderRadius: AppRadius.borderLg),
+            title: const Row(
+              children: [
+                Icon(Icons.send_rounded, color: AppColors.primaryBlue, size: 22),
+                SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    'Share Verified Clearance',
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            content: SizedBox(
+              width: 460,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Request: ${req.id} • ${req.reason}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1A365D))),
+                  const SizedBox(height: 4),
+                  Text('Send verified OD attendance proof directly to your course/subject teacher for attendance register entry.', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                  const SizedBox(height: AppSpacing.md),
+                  if (errorMessage != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.red.shade300),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.error_outline_rounded, size: 18, color: Colors.red.shade700),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              errorMessage!,
+                              style: TextStyle(color: Colors.red.shade900, fontSize: 12, fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  TextField(
+                    controller: emailCtrl,
+                    decoration: const InputDecoration(
+                      labelText: "Course Teacher's Institutional Email",
+                      hintText: "e.g. karthik@srmist.edu.in",
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.email_outlined, size: 18),
+                      errorText: null,
+                    ),
+                    onChanged: (_) {
+                      if (errorMessage != null) {
+                        setDialogState(() => errorMessage = null);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  TextField(
+                    controller: noteCtrl,
+                    decoration: const InputDecoration(
+                      labelText: "Optional Note for Subject Teacher",
+                      hintText: "e.g. For Mathematics - Period 3 attendance",
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: isSubmitting ? null : () => Navigator.pop(dialogCtx), child: const Text('Cancel')),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue, foregroundColor: Colors.white),
+                icon: const Icon(Icons.send_rounded, size: 16),
+                label: Text(isSubmitting ? 'Verifying...' : 'Dispatch Clearance'),
+                onPressed: isSubmitting
+                    ? null
+                    : () async {
+                        final email = emailCtrl.text.trim();
+                        if (email.isEmpty || !email.contains('@')) {
+                          setDialogState(() => errorMessage = 'Please enter a valid teacher institutional email.');
+                          return;
+                        }
+                        setDialogState(() {
+                          isSubmitting = true;
+                          errorMessage = null;
+                        });
+                        try {
+                          final repo = ref.read(adminRepositoryProvider);
+                          await repo.shareClearance(req.id, email, notes: noteCtrl.text.trim());
+                          if (dialogCtx.mounted) Navigator.pop(dialogCtx);
+                          if (context.mounted) {
+                            AppSnackbar.showSuccess(context, 'OD Attendance Clearance sent to $email successfully!');
+                          }
+                        } catch (e) {
+                          setDialogState(() {
+                            isSubmitting = false;
+                            final errStr = e.toString().replaceAll('ApiException: ', '').replaceAll('Exception: ', '');
+                            errorMessage = errStr;
+                          });
+                        }
+                      },
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -271,7 +406,7 @@ class _RequestDetailsModalState extends ConsumerState<RequestDetailsModal> with 
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
-                  AppStatusChip(label: req.status.displayName, statusType: req.status.statusType),
+                  AppStatusChip(label: req.statusDisplayLabel, statusType: req.status.statusType),
                 ],
               ),
             ),
@@ -334,8 +469,16 @@ class _RequestDetailsModalState extends ConsumerState<RequestDetailsModal> with 
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: AppSpacing.xs),
-                              Text('${req.program} • ${req.yearSection}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                              const SizedBox(height: AppSpacing.sm),
+                              Text(
+                                req.studentName,
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5, color: AppColors.textPrimary),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${req.registerNumber} • ${req.program} • ${req.yearSection}',
+                                style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
+                              ),
                               const AppDivider(),
                               Row(
                                 children: [
@@ -411,6 +554,41 @@ class _RequestDetailsModalState extends ConsumerState<RequestDetailsModal> with 
                             ],
                           ),
                         ),
+
+                        if (req.status == OdStatus.completed) ...[
+                          const SizedBox(height: AppSpacing.md),
+                          AppCard(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Wrap(
+                                  alignment: WrapAlignment.spaceBetween,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.verified_rounded, color: AppColors.success, size: 20),
+                                        SizedBox(width: 6),
+                                        Text('Verified OD Attendance Clearance', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.success)),
+                                      ],
+                                    ),
+                                    ElevatedButton.icon(
+                                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1A365D), foregroundColor: Colors.white),
+                                      icon: const Icon(Icons.send_rounded, size: 14),
+                                      label: const Text('Share with Course Faculty'),
+                                      onPressed: () => _showShareClearanceDialog(context, req),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                const Text('All approvals and evidence verification are complete. Share digital clearance with your individual course/subject faculties for attendance entry.', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                              ],
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -435,8 +613,15 @@ class _RequestDetailsModalState extends ConsumerState<RequestDetailsModal> with 
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    const Text('Post-Event Completion Proof', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primaryBlue)),
-                                    AppStatusChip(label: req.status.displayName, statusType: req.status.statusType),
+                                    const Expanded(
+                                      child: Text(
+                                        'Post-Event Completion Proof',
+                                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primaryBlue),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    AppStatusChip(label: req.statusDisplayLabel, statusType: req.status.statusType),
                                   ],
                                 ),
                                 const SizedBox(height: AppSpacing.xs),

@@ -1,7 +1,7 @@
 def test_login_student_success(client):
     response = client.post(
         "/api/v1/auth/login",
-        data={"username": "RA2511026020400", "password": "student123"}
+        data={"username": "RA2511026020400", "password": "Student@123"}
     )
     assert response.status_code == 200
     data = response.json()
@@ -11,7 +11,7 @@ def test_login_student_success(client):
 def test_login_faculty_success(client):
     response = client.post(
         "/api/v1/auth/login",
-        data={"username": "FA1001", "password": "faculty123"}
+        data={"username": "FA1001", "password": "Faculty@123"}
     )
     assert response.status_code == 200
     assert "access_token" in response.json()
@@ -26,7 +26,7 @@ def test_login_invalid_password(client):
 def test_get_me_profile(client):
     login_res = client.post(
         "/api/v1/auth/login",
-        data={"username": "RA2511026020400", "password": "student123"}
+        data={"username": "RA2511026020400", "password": "Student@123"}
     )
     token = login_res.json()["access_token"]
 
@@ -44,7 +44,7 @@ def test_get_me_profile(client):
 def test_refresh_token(client):
     login_res = client.post(
         "/api/v1/auth/login/json",
-        json={"username": "RA2511026020400", "password": "student123"}
+        json={"username": "RA2511026020400", "password": "Student@123"}
     )
     refresh_token = login_res.json()["refresh_token"]
 

@@ -1,0 +1,18 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
+
+class FileDownloadHelper {
+  static void downloadCsv({required String csvContent, required String filename}) {
+    if (kIsWeb) {
+      final bytes = utf8.encode('\uFEFF$csvContent');
+      final blob = html.Blob([bytes], 'text/csv;charset=utf-8');
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      html.AnchorElement(href: url)
+        ..setAttribute('download', filename)
+        ..click();
+      html.Url.revokeObjectUrl(url);
+    }
+  }
+}

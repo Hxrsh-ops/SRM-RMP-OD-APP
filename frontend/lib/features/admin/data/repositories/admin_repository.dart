@@ -199,4 +199,54 @@ class AdminRepository {
   Future<void> clearAllSecurityEvents() async {
     await apiClient.delete('/admin/security/events');
   }
+
+  Future<List<ClassSectionModel>> getClassSections({String? departmentId, int? academicYear}) async {
+    final queryParams = <String, dynamic>{};
+    if (departmentId != null && departmentId.isNotEmpty) queryParams['department_id'] = departmentId;
+    if (academicYear != null) queryParams['academic_year'] = academicYear;
+
+    final List response = await apiClient.get('/class-sections', queryParameters: queryParams);
+    return response.map((e) => ClassSectionModel.fromJson(e)).toList();
+  }
+
+  Future<ClassSectionModel> createClassSection(Map<String, dynamic> data) async {
+    final response = await apiClient.post('/class-sections', data: data);
+    return ClassSectionModel.fromJson(response);
+  }
+
+  Future<ClassSectionModel> assignClassSectionFA(String sectionId, {String? facultyAdvisorId, String? section, int? academicYear, String? batch}) async {
+    final payload = <String, dynamic>{};
+    if (facultyAdvisorId != null) payload['faculty_advisor_id'] = facultyAdvisorId;
+    if (section != null) payload['section'] = section;
+    if (academicYear != null) payload['academic_year'] = academicYear;
+    if (batch != null) payload['batch'] = batch;
+
+    final response = await apiClient.put('/class-sections/$sectionId/assign-fa', data: payload);
+    return ClassSectionModel.fromJson(response);
+  }
+
+  Future<void> deleteClassSection(String sectionId) async {
+    await apiClient.delete('/class-sections/$sectionId');
+  }
+
+  Future<List<SharedClearanceModel>> getSharedClearances() async {
+    final List response = await apiClient.get('/od-requests/shared-clearances');
+    return response.map((e) => SharedClearanceModel.fromJson(e)).toList();
+  }
+
+  Future<SharedClearanceModel> shareClearance(String odRequestId, String facultyEmail, {String? notes}) async {
+    final response = await apiClient.post(
+      '/od-requests/$odRequestId/share-clearance',
+      data: {
+        'faculty_email': facultyEmail,
+        if (notes != null) 'notes': notes,
+      },
+    );
+    return SharedClearanceModel.fromJson(response);
+  }
+
+  Future<SharedClearanceModel> acknowledgeClearance(String shareId) async {
+    final response = await apiClient.post('/od-requests/shared-clearances/$shareId/acknowledge');
+    return SharedClearanceModel.fromJson(response);
+  }
 }

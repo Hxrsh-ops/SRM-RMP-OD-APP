@@ -40,7 +40,7 @@ def setup_db():
             username="FA1001",
             email="faculty@srmist.edu.in",
             full_name="Dr. Karthik B",
-            hashed_password=get_password_hash("faculty123"),
+            hashed_password=get_password_hash("Faculty@123"),
             role=UserRole.FACULTY_ADVISOR,
             department_id=dept.id,
         )
@@ -55,7 +55,7 @@ def setup_db():
             username="CO1001",
             email="coord@srmist.edu.in",
             full_name="Prof. Ramesh Kumar",
-            hashed_password=get_password_hash("coord123"),
+            hashed_password=get_password_hash("Coord@123"),
             role=UserRole.COORDINATOR,
             department_id=dept.id,
         )
@@ -76,14 +76,42 @@ def setup_db():
         db.add(admin)
         db.commit()
 
-    # Seed Student
+    # Seed HOD
+    hod = db.query(User).filter(User.username == "HOD1001").first()
+    if not hod:
+        hod = User(
+            username="HOD1001",
+            email="hod@srmist.edu.in",
+            full_name="Dr. Krishna HOD",
+            hashed_password=get_password_hash("Hod@123456"),
+            role=UserRole.HOD,
+            department_id=dept.id,
+        )
+        db.add(hod)
+        db.commit()
+
+    # Seed Dean
+    dean = db.query(User).filter(User.username == "DEAN1001").first()
+    if not dean:
+        dean = User(
+            username="DEAN1001",
+            email="dean@srmist.edu.in",
+            full_name="Dr. S. Dean",
+            hashed_password=get_password_hash("Dean@123456"),
+            role=UserRole.DEAN,
+            department_id=dept.id,
+        )
+        db.add(dean)
+        db.commit()
+
+    # Seed Student 1
     student = db.query(User).filter(User.username == "RA2511026020400").first()
     if not student:
         student = User(
             username="RA2511026020400",
             email="hk7793@srmist.edu.in",
             full_name="K.M. Harshanth",
-            hashed_password=get_password_hash("student123"),
+            hashed_password=get_password_hash("Student@123"),
             role=UserRole.STUDENT,
             department_id=dept.id,
             program="B.Tech CSE (AI & ML)",
@@ -91,6 +119,23 @@ def setup_db():
             assigned_faculty_id=faculty.id,
         )
         db.add(student)
+        db.commit()
+
+    # Seed Student 2
+    student2 = db.query(User).filter(User.username == "RA2511026020401").first()
+    if not student2:
+        student2 = User(
+            username="RA2511026020401",
+            email="student2@srmist.edu.in",
+            full_name="John Doe",
+            hashed_password=get_password_hash("Student@123"),
+            role=UserRole.STUDENT,
+            department_id=dept.id,
+            program="B.Tech CSE (AI & ML)",
+            year_section="2nd Year - Sec G",
+            assigned_faculty_id=faculty.id,
+        )
+        db.add(student2)
         db.commit()
 
     db.close()

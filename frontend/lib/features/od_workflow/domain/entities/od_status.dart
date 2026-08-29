@@ -19,21 +19,21 @@ enum OdStatus {
       case OdStatus.submitted:
         return 'Submitted';
       case OdStatus.pendingFaculty:
-        return 'Pending Faculty';
+        return 'Pending FA Approval';
       case OdStatus.facultyApproved:
-        return 'Faculty Approved';
+        return 'FA Approved';
       case OdStatus.facultyRejected:
-        return 'Faculty Rejected';
+        return 'FA Rejected';
       case OdStatus.pendingCoordinator:
         return 'Pending Coordinator';
       case OdStatus.approvedAwaitingEvidence:
-        return 'Awaiting Evidence';
+        return 'Awaiting Proof';
       case OdStatus.pendingEvidenceFaculty:
-        return 'Proof Review (Faculty)';
+        return 'Pending FA Proof';
       case OdStatus.pendingEvidenceCoordinator:
-        return 'Proof Review (Coord)';
+        return 'Pending Proof Review';
       case OdStatus.evidenceRevisionRequested:
-        return 'Revision Requested';
+        return 'Proof Revision';
       case OdStatus.completed:
         return 'Completed';
       case OdStatus.rejected:

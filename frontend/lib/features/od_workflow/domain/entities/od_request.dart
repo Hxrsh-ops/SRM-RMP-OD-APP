@@ -116,4 +116,60 @@ class OdRequest {
       createdAt: createdAt,
     );
   }
+
+  bool get isEscalatedToDean {
+    return timeline.any((t) {
+      final title = t.title.toLowerCase();
+      final note = (t.note ?? '').toLowerCase();
+      return title.contains('escalated to dean') ||
+          title.contains('escalated to executive dean') ||
+          note.contains('[escalated to dean]');
+    });
+  }
+
+  bool get isEscalatedToHod {
+    return timeline.any((t) {
+      final title = t.title.toLowerCase();
+      final note = (t.note ?? '').toLowerCase();
+      return title.contains('escalated to hod') ||
+          title.contains('escalated to head of department') ||
+          title.contains('routed to hod') ||
+          note.contains('[escalated to hod]');
+    });
+  }
+
+  bool get isDirectHodSubmission {
+    return timeline.any((t) {
+      final title = t.title.toLowerCase();
+      final note = (t.note ?? '').toLowerCase();
+      return title.contains('directly for head of department') ||
+          title.contains('direct hod') ||
+          title.contains('routed to head of department') ||
+          title.contains('forwarded for hod') ||
+          title.contains('forwarded for head of department') ||
+          title.contains('hod review') ||
+          note.contains('directly for head of department') ||
+          note.contains('direct hod') ||
+          note.contains('forwarded for hod') ||
+          note.contains('forwarded for head of department') ||
+          note.contains('head of department (hod) review') ||
+          note.contains('head of department (hod) approval') ||
+          note.contains('hod review');
+    });
+  }
+
+  String get statusDisplayLabel {
+    if (status == OdStatus.pendingCoordinator) {
+      if (isEscalatedToDean) return 'Pending Dean';
+      if (isEscalatedToHod || isDirectHodSubmission) return 'Pending HOD';
+      return 'Pending Coordinator';
+    }
+    if (status == OdStatus.pendingEvidenceCoordinator) {
+      if (isEscalatedToDean) return 'Pending Dean Proof';
+      if (isEscalatedToHod) return 'Pending HOD Proof';
+      return 'Pending Proof Review';
+    }
+    if (status == OdStatus.pendingFaculty) return 'Pending FA Approval';
+    return status.displayName;
+  }
 }

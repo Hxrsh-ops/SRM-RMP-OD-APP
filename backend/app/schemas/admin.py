@@ -50,6 +50,7 @@ class UserResponseSchema(BaseModel):
     department_name: Optional[str] = None
     program: Optional[str] = None
     year_section: Optional[str] = None
+    class_section_id: Optional[UUID] = None
     assigned_faculty_id: Optional[UUID] = None
     assigned_faculty_name: Optional[str] = None
     is_active: bool
@@ -66,15 +67,18 @@ class UserCreateSchema(BaseModel):
     password: str = Field(..., min_length=6)
     role: UserRole
     department_id: Optional[UUID] = None
+    class_section_id: Optional[UUID] = None
     program: Optional[str] = None
     year_section: Optional[str] = None
     assigned_faculty_id: Optional[UUID] = None
 
 class UserUpdateSchema(BaseModel):
+    username: Optional[str] = None
     full_name: Optional[str] = None
     email: Optional[EmailStr] = None
     role: Optional[UserRole] = None
     department_id: Optional[UUID] = None
+    class_section_id: Optional[UUID] = None
     program: Optional[str] = None
     year_section: Optional[str] = None
     assigned_faculty_id: Optional[UUID] = None
@@ -153,7 +157,7 @@ class OrganizationSettingsSchema(BaseModel):
     max_file_size_mb: int = 10
     allowed_file_types: List[str] = ["pdf", "jpg", "jpeg", "png", "docx"]
     require_evidence: bool = True
-    jwt_expiration_minutes: int = 43200  # 30 Days (43200 minutes)
+    jwt_expiration_minutes: int = 1440  # 1 Day (1440 minutes)
     notification_email_enabled: bool = True
     system_branding_title: str = "SRM RMP OD Platform"
     primary_color_hex: str = "#1A365D"

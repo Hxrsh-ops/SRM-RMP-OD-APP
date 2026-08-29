@@ -7,7 +7,7 @@ def get_token(client: TestClient, username: str, password: str) -> str:
     return res.json()["access_token"]
 
 def test_admin_rbac_protection(client: TestClient):
-    student_token = get_token(client, "RA2511026020400", "student123")
+    student_token = get_token(client, "RA2511026020400", "Student@123")
     headers = {"Authorization": f"Bearer {student_token}"}
     res = client.get("/api/v1/admin/dashboard/metrics", headers=headers)
     assert res.status_code == 403

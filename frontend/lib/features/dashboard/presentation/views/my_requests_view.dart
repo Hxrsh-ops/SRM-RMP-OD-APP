@@ -139,7 +139,7 @@ class _MyRequestsViewState extends ConsumerState<MyRequestsView> {
                                       DataCell(Text(req.reason)),
                                       DataCell(Text('${req.startDate.toString().split(' ')[0]} to ${req.endDate.toString().split(' ')[0]}')),
                                       DataCell(Text('${req.durationDays} Days')),
-                                      DataCell(AppStatusChip(label: req.status.displayName, statusType: req.status.statusType)),
+                                      DataCell(AppStatusChip(label: req.statusDisplayLabel, statusType: req.status.statusType)),
                                     ],
                                   );
                                 }).toList(),
@@ -170,7 +170,7 @@ class _MyRequestsViewState extends ConsumerState<MyRequestsView> {
                             const SizedBox(height: 4),
                             Text('Purpose: ${_selectedRequest!.purpose} • ${_selectedRequest!.venue}', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                             const SizedBox(height: AppSpacing.md),
-                            AppStatusChip(label: _selectedRequest!.status.displayName, statusType: _selectedRequest!.status.statusType),
+                            AppStatusChip(label: _selectedRequest!.statusDisplayLabel, statusType: _selectedRequest!.status.statusType),
                             const SizedBox(height: AppSpacing.md),
                             ElevatedButton.icon(
                               onPressed: () => RequestDetailsModal.show(context, _selectedRequest!),

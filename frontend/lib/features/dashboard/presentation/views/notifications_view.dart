@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/responsive/responsive_layout.dart';
 import '../../../../core/theme/color_tokens.dart';
 import '../../../../core/theme/tokens/theme_tokens.dart';
 import '../../../../core/ui/ui.dart';
@@ -22,7 +21,6 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
     final theme = Theme.of(context);
     final notifications = ref.watch(workflowControllerProvider.select((s) => s.notifications));
     final requests = ref.watch(workflowControllerProvider.select((s) => s.requests));
-    final isMobile = ResponsiveLayout.isMobile(context);
 
     final allSelected = notifications.isNotEmpty && _selectedIds.length == notifications.length;
 
@@ -239,7 +237,9 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
     if (mounted) {
       if (success) {
         setState(() => _selectedIds.clear());
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Deleted $count notification(s)')));
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Deleted $count notification(s)')));
+        }
       }
     }
   }

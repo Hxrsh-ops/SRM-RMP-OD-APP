@@ -13,3 +13,4 @@ class Department(Base, AuditMixin, SoftDeleteMixin):
     code = Column(String(20), unique=True, nullable=False)
 
     users = relationship("User", back_populates="department")
+    class_sections = relationship("ClassSection", back_populates="department", cascade="all, delete-orphan")

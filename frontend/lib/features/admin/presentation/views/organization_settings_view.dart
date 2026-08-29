@@ -23,14 +23,17 @@ class _OrganizationSettingsViewState extends ConsumerState<OrganizationSettingsV
   bool _requireEvidence = true;
   bool _maintenanceMode = false;
   bool _initialized = false;
+  bool _isDirty = false;
+  OrganizationSettings? _initialSettings;
 
   void _initForm(OrganizationSettings s) {
     if (_initialized) return;
-    _acadYearCtrl = TextEditingController(text: s.academicYear);
-    _maxSizeCtrl = TextEditingController(text: s.maxFileSizeMb.toString());
-    _jwtExprCtrl = TextEditingController(text: s.jwtExpirationMinutes.toString());
-    _titleCtrl = TextEditingController(text: s.systemBrandingTitle);
-    _hodAutoDaysCtrl = TextEditingController(text: s.hodAutoEscalationDays.toString());
+    _initialSettings = s;
+    _acadYearCtrl = TextEditingController(text: s.academicYear)..addListener(_checkDirty);
+    _maxSizeCtrl = TextEditingController(text: s.maxFileSizeMb.toString())..addListener(_checkDirty);
+    _jwtExprCtrl = TextEditingController(text: s.jwtExpirationMinutes.toString())..addListener(_checkDirty);
+    _titleCtrl = TextEditingController(text: s.systemBrandingTitle)..addListener(_checkDirty);
+    _hodAutoDaysCtrl = TextEditingController(text: s.hodAutoEscalationDays.toString())..addListener(_checkDirty);
     _workflowMode = s.workflowMode;
     _evidenceWorkflowMode = s.evidenceWorkflowMode;
     _allowCoordToHod = s.allowCoordinatorEscalationToHod;
@@ -38,6 +41,37 @@ class _OrganizationSettingsViewState extends ConsumerState<OrganizationSettingsV
     _requireEvidence = s.requireEvidence;
     _maintenanceMode = s.maintenanceMode;
     _initialized = true;
+    _isDirty = false;
+  }
+
+  void _checkDirty() {
+    if (_initialSettings == null) return;
+    final s = _initialSettings!;
+    final dirty = _acadYearCtrl.text.trim() != s.academicYear ||
+        _maxSizeCtrl.text.trim() != s.maxFileSizeMb.toString() ||
+        _jwtExprCtrl.text.trim() != s.jwtExpirationMinutes.toString() ||
+        _titleCtrl.text.trim() != s.systemBrandingTitle ||
+        _hodAutoDaysCtrl.text.trim() != s.hodAutoEscalationDays.toString() ||
+        _workflowMode != s.workflowMode ||
+        _evidenceWorkflowMode != s.evidenceWorkflowMode ||
+        _allowCoordToHod != s.allowCoordinatorEscalationToHod ||
+        _allowHodToDean != s.allowHodEscalationToDean ||
+        _requireEvidence != s.requireEvidence ||
+        _maintenanceMode != s.maintenanceMode;
+
+    if (dirty != _isDirty && mounted) {
+      setState(() => _isDirty = dirty);
+    }
+  }
+
+  @override
+  void dispose() {
+    _acadYearCtrl.dispose();
+    _maxSizeCtrl.dispose();
+    _jwtExprCtrl.dispose();
+    _titleCtrl.dispose();
+    _hodAutoDaysCtrl.dispose();
+    super.dispose();
   }
 
   @override
@@ -70,12 +104,36 @@ class _OrganizationSettingsViewState extends ConsumerState<OrganizationSettingsV
                         Text('Configure approval workflow rules, evidence verification policies, upload quotas, and security', style: TextStyle(color: Colors.grey, fontSize: 12)),
                       ],
                     ),
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1A365D), foregroundColor: Colors.white),
-                      icon: const Icon(Icons.save, size: 18),
-                      label: const Text('Save Settings'),
-                      onPressed: _saveSettings,
-                    ),
+                    if (_isDirty)
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1A365D),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          elevation: 2,
+                        ),
+                        icon: const Icon(Icons.save, size: 18),
+                        label: const Text('Save Settings', style: TextStyle(fontWeight: FontWeight.bold)),
+                        onPressed: _saveSettings,
+                      )
+                    else
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.check_circle_outline, color: Colors.green, size: 16),
+                            SizedBox(width: 6),
+                            Text('Settings Saved', style: TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      ),
                   ],
                 ),
                 const SizedBox(height: 20),
@@ -107,7 +165,7 @@ class _OrganizationSettingsViewState extends ConsumerState<OrganizationSettingsV
 
                         // Workflow Mode Dropdown
                         DropdownButtonFormField<String>(
-                          value: _workflowMode,
+                          initialValue: _workflowMode,
                           isExpanded: true,
                           decoration: const InputDecoration(
                             labelText: 'Initial Approval Workflow Mode',
@@ -136,7 +194,10 @@ class _OrganizationSettingsViewState extends ConsumerState<OrganizationSettingsV
                             ),
                           ],
                           onChanged: (val) {
-                            if (val != null) setState(() => _workflowMode = val);
+                            if (val != null) {
+                              setState(() => _workflowMode = val);
+                              _checkDirty();
+                            }
                           },
                         ),
                         const SizedBox(height: 16),
@@ -184,14 +245,20 @@ class _OrganizationSettingsViewState extends ConsumerState<OrganizationSettingsV
                           title: const Text('Allow Coordinators to Escalate to HOD'),
                           subtitle: const Text('Coordinators can forward complex requests for HOD endorsement'),
                           value: _allowCoordToHod,
-                          onChanged: (val) => setState(() => _allowCoordToHod = val),
+                          onChanged: (val) {
+                            setState(() => _allowCoordToHod = val);
+                            _checkDirty();
+                          },
                         ),
                         SwitchListTile(
                           contentPadding: EdgeInsets.zero,
                           title: const Text('Allow HOD to Escalate to Dean'),
                           subtitle: const Text('Only HOD can escalate high-profile / multi-tier requests to Executive Dean'),
                           value: _allowHodToDean,
-                          onChanged: (val) => setState(() => _allowHodToDean = val),
+                          onChanged: (val) {
+                            setState(() => _allowHodToDean = val);
+                            _checkDirty();
+                          },
                         ),
                       ],
                     ),
@@ -226,7 +293,7 @@ class _OrganizationSettingsViewState extends ConsumerState<OrganizationSettingsV
 
                         // Evidence Workflow Mode Dropdown
                         DropdownButtonFormField<String>(
-                          value: _evidenceWorkflowMode,
+                          initialValue: _evidenceWorkflowMode,
                           isExpanded: true,
                           decoration: const InputDecoration(
                             labelText: 'Evidence Verification Workflow Mode',
@@ -260,7 +327,10 @@ class _OrganizationSettingsViewState extends ConsumerState<OrganizationSettingsV
                             ),
                           ],
                           onChanged: (val) {
-                            if (val != null) setState(() => _evidenceWorkflowMode = val);
+                            if (val != null) {
+                              setState(() => _evidenceWorkflowMode = val);
+                              _checkDirty();
+                            }
                           },
                         ),
                         const SizedBox(height: 16),
@@ -270,7 +340,10 @@ class _OrganizationSettingsViewState extends ConsumerState<OrganizationSettingsV
                           title: const Text('Require Post-Event Proof Evidence'),
                           subtitle: const Text('Enforce mandatory certificate / proof upload before completing any OD request'),
                           value: _requireEvidence,
-                          onChanged: (val) => setState(() => _requireEvidence = val),
+                          onChanged: (val) {
+                            setState(() => _requireEvidence = val);
+                            _checkDirty();
+                          },
                         ),
                       ],
                     ),
@@ -375,7 +448,10 @@ class _OrganizationSettingsViewState extends ConsumerState<OrganizationSettingsV
                           subtitle: const Text('Restricts platform access strictly to Master Administrators'),
                           value: _maintenanceMode,
                           activeThumbColor: Colors.red,
-                          onChanged: (val) => setState(() => _maintenanceMode = val),
+                          onChanged: (val) {
+                            setState(() => _maintenanceMode = val);
+                            _checkDirty();
+                          },
                         ),
                       ],
                     ),
@@ -411,6 +487,8 @@ class _OrganizationSettingsViewState extends ConsumerState<OrganizationSettingsV
         allowHodEscalationToDean: _allowHodToDean,
       );
       await repo.updateOrganizationSettings(updated);
+      _initialSettings = updated;
+      setState(() => _isDirty = false);
       ref.invalidate(adminSettingsProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Workflow & System Settings updated successfully!'), backgroundColor: Colors.green));

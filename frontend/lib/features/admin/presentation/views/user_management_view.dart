@@ -19,7 +19,13 @@ class _UserManagementViewState extends ConsumerState<UserManagementView> {
   Widget build(BuildContext context) {
     final usersAsync = ref.watch(adminUsersProvider);
     final deptsAsync = ref.watch(adminDepartmentsProvider);
+    final classSectionsAsync = ref.watch(classSectionsProvider);
     final params = ref.watch(userQueryParamsProvider);
+
+    final currentItems = (usersAsync.value?['items'] as List<dynamic>?)?.cast<AdminUser>() ?? [];
+    final selectedUsers = currentItems.where((u) => _selectedUserIds.contains(u.id)).toList();
+    final activeCount = selectedUsers.where((u) => u.isActive).length;
+    final inactiveCount = selectedUsers.where((u) => !u.isActive).length;
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -46,21 +52,23 @@ class _UserManagementViewState extends ConsumerState<UserManagementView> {
                 runSpacing: 8,
                 children: [
                   if (_selectedUserIds.isNotEmpty) ...[
-                    OutlinedButton.icon(
-                      icon: const Icon(Icons.block, color: Colors.orange, size: 18),
-                      label: Text('Deactivate (${_selectedUserIds.length})'),
-                      onPressed: () => _performBulkAction('deactivate'),
-                    ),
-                    OutlinedButton.icon(
-                      icon: const Icon(Icons.check_circle_outline, color: Colors.green, size: 18),
-                      label: Text('Activate (${_selectedUserIds.length})'),
-                      onPressed: () => _performBulkAction('activate'),
-                    ),
+                    if (activeCount > 0)
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.block, color: Colors.orange, size: 18),
+                        label: Text('Deactivate ($activeCount)'),
+                        onPressed: () => _performBulkAction('deactivate'),
+                      ),
+                    if (inactiveCount > 0)
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.check_circle_outline, color: Colors.green, size: 18),
+                        label: Text('Activate ($inactiveCount)'),
+                        onPressed: () => _performBulkAction('activate'),
+                      ),
                     OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
                       icon: const Icon(Icons.delete_outline, color: Colors.red, size: 18),
                       label: Text('Delete (${_selectedUserIds.length})'),
-                      onPressed: () => _promptBulkDelete(),
+                      onPressed: () => _performBulkAction('delete'),
                     ),
                   ],
                   ElevatedButton.icon(
@@ -72,10 +80,12 @@ class _UserManagementViewState extends ConsumerState<UserManagementView> {
                     label: const Text('Provision User'),
                     onPressed: () {
                       final depts = deptsAsync.value ?? [];
+                      final sections = classSectionsAsync.value ?? [];
                       showDialog(
                         context: context,
                         builder: (_) => UserFormDialog(
                           departments: depts,
+                          classSections: sections,
                           onSubmit: (formData) async {
                             try {
                               final repo = ref.read(adminRepositoryProvider);
@@ -100,65 +110,253 @@ class _UserManagementViewState extends ConsumerState<UserManagementView> {
           ),
           const SizedBox(height: 16),
 
-          // Filters Row
-          Card(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Wrap(
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(minWidth: 200, maxWidth: 350),
+          // Modern Filter Bar
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade200),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                ConstrainedBox(
+                  constraints: const BoxConstraints(minWidth: 240, maxWidth: 380),
+                  child: Container(
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
                     child: TextField(
                       controller: _searchController,
+                      style: const TextStyle(fontSize: 13),
                       decoration: const InputDecoration(
                         hintText: 'Search by name, email, or reg no...',
-                        prefixIcon: Icon(Icons.search, size: 20),
+                        hintStyle: TextStyle(fontSize: 13, color: Colors.black38),
+                        prefixIcon: Icon(Icons.search, size: 18, color: Color(0xFF1A365D)),
                         border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(vertical: 10),
                       ),
                       onSubmitted: (val) {
                         ref.read(userQueryParamsProvider.notifier).state = params.copyWith(query: val, page: 1);
                       },
                     ),
                   ),
-                  DropdownButton<String>(
-                    value: params.role,
-                    hint: const Text('All Roles'),
-                    items: const [
-                      DropdownMenuItem(value: null, child: Text('All Roles')),
-                      DropdownMenuItem(value: 'STUDENT', child: Text('Students')),
-                      DropdownMenuItem(value: 'FACULTY_ADVISOR', child: Text('Faculty Advisors')),
-                      DropdownMenuItem(value: 'COORDINATOR', child: Text('Coordinators')),
-                      DropdownMenuItem(value: 'HOD', child: Text('HODs')),
-                      DropdownMenuItem(value: 'DEAN', child: Text('Deans')),
-                      DropdownMenuItem(value: 'MASTER_ADMIN', child: Text('Master Admins')),
-                    ],
-                    onChanged: (val) {
-                      ref.read(userQueryParamsProvider.notifier).state = params.copyWith(role: val, page: 1, clearRole: val == null);
-                    },
+                ),
+                Container(
+                  height: 40,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.shade300),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.refresh),
-                    tooltip: 'Refresh Users',
-                    onPressed: () => ref.refresh(adminUsersProvider),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: params.role,
+                      icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: Color(0xFF1A365D)),
+                      style: const TextStyle(fontSize: 13, color: Color(0xFF1A365D), fontWeight: FontWeight.w600),
+                      dropdownColor: Colors.white,
+                      hint: const Row(
+                        children: [
+                          Icon(Icons.filter_list_rounded, size: 16, color: Color(0xFF1A365D)),
+                          SizedBox(width: 6),
+                          Text('All Roles', style: TextStyle(fontSize: 13, color: Color(0xFF1A365D), fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: null,
+                          child: Row(
+                            children: [
+                              Icon(Icons.people_outline, size: 16, color: Color(0xFF1A365D)),
+                              SizedBox(width: 8),
+                              Text('All Roles'),
+                            ],
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: 'STUDENT',
+                          child: Row(
+                            children: [
+                              Icon(Icons.school_outlined, size: 16, color: Colors.blue),
+                              SizedBox(width: 8),
+                              Text('Students'),
+                            ],
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: 'FACULTY_ADVISOR',
+                          child: Row(
+                            children: [
+                              Icon(Icons.badge_outlined, size: 16, color: Colors.teal),
+                              SizedBox(width: 8),
+                              Text('Faculty Advisors'),
+                            ],
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: 'COORDINATOR',
+                          child: Row(
+                            children: [
+                              Icon(Icons.domain_verification_outlined, size: 16, color: Colors.indigo),
+                              SizedBox(width: 8),
+                              Text('Coordinators'),
+                            ],
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: 'HOD',
+                          child: Row(
+                            children: [
+                              Icon(Icons.account_balance_outlined, size: 16, color: Colors.deepPurple),
+                              SizedBox(width: 8),
+                              Text('HODs'),
+                            ],
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: 'DEAN',
+                          child: Row(
+                            children: [
+                              Icon(Icons.stars_outlined, size: 16, color: Colors.amber),
+                              SizedBox(width: 8),
+                              Text('Deans'),
+                            ],
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: 'MASTER_ADMIN',
+                          child: Row(
+                            children: [
+                              Icon(Icons.admin_panel_settings_outlined, size: 16, color: Colors.red),
+                              SizedBox(width: 8),
+                              Text('Master Admins'),
+                            ],
+                          ),
+                        ),
+                      ],
+                      onChanged: (val) {
+                        ref.read(userQueryParamsProvider.notifier).state = params.copyWith(role: val, page: 1, clearRole: val == null);
+                      },
+                    ),
+                  ),
+                ),
+                IconButton.filledTonal(
+                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                  tooltip: 'Refresh Users',
+                  style: IconButton.styleFrom(
+                    backgroundColor: const Color(0xFF1A365D).withValues(alpha: 0.08),
+                    foregroundColor: const Color(0xFF1A365D),
+                  ),
+                  onPressed: () => ref.invalidate(adminUsersProvider),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          if (_selectedUserIds.isNotEmpty) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1A365D).withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFF1A365D).withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                children: [
+                  Text(
+                    '${_selectedUserIds.length} user(s) selected',
+                    style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1A365D)),
+                  ),
+                  const Spacer(),
+                  TextButton.icon(
+                    icon: const Icon(Icons.check_circle_outline, size: 16, color: Colors.green),
+                    label: const Text('Activate', style: TextStyle(color: Colors.green)),
+                    onPressed: () => _performBulkAction('activate'),
+                  ),
+                  TextButton.icon(
+                    icon: const Icon(Icons.block, size: 16, color: Colors.orange),
+                    label: const Text('Deactivate', style: TextStyle(color: Colors.orange)),
+                    onPressed: () => _performBulkAction('deactivate'),
+                  ),
+                  TextButton.icon(
+                    icon: const Icon(Icons.delete_outline, size: 16, color: Colors.red),
+                    label: const Text('Delete Selected', style: TextStyle(color: Colors.red)),
+                    onPressed: _promptBulkDelete,
                   ),
                 ],
               ),
             ),
-          ),
-          const SizedBox(height: 16),
+            const SizedBox(height: 12),
+          ],
 
           // Users Table
           Expanded(
             child: usersAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, _) => Center(child: Text('Error loading users: $err')),
+              error: (err, _) => Center(
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.red.shade200),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4)),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.cloud_off_rounded, size: 48, color: Colors.red.shade400),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Unable to Load User Registry',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1A365D)),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Server response error: $err\nPlease check connection or retry.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.refresh_rounded, size: 16),
+                        label: const Text('Retry Connection'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1A365D),
+                          foregroundColor: Colors.white,
+                        ),
+                        onPressed: () => ref.refresh(adminUsersProvider),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
               data: (data) {
-                final List<AdminUser> items = data['items'];
-                final int totalPages = data['total_pages'];
+                final List<AdminUser> items = (data['items'] as List<dynamic>?)?.map((e) {
+                      if (e is AdminUser) return e;
+                      return AdminUser.fromJson(e as Map<String, dynamic>);
+                    }).toList() ??
+                    [];
+                final int totalPages = (data['total_pages'] as int?) ?? 1;
 
                 if (items.isEmpty) {
                   return const Center(child: Text('No users match current filters'));
@@ -252,26 +450,24 @@ class _UserManagementViewState extends ConsumerState<UserManagementView> {
                                     DataCell(Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        IconButton(
-                                          icon: const Icon(Icons.folder_shared_outlined, size: 18, color: Color(0xFF1A365D)),
-                                          tooltip: 'View Profile & OD Records',
-                                          onPressed: () {
-                                            showDialog(
-                                              context: context,
-                                              builder: (_) => UserRecordsDialog(user: u),
-                                            );
-                                          },
-                                        ),
+                                        if (!isAdmin)
+                                          IconButton(
+                                            icon: const Icon(Icons.folder_shared_outlined, size: 18, color: Color(0xFF1A365D)),
+                                            tooltip: 'View Profile & OD Records',
+                                            onPressed: () => UserRecordsDialog.show(context, u),
+                                          ),
                                         IconButton(
                                           icon: const Icon(Icons.edit, size: 18),
                                           tooltip: 'Edit User',
                                           onPressed: () {
                                             final depts = deptsAsync.value ?? [];
+                                            final sections = classSectionsAsync.value ?? [];
                                             showDialog(
                                               context: context,
                                               builder: (_) => UserFormDialog(
                                                 user: u,
                                                 departments: depts,
+                                                classSections: sections,
                                                 onSubmit: (formData) async {
                                                   final repo = ref.read(adminRepositoryProvider);
                                                   await repo.updateUser(u.id, formData);
@@ -633,11 +829,15 @@ class _AssignAdvisorDialogState extends State<_AssignAdvisorDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 550;
+
     return Dialog(
+      insetPadding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24, vertical: 24),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
-        width: 480,
-        padding: const EdgeInsets.all(24),
+        width: isMobile ? screenWidth * 0.95 : 480,
+        padding: EdgeInsets.all(isMobile ? 16 : 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -698,10 +898,29 @@ class _AssignAdvisorDialogState extends State<_AssignAdvisorDialog> {
 
 // -----------------------------------------------------------------------------
 // USER RECORDS & OD REQUEST INSPECTION DIALOG (WITH PERMANENT DELETION)
-// -----------------------------------------------------------------------------
 class UserRecordsDialog extends ConsumerStatefulWidget {
   final AdminUser user;
-  const UserRecordsDialog({super.key, required this.user});
+  final bool isBottomSheet;
+  const UserRecordsDialog({super.key, required this.user, this.isBottomSheet = false});
+
+  static void show(BuildContext context, AdminUser user) {
+    final isMobile = MediaQuery.of(context).size.width < 700;
+    if (isMobile) {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        backgroundColor: Colors.white,
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+        builder: (ctx) => UserRecordsDialog(user: user, isBottomSheet: true),
+      );
+    } else {
+      showDialog(
+        context: context,
+        builder: (ctx) => UserRecordsDialog(user: user, isBottomSheet: false),
+      );
+    }
+  }
 
   @override
   ConsumerState<UserRecordsDialog> createState() => _UserRecordsDialogState();
@@ -808,32 +1027,106 @@ class _UserRecordsDialogState extends ConsumerState<UserRecordsDialog> {
     }
   }
 
+  String _formatStatusLabel(String raw) {
+    switch (raw.toUpperCase()) {
+      case 'PENDING_FACULTY':
+        return 'Pending FA Approval';
+      case 'FACULTY_APPROVED':
+        return 'FA Approved';
+      case 'PENDING_COORDINATOR':
+        return 'Pending Coordinator / HOD';
+      case 'APPROVED_AWAITING_EVIDENCE':
+        return 'Awaiting Proof';
+      case 'PENDING_EVIDENCE_FACULTY':
+        return 'Pending FA Proof';
+      case 'PENDING_EVIDENCE_COORDINATOR':
+        return 'Pending Proof Review';
+      case 'COMPLETED':
+        return 'Completed';
+      case 'REJECTED':
+      case 'FACULTY_REJECTED':
+        return 'Rejected';
+      case 'REVISION_REQUESTED':
+      case 'EVIDENCE_REVISION_REQUESTED':
+        return 'Revision Requested';
+      default:
+        return raw.replaceAll('_', ' ');
+    }
+  }
+
+  Color _getStatusBadgeColor(String raw) {
+    switch (raw.toUpperCase()) {
+      case 'COMPLETED':
+        return Colors.green.shade700;
+      case 'PENDING_FACULTY':
+      case 'PENDING_COORDINATOR':
+      case 'PENDING_EVIDENCE_FACULTY':
+      case 'PENDING_EVIDENCE_COORDINATOR':
+        return Colors.orange.shade800;
+      case 'APPROVED_AWAITING_EVIDENCE':
+      case 'FACULTY_APPROVED':
+        return Colors.blue.shade700;
+      case 'REJECTED':
+      case 'FACULTY_REJECTED':
+        return Colors.red.shade700;
+      default:
+        return Colors.grey.shade800;
+    }
+  }
+
+  String _getRecordsSectionTitle(String role, int count) {
+    switch (role.toUpperCase()) {
+      case 'STUDENT':
+        return 'Associated OD Submissions ($count)';
+      case 'FACULTY_ADVISOR':
+        return 'Assigned Advisee OD Requests ($count)';
+      case 'COORDINATOR':
+      case 'HOD':
+        return 'Department OD Requests ($count)';
+      default:
+        return 'Campus OD Submissions ($count)';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        width: 750,
-        constraints: const BoxConstraints(maxHeight: 650),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 700;
+
+    final content = Container(
+      width: isMobile ? double.infinity : 680,
+      height: MediaQuery.of(context).size.height * 0.85,
+      padding: EdgeInsets.all(isMobile ? 16 : 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (widget.isBottomSheet)
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
                 CircleAvatar(
                   backgroundColor: const Color(0xFF1A365D).withValues(alpha: 0.1),
                   child: const Icon(Icons.person, color: Color(0xFF1A365D)),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          Text(widget.user.fullName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                          const SizedBox(width: 8),
+                          Text(widget.user.fullName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
@@ -844,17 +1137,18 @@ class _UserRecordsDialogState extends ConsumerState<UserRecordsDialog> {
                           ),
                         ],
                       ),
+                      const SizedBox(height: 4),
                       Text('${widget.user.username} • ${widget.user.email} • ${widget.user.departmentName ?? "No Dept"}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
                     ],
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.refresh),
+                  icon: const Icon(Icons.refresh, size: 20),
                   tooltip: 'Refresh Records',
                   onPressed: _fetchRecords,
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close),
+                  icon: const Icon(Icons.close, size: 20),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
@@ -863,22 +1157,29 @@ class _UserRecordsDialogState extends ConsumerState<UserRecordsDialog> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Associated OD Submissions (${_records.length})',
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                Expanded(
+                  child: Text(
+                    _getRecordsSectionTitle(widget.user.role, _records.length),
+                    style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: Color(0xFF1A365D)),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-                if (_records.isNotEmpty)
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red.shade700,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                if (_records.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red.shade700,
+                      side: BorderSide(color: Colors.red.shade300),
+                      backgroundColor: Colors.red.shade50,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
-                    icon: const Icon(Icons.delete_sweep, size: 16),
-                    label: Text('Delete All (${_records.length})'),
+                    icon: const Icon(Icons.delete_sweep_rounded, size: 14),
+                    label: Text('Delete All (${_records.length})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11.5)),
                     onPressed: _deleteAllRecords,
                   ),
+                ],
               ],
             ),
             const SizedBox(height: 12),
@@ -903,12 +1204,19 @@ class _UserRecordsDialogState extends ConsumerState<UserRecordsDialog> {
                               itemBuilder: (context, idx) {
                                 final r = _records[idx] as Map<String, dynamic>;
                                 final reqId = r['id']?.toString() ?? '';
+                                final studentName = r['student_name']?.toString() ?? '';
+                                final registerNumber = r['register_number']?.toString() ?? '';
+                                final program = r['program']?.toString() ?? '';
+                                final yearSection = r['year_section']?.toString() ?? '';
+                                final facultyAdvisorName = r['faculty_advisor_name']?.toString() ?? '';
                                 final reason = r['reason']?.toString() ?? 'OD Event';
                                 final statusStr = r['status']?.toString() ?? '';
                                 final duration = r['duration_days'] ?? 1;
                                 final startDate = r['start_date']?.toString() ?? '';
                                 final endDate = r['end_date']?.toString() ?? '';
                                 final purpose = r['purpose']?.toString() ?? '';
+
+                                final isNotStudentUser = widget.user.role.toUpperCase() != 'STUDENT';
 
                                 return Card(
                                   margin: const EdgeInsets.only(bottom: 10),
@@ -923,10 +1231,12 @@ class _UserRecordsDialogState extends ConsumerState<UserRecordsDialog> {
                                           child: Column(
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
-                                              Row(
+                                              Wrap(
+                                                spacing: 6,
+                                                runSpacing: 4,
+                                                crossAxisAlignment: WrapCrossAlignment.center,
                                                 children: [
                                                   Text(reqId, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1A365D))),
-                                                  const SizedBox(width: 8),
                                                   Container(
                                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                                     decoration: BoxDecoration(
@@ -935,17 +1245,49 @@ class _UserRecordsDialogState extends ConsumerState<UserRecordsDialog> {
                                                     ),
                                                     child: Text('$duration Day(s)', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.blue)),
                                                   ),
-                                                  const SizedBox(width: 6),
                                                   Container(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                                     decoration: BoxDecoration(
-                                                      color: Colors.grey.withValues(alpha: 0.15),
-                                                      borderRadius: BorderRadius.circular(4),
+                                                      color: _getStatusBadgeColor(statusStr).withValues(alpha: 0.12),
+                                                      borderRadius: BorderRadius.circular(6),
+                                                      border: Border.all(color: _getStatusBadgeColor(statusStr).withValues(alpha: 0.3)),
                                                     ),
-                                                    child: Text(statusStr, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                                                    child: Text(
+                                                      _formatStatusLabel(statusStr),
+                                                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _getStatusBadgeColor(statusStr)),
+                                                    ),
                                                   ),
                                                 ],
                                               ),
+                                              if (isNotStudentUser && studentName.isNotEmpty) ...[
+                                                const SizedBox(height: 6),
+                                                Row(
+                                                  children: [
+                                                    const Icon(Icons.person_outline_rounded, size: 14, color: Color(0xFF1A365D)),
+                                                    const SizedBox(width: 4),
+                                                    Flexible(
+                                                      child: Text(
+                                                        '$studentName ($registerNumber)${program.isNotEmpty ? " • $program ($yearSection)" : ""}',
+                                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: Color(0xFF1A365D)),
+                                                        overflow: TextOverflow.ellipsis,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
+                                              if (facultyAdvisorName.isNotEmpty && widget.user.role.toUpperCase() != 'FACULTY_ADVISOR') ...[
+                                                const SizedBox(height: 4),
+                                                Row(
+                                                  children: [
+                                                    const Icon(Icons.verified_user_outlined, size: 13, color: Colors.teal),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      'FA: $facultyAdvisorName (Assigned)',
+                                                      style: TextStyle(fontSize: 11, color: Colors.teal.shade800, fontWeight: FontWeight.w600),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
                                               const SizedBox(height: 6),
                                               Text('Event: $reason ($startDate to $endDate)', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
                                               if (purpose.isNotEmpty) ...[
@@ -969,7 +1311,15 @@ class _UserRecordsDialogState extends ConsumerState<UserRecordsDialog> {
             ),
           ],
         ),
-      ),
+      );
+
+    if (widget.isBottomSheet) {
+      return content;
+    }
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: content,
     );
   }
 }

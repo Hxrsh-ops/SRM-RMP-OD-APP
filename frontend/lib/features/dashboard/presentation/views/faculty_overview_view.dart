@@ -154,25 +154,57 @@ class FacultyOverviewView extends ConsumerWidget {
                     padding: const EdgeInsets.only(bottom: AppSpacing.md),
                     child: AppClickableCard(
                       onTap: () => RequestDetailsModal.show(context, req),
-                      child: Row(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(AppSpacing.sm),
-                            decoration: const BoxDecoration(color: AppColors.surfaceVariant, shape: BoxShape.circle),
-                            child: const Icon(Icons.person_outline_rounded, color: AppColors.primaryBlue, size: 20),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(AppSpacing.sm),
+                                decoration: const BoxDecoration(color: AppColors.surfaceVariant, shape: BoxShape.circle),
+                                child: const Icon(Icons.person_outline_rounded, color: AppColors.primaryBlue, size: 20),
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      req.studentName,
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      req.registerNumber,
+                                      style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              AppStatusChip(label: req.statusDisplayLabel, statusType: req.status.statusType),
+                            ],
                           ),
-                          const SizedBox(width: AppSpacing.md),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('${req.studentName} (${req.registerNumber})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                                Text('Event: ${req.reason} • ${req.durationDays} Days', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-                              ],
+                          const SizedBox(height: AppSpacing.sm),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceVariant.withValues(alpha: 0.5),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              'Event: ${req.reason} • ${req.durationDays} Days (${req.startDate.toString().split(" ")[0]})',
+                              style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          const SizedBox(width: AppSpacing.xs),
-                          AppStatusChip(label: req.status.displayName, statusType: req.status.statusType),
                         ],
                       ),
                     ),

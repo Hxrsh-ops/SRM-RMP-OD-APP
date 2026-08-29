@@ -42,3 +42,4 @@ class OdRequest(Base, AuditMixin, SoftDeleteMixin):
     attachments = relationship("Attachment", back_populates="od_request", cascade="all, delete-orphan")
     timeline = relationship("TimelineEvent", back_populates="od_request", cascade="all, delete-orphan", order_by="TimelineEvent.timestamp")
     comments = relationship("Comment", back_populates="od_request", cascade="all, delete-orphan", order_by="Comment.timestamp")
+    shared_clearances = relationship("SharedOdClearance", back_populates="od_request", cascade="all, delete-orphan")
