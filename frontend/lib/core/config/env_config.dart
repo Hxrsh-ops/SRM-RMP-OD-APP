@@ -47,12 +47,20 @@ class EnvConfig {
       return 'http://127.0.0.1:8000/api/v1';
     }
 
-    if (currentEnvironment == Environment.prod) {
+    // Web browser environment
+    if (kIsWeb) {
+      if (Uri.base.host == 'localhost' || Uri.base.host == '127.0.0.1') {
+        return 'http://127.0.0.1:8000/api/v1';
+      }
       return 'https://srm-rmp-od-app.onrender.com/api/v1';
     }
 
-    // Default to local backend (also works seamlessly on mobile via ADB reverse)
-    return 'http://127.0.0.1:8000/api/v1';
+    if (currentEnvironment == Environment.prod || kReleaseMode) {
+      return 'https://srm-rmp-od-app.onrender.com/api/v1';
+    }
+
+    // Default to production cloud backend
+    return 'https://srm-rmp-od-app.onrender.com/api/v1';
   }
 
   /// Returns the root server URL (without /api/v1 suffix) for static file attachments

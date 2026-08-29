@@ -23,6 +23,30 @@ async def lifespan(app: FastAPI):
     logger.info(f"PostgreSQL Engine Active: {engine.url.render_as_string(hide_password=True)}")
     # Ensure database tables exist (migrations handle schema updates)
     Base.metadata.create_all(bind=engine)
+
+    # Apply safe column checks for cloud databases
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_login_attempts INTEGER DEFAULT 0;"))
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_locked BOOLEAN DEFAULT FALSE;"))
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS force_password_change BOOLEAN DEFAULT FALSE;"))
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMP WITH TIME ZONE;"))
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS assigned_faculty_id UUID;"))
+            conn.execute(text("ALTER TABLE od_requests ADD COLUMN IF NOT EXISTS cgpa DOUBLE PRECISION;"))
+            conn.execute(text("ALTER TABLE od_requests ADD COLUMN IF NOT EXISTS attendance_percentage DOUBLE PRECISION;"))
+            conn.execute(text("ALTER TABLE od_requests ADD COLUMN IF NOT EXISTS parent_consent_url VARCHAR(500);"))
+            conn.execute(text("ALTER TABLE od_requests ADD COLUMN IF NOT EXISTS rejection_reason VARCHAR(500);"))
+            conn.commit()
+    except Exception as e:
+        logger.warning(f"Schema column check notice: {e}")
+
+    # Auto-seed clean pilot accounts on startup
+    try:
+        from .scripts.seed_pilot_accounts import seed_pilot_accounts
+        seed_pilot_accounts()
+    except Exception as e:
+        logger.warning(f"Pilot accounts seeding notice: {e}")
+
     yield
 
 app = FastAPI(

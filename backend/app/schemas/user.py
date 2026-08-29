@@ -1,6 +1,6 @@
 from uuid import UUID
 from typing import Optional
-from pydantic import BaseModel, EmailStr, ConfigDict
+from pydantic import BaseModel, EmailStr, ConfigDict, model_validator
 from ..models.enums import UserRole
 
 class UserBase(BaseModel):
@@ -25,9 +25,20 @@ class UserResponse(UserBase):
     model_config = ConfigDict(from_attributes=True)
 
 class LoginRequest(BaseModel):
-    username: str
+    username: Optional[str] = None
+    identifier: Optional[str] = None
     password: str
     remember_me: bool = True
+
+    @model_validator(mode="after")
+    def unify_identifier(self) -> "LoginRequest":
+        if not self.username and self.identifier:
+            self.username = self.identifier
+        elif not self.identifier and self.username:
+            self.identifier = self.username
+        if not self.username:
+            raise ValueError("Username or Identifier is required")
+        return self
 
 class ChangePasswordRequest(BaseModel):
     current_password: str
