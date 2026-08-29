@@ -62,3 +62,22 @@ def root():
         "docs": f"{settings.API_V1_STR}/docs",
         "status": "healthy"
     }
+
+@app.get("/debug-db")
+def debug_db():
+    try:
+        from .core.database import engine
+        from sqlalchemy import text
+        with engine.connect() as conn:
+            result = conn.execute(text("SELECT current_database(), current_user;")).fetchall()
+            tables = conn.execute(text("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';")).fetchall()
+            users_count = conn.execute(text("SELECT count(*) FROM users;")).scalar() if any(t[0] == 'users' for t in tables) else 'no users table'
+            return {
+                "db_info": [list(r) for r in result],
+                "tables": [t[0] for t in tables],
+                "users_count": users_count,
+                "status": "connected"
+            }
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "traceback": traceback.format_exc()}
