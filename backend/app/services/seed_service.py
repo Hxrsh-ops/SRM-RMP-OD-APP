@@ -48,7 +48,7 @@ def run_db_migrations_and_seed():
             db.commit()
             db.refresh(ai_dept)
 
-        # Master Admin
+        # Master Admin (Only create if missing - Never overwrite existing password)
         admin = db.query(User).filter(User.username == "ADMIN1001").first()
         if not admin:
             admin = User(
@@ -62,12 +62,7 @@ def run_db_migrations_and_seed():
                 force_password_change=False,
             )
             db.add(admin)
-        else:
-            admin.hashed_password = get_password_hash("Admin@123456")
-            admin.is_active = True
-            admin.is_locked = False
-            admin.force_password_change = False
-        db.commit()
+            db.commit()
 
         # Dean
         dean = db.query(User).filter(User.username == "DEAN1001").first()
@@ -83,12 +78,7 @@ def run_db_migrations_and_seed():
                 force_password_change=False,
             )
             db.add(dean)
-        else:
-            dean.hashed_password = get_password_hash("Dean@123456")
-            dean.is_active = True
-            dean.is_locked = False
-            dean.force_password_change = False
-        db.commit()
+            db.commit()
 
         # HOD
         hod = db.query(User).filter(User.username == "HOD1001").first()
@@ -105,13 +95,7 @@ def run_db_migrations_and_seed():
                 force_password_change=False,
             )
             db.add(hod)
-        else:
-            hod.hashed_password = get_password_hash("Hod@123456")
-            hod.department_id = cse_dept.id
-            hod.is_active = True
-            hod.is_locked = False
-            hod.force_password_change = False
-        db.commit()
+            db.commit()
 
         # Coordinator
         coord = db.query(User).filter(User.username == "COORD1001").first()
@@ -128,13 +112,7 @@ def run_db_migrations_and_seed():
                 force_password_change=False,
             )
             db.add(coord)
-        else:
-            coord.hashed_password = get_password_hash("Coord@123456")
-            coord.department_id = cse_dept.id
-            coord.is_active = True
-            coord.is_locked = False
-            coord.force_password_change = False
-        db.commit()
+            db.commit()
 
         # Faculty Advisor
         fa = db.query(User).filter(User.username == "FA1001").first()
@@ -153,13 +131,6 @@ def run_db_migrations_and_seed():
             db.add(fa)
             db.commit()
             db.refresh(fa)
-        else:
-            fa.hashed_password = get_password_hash("Faculty@123456")
-            fa.department_id = cse_dept.id
-            fa.is_active = True
-            fa.is_locked = False
-            fa.force_password_change = False
-            db.commit()
 
         # Student
         stu = db.query(User).filter((User.username == "STU1001") | (User.username == "RA2311003010001")).first()
@@ -171,7 +142,7 @@ def run_db_migrations_and_seed():
                 hashed_password=get_password_hash("Student@123456"),
                 role=UserRole.STUDENT,
                 department_id=cse_dept.id,
-                assigned_faculty_id=fa.id,
+                assigned_faculty_id=fa.id if fa else None,
                 program="B.Tech Computer Science & Engineering",
                 year_section="3rd Year - Section G",
                 is_active=True,
@@ -179,13 +150,7 @@ def run_db_migrations_and_seed():
                 force_password_change=False,
             )
             db.add(stu)
-        else:
-            stu.hashed_password = get_password_hash("Student@123456")
-            stu.assigned_faculty_id = fa.id
-            stu.is_active = True
-            stu.is_locked = False
-            stu.force_password_change = False
-        db.commit()
+            db.commit()
 
         logger.info("Database schema and pilot accounts verified.")
     except Exception as e:
